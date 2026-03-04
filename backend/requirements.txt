@@ -1,0 +1,11 @@
+fastapi[standard]
+sqlmodel
+asyncpg
+pydantic-settings
+python-dotenv
+passlib[argon2]
+python-jose[cryptography]
+requests
+tenacity
+python-json-logger
+cloudinary

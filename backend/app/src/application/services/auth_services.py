@@ -1,0 +1,290 @@
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
+from jose import ExpiredSignatureError, JWTError
+from pydantic import EmailStr
+
+from app.src.application.services import retry_on_transient
+from app.src.core.constants import ConstantsData, ConstantsKeyData
+from app.src.core.security import AppSecurity
+from app.src.domain.dto.auth_dto import SessionTokenDTO, SignUpModelDTO, TokenDTO
+from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainDeactivatedError, DomainError,
+                                                  DomainInvalidCredentialsError, DomainNotFoundError,
+                                                  DomainOTPNotExpireError, DomainUnAuthorizedError, )
+from app.src.infrastructure.db.uow import SQLUnitOfWork
+from app.src.infrastructure.email_infrastructure import EmailInfrastructure
+from app.src.schema import RoleSchema
+from app.src.schema.auth_schema import LoginRequest, SessionTokenRequest, SignUpRequest, TempUserRequest
+from app.src.utils.utility import Utility
+
+
+# action
+
+class AuthServices:
+    
+    def __init__(self, uow: SQLUnitOfWork, email_infrastructure: EmailInfrastructure = None):
+        self.__uow = uow
+        self.__verification_token = ConstantsKeyData.COOKIE_VERIFICATION_KEY
+        self.email_infrastructure = email_infrastructure
+    
+    @retry_on_transient
+    async def manual_signup_initiate(self, email: EmailStr | str, old_otp_code: str):
+        try:
+            
+            # get the data from db.
+            data = await self.__uow.users.find_record(email)
+            
+            # then check if the user exists or active.
+            if data:
+                curr_users = data["Users"]
+                if curr_users.is_deleted:
+                    raise DomainDeactivatedError("This email is deactivated.")
+                
+                raise DomainAlreadyExistsError(message="This email is already exist. Please login instead.")
+            
+            # check first if there's otp code in that email on redis before proceeding.
+            
+            if old_otp_code:
+                raise DomainOTPNotExpireError(message="Your code has not expired yet.", )
+            
+            # query from temp database
+            temp_user_data = await self.__uow.temp_users.find_record(email)
+            # generate an otp_code
+            otp_code = AppSecurity.generate_otp_code()
+            
+            # Check if the user email is already verified.
+            if temp_user_data:
+                if temp_user_data.sign_up_steps == 1:
+                    # generate an otp
+                    # return the successful response
+                    return SignUpModelDTO(message="Verification code sent to your email.", otp_code=otp_code)
+                
+                elif temp_user_data.sign_up_steps == 2:
+                    # return the successful response
+                    return SignUpModelDTO(message="Your email is verified, please proceed to next step.")
+                else:
+                    # otherwise raise an exception
+                    raise DomainError
+            
+            # insert into db
+            await self.__uow.temp_users.insert_record(TempUserRequest(email=email.strip()))
+            
+            # return the successful response
+            return SignUpModelDTO(message="Verification code sent to your email.", otp_code=otp_code)
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def verify_signup_otp_code(self, *, otp_code: str,
+                                     otp_code_from_redis: str,
+                                     email: str):
+        try:
+            # check first if the email is already verified
+            temp_users_data = await self.__uow.temp_users.find_record(email)
+            
+            if not temp_users_data:
+                raise DomainNotFoundError(message="Email does not exist.")
+            
+            if temp_users_data.sign_up_steps == 2:
+                return SignUpModelDTO(message="Your email is already verified, please proceed to next step.")
+            
+            # verify otp
+            Utility.verify_otp(otp_code_from_redis, otp_code)
+            
+            # update the record in db
+            await self.__uow.temp_users.update_record(record_id=email)
+            response = SignUpModelDTO(message="Successfully verified your email. Please proceed to next step.")
+            
+            # return the successful response
+            return response
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def manual_signup_final_step(self, new_user: SignUpRequest, verification_token: str):
+        """
+        This function is the final step, which the user will input the password, firstname, middle name and lastname to proceed in homepage.
+        :param new_user: The data to be insert in database.
+        :param verification_token: verification token that will retrieve in cookie.
+        :return: Successful Response Schema
+        """
+        try:
+            
+            try:
+                payload = AppSecurity.decode_jwt_token(verification_token)
+                email: str = payload.get("user_email")
+            
+            except Exception as e:
+                raise DomainInvalidCredentialsError(message="Signup verification failed. Please re-enter your email.", )
+            
+            # hashe password
+            hashed_password = AppSecurity.hash_plain_password(new_user.password)
+            # set the password to hashed password
+            new_user.password = hashed_password
+            # then clean the email if there's space from start and end.
+            new_user.email = email.strip()
+            
+            # insert user into db and return the user to get the id
+            user = await self.__uow.users.insert_record(new_user)
+            
+            user_id = user.id
+            # insert data into address and personal info
+            await self.__uow.users.insert_personal_info_address(user_id, new_user)
+            
+            # insert the token into db
+            access_refresh_token = await self.__insert_session_token(user_id)
+            # prepare the response
+            response = SignUpModelDTO(message="Successfully created account.",
+                                      access_token=access_refresh_token.access_token,
+                                      refresh_token=access_refresh_token.refresh_token)
+            return response
+        
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def manual_login(self, *, credentials: LoginRequest):
+        try:
+            # get the data from db.
+            data = await self.__uow.users.find_record(credentials.email)
+            
+            if not data:
+                raise DomainNotFoundError(message="Email does not exist.")
+            
+            curr_users = data["Users"]
+            
+            if curr_users.is_deleted:
+                raise DomainDeactivatedError("This email is deactivated.")
+            
+            if not curr_users.is_active:
+                # send email again
+                return SignUpModelDTO(
+                        action=ConstantsKeyData.USER_ACTION_EMAIL_VERIFICATION,
+                        message="Your account has not been activated yet. Please check your email for the verification link.")
+            
+            # hashed password
+            hashed_password = curr_users.password
+            # check first if the signin_type is password
+            if "password" not in curr_users.signin_type:
+                raise DomainUnAuthorizedError(
+                        message="This email is registered with other signin type. Please login with the correct signin type.")
+            
+            if not AppSecurity.verify_hash_password(credentials.password, hashed_password):
+                raise DomainInvalidCredentialsError(message="Incorrect password.")
+            
+            # insert the token into db
+            access_refresh_token = await self.__insert_session_token(curr_users.id)
+            
+            # prepare the response
+            response = SignUpModelDTO(message="Successfully logged in.",
+                                      access_token=access_refresh_token.access_token,
+                                      refresh_token=access_refresh_token.refresh_token)
+            return response
+        
+        except Exception as e:
+            raise e
+    
+    async def refresh_token(self, *, refresh_token: str):
+        try:
+            # decode the token
+            payload = AppSecurity.decode_jwt_token(refresh_token, verify_exp=False)
+            
+            user_id: str = payload.get("user_id")
+            
+            access_refresh_token = await self.__update_refresh_token(refresh_token, user_id)
+            
+            response = SignUpModelDTO(message="Successfully refreshed token.",
+                                      access_token=access_refresh_token.access_token,
+                                      refresh_token=access_refresh_token.refresh_token)
+            return response
+        
+        except ExpiredSignatureError as e:
+            raise DomainUnAuthorizedError(message="Refresh token has expired. Please login again.", )
+        except JWTError as e:
+            raise DomainUnAuthorizedError(message="Invalid refresh token. Please login again.", )
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    def __generate_access_refresh_token(access_token_data: dict,
+                                        refresh_token_data: dict,
+                                        token_expiration: int = 15) -> TokenDTO:
+        """
+        This function is to generate access and refresh token.
+        :param access_token_data: To encode and insert into signed token for access token.
+        :param refresh_token_data: To encode and insert into signed token for refresh token.
+        :param token_expiration: is for expiration in access token and this will be minutes based.
+        Default value is 15 minutes.
+        :return: Access and refresh token.
+        """
+        # convert time into seconds
+        expires = int(timedelta(minutes=token_expiration).total_seconds())
+        refresh_expires_datetime = datetime.now(timezone.utc) + timedelta(days=ConstantsData.JWT_EXPIRATION)
+        
+        # generate new tokens
+        access_token = AppSecurity.generate_access_token(jti=str(uuid4()), data=access_token_data, exp=expires)
+        
+        # convert jwt expiration into seconds
+        refresh_expires_seconds = int(timedelta(days=ConstantsData.JWT_EXPIRATION).total_seconds())
+        
+        new_refresh_token = AppSecurity.generate_access_token(jti=str(uuid4()), data=refresh_token_data,
+                                                              exp=refresh_expires_seconds)
+        
+        return TokenDTO(access_token=access_token,
+                        refresh_token=new_refresh_token,
+                        refresh_token_expiration=refresh_expires_datetime)
+    
+    async def __check_session_token(self, token: str) -> SessionTokenDTO:
+        
+        # hashed token in database
+        hashed_token = AppSecurity.hash_token(token)
+        refresh_token_db = await self.__uow.token_session.find_record(hashed_token)
+        
+        if not refresh_token_db:
+            raise DomainUnAuthorizedError(message="Refresh token does not exist. Please login again.", )
+        
+        if refresh_token_db.is_revoke:
+            raise DomainUnAuthorizedError(message="Refresh token has been revoked. Please login again.", )
+        
+        return refresh_token_db
+    
+    async def __update_refresh_token(self, token, user_id) -> TokenDTO:
+        # check and get the refresh token session
+        refresh_token_db = await self.__check_session_token(token)
+        
+        # generate access and refresh token
+        access_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id,
+                             ConstantsKeyData.TOKEN_DATA_KEY_ROLE   : RoleSchema.CUSTOMER}
+        refresh_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id}
+        # call the function to generate access token
+        refresh_access_token = self.__generate_access_refresh_token(access_token_data, refresh_token_data)
+        
+        new_session_data = SessionTokenRequest(token=refresh_access_token.refresh_token, user_id=user_id,
+                                               expires_at=refresh_access_token.refresh_token_expiration)
+        
+        # update the token in db
+        await self.__uow.token_session.update_record(record_id=refresh_token_db.token,
+                                                     data=new_session_data.model_dump())
+        
+        return refresh_access_token
+    
+    async def __insert_session_token(self, user_id: str) -> TokenDTO:
+        print("user", user_id)
+        # get the access and refresh token
+        access_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id,
+                             "role"                                 : ConstantsKeyData.TOKEN_DATA_KEY_ROLE}
+        refresh_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id}
+        
+        # generate access and refresh token also the refresh token expiration for database.
+        access_refresh_token = self.__generate_access_refresh_token(access_token_data, refresh_token_data)
+        
+        # hashed the refresh token
+        hashed_refresh_token = AppSecurity.hash_token(access_refresh_token.refresh_token)
+        
+        # prepare the data for new session token
+        new_session_data = SessionTokenRequest(token=hashed_refresh_token, user_id=user_id,
+                                               expires_at=access_refresh_token.refresh_token_expiration)
+        # insert the token into db
+        await self.__uow.token_session.insert_record(new_session_data)
+        # return TokenDTO
+        return access_refresh_token

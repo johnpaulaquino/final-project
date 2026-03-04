@@ -1,0 +1,51 @@
+services:
+  e_comm:
+    build: .
+    ports:
+      - "6767:6767"
+    profiles:
+      - dev
+    extra_hosts:
+      - "docker.host.internal:host-gateway"
+
+    env_file:
+      - .env.docker
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+
+
+
+
+
+
+#  #database postgresql
+#  postgres_db:
+#    image: postgres:16-alpine
+#    restart: always
+#    env_file:
+#      - .env.docker
+#    environment:
+#      POSTGRES_USER: ${DB_USER}
+#      POSTGRES_PASSWORD: ${DB_PASSWORD}
+#      POSTGRES_DB: ${DB_NAME}
+#
+#    ports:
+#      - "5433:5432"
+#    volumes:
+#      - ./postgres_data:/var/lib/postgresql/data
+#    healthcheck:
+#      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h docker.host.internal" ]
+#
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 30s
+#
+#volumes:
+#  postgres_data:
+#    driver: local

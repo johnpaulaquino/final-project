@@ -1,0 +1,69 @@
+[project]
+name = "no-title"
+version = "0.1.0"
+description = "No clear description yet"
+
+dependencies = [
+    "fastapi[standard]",
+    "sqlmodel",
+    "alembic",
+    "asyncpg",
+    "pydantic-settings",
+    "python-dotenv",
+    "passlib[argon2]",
+    "python-jose[cryptography]",
+    "requests",
+    "msgpack",
+    "redis",
+    "cloudinary",
+    "fastapi-mail",
+    "cryptography", # Fernet is part of this package
+    "tenacity",
+    "python-json-logger",
+]
+
+
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["app/tests"]
+asyncio_mode = "auto"
+#This tells Pytest exactly where to look for your test files. When you type pytest in your terminal,
+#it won't waste time searching your node_modules or logs; it goes straight to your app/tests folder.
+##Since you are using FastAPI and asyncpg, your tests will be "asynchronous." Normally,
+# Pytest doesn't understand async def functions. This setting tells Pytest to automatically
+# handle those asynchronous tests without you having to add a @pytest.mark.asyncio decorator
+#  to every single function.
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]  # Only include the app package
+exclude = ["migration*", "tests*"] # Exclude migrations and tests
+
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"] # Linting and Import sorting
+#Ruff is the "new king" of Python linting and formatting. It is written in Rust,
+#making it 10–100x faster than older tools like Flake8 or Black.
+#
+#line-length = 88: This is the industry standard (made famous by the "Black"
+#formatter). It ensures your code doesn't get too wide, which makes it easier to
+#read on split screens.
+#
+#select = ["E", "F", "I"]: These are the "rules" Ruff will enforce:
+#
+#E (Error): Catches PEP 8 style violations (e.g., bad spacing).
+#
+#F (Pyflakes): Catches actual logic errors (e.g., a variable you defined but never used,
+# or an undefined variable).
+#
+#I (Isort): This is a favorite for professional devs. It automatica
+
+[project.scripts]
+server = "app.main:start"

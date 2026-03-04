@@ -1,0 +1,117 @@
+from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio.session import AsyncSession
+
+from app.src.domain.dto.products_dto import ProductInformationDTO, ProductsDataDTO
+from app.src.domain.interfaces.user_interface import UserInterface
+from app.src.infrastructure.db.entity import Inventory, ProductDetails, Products
+from app.src.schema.products_schema import ProductsFullInformationRequestSchema
+
+
+class ProductsRepository(UserInterface):
+    
+    def __init__(self, db: AsyncSession):
+        self.db = db
+    
+    async def insert_record(self, request: ProductsFullInformationRequestSchema) -> Products:
+        """
+        To insert products into database.
+        :param request:
+        :return: products to access the id.
+        """
+        # initialize model entity
+        products = Products(**request.model_dump())
+        # insert into db, but not commited for the meantime
+        self.db.add(products)
+        await self.db.flush()
+        await self.db.refresh(products)
+        
+        product_id = products.id
+        
+        # insert into product details
+        products_details = ProductDetails(product_id=product_id, images=request.images, description=request.description)
+        # insert into db, but not commited for the meantime
+        self.db.add(products_details)
+        
+        # insert into inventory
+        inventory = Inventory(product_id=product_id, quantity=request.quantity,
+                              low_stock_threshold=request.low_stock_threshold)
+        # insert into db, but not commited for the meantime
+        self.db.add(inventory)
+        
+        return products
+    
+    async def find_record(self, record_id: str) -> ProductInformationDTO:
+        """
+        To retrieved full information of products.
+        :param record_id: Unique from products.
+        :return: Product record or None
+        """
+        stmt = select(Products, Inventory.quantity, Inventory.low_stock_threshold,
+                      ProductDetails.images, ProductDetails.description
+                      ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
+                                  ).outerjoin(Inventory, Products.id == Inventory.product_id
+                                              ).where(Products.id == record_id)
+        
+        result = await self.db.execute(stmt)
+        data = result.mappings().fetchall()
+        
+        return ProductInformationDTO.model_validate(data[0], from_attributes=True) if data else None
+    
+    async def get_paginated_record(self, offset: int, limit: int):
+        """
+        To get the paginated data.
+        :param offset: Where the data retrieval start.
+        :param limit: How many data will retrieve.
+        :return: Paginated data or None.
+        """
+        stmt = select(Products,
+                      Inventory.quantity, Inventory.low_stock_threshold,
+                      ProductDetails.description, ProductDetails.images
+                      ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
+                                  ).outerjoin(Inventory, Products.id == Inventory.product_id
+                                              ).offset(offset).limit(limit)
+        
+        result = await self.db.execute(stmt)
+        data = result.mappings().fetchall()
+        return data or None
+    
+    async def get_product_only(self, product_id: str) -> ProductsDataDTO:
+        """
+        To retrieve product only for fast retrieval.
+        :param product_id: Unique for product.
+        :return: the actual product data.
+        """
+        stmt = select(Products).where(Products.id == product_id)
+        result = await self.db.execute(stmt)
+        data = result.scalar_one_or_none()
+        
+        return data
+    
+    # product, product details and inventory update
+    async def update_record(self, record_id: str, data: dict | None = None):
+        """
+        To update the products only.
+        :param record_id: Unique from products.
+        :param data: This is the actual data to be update in database. This is a dict and will map the actual column name.
+        :return:
+        """
+        stmt = update(Products).where(Products.id == record_id).values(**data)
+        await self.db.execute(stmt)
+    
+    async def update_product_details(self, product_id: str, data: dict):
+        stmt = update(ProductDetails).where(ProductDetails.product_id == product_id).values(**data)
+        await self.db.execute(stmt)
+    
+    async def update_product_inventory(self, product_id: str, data: dict):
+        stmt = update(Inventory).where(Inventory.product_id == product_id).values(**data)
+        await self.db.execute(stmt)
+    
+    # delete product
+    async def delete_record(self, record_id: str):
+        """
+        To delete the actual product in database.
+        :param record_id: Unique from products.
+        :return:
+        """
+        stmt = delete(Products).where(Products.id == record_id)
+        await self.db.execute(stmt)
