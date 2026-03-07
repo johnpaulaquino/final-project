@@ -9,10 +9,10 @@ from app.src.schema.products_schema import ProductsFullInformationRequestSchema
 
 class ProductsRepository(UserInterface):
     
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self, _db: AsyncSession):
+        self._db = _db
     
-    async def insert_record(self, request: ProductsFullInformationRequestSchema) -> Products:
+    async def insert_record(self, request: ProductsFullInformationRequestSchema) -> ProductsDataDTO:
         """
         To insert products into database.
         :param request:
@@ -20,25 +20,24 @@ class ProductsRepository(UserInterface):
         """
         # initialize model entity
         products = Products(**request.model_dump())
-        # insert into db, but not commited for the meantime
-        self.db.add(products)
-        await self.db.flush()
-        await self.db.refresh(products)
+        # insert into _db, but not commited for the meantime
+        self._db.add(products)
+        await self._db.flush()
         
         product_id = products.id
         
         # insert into product details
         products_details = ProductDetails(product_id=product_id, images=request.images, description=request.description)
-        # insert into db, but not commited for the meantime
-        self.db.add(products_details)
+        # insert into _db, but not commited for the meantime
         
         # insert into inventory
         inventory = Inventory(product_id=product_id, quantity=request.quantity,
                               low_stock_threshold=request.low_stock_threshold)
-        # insert into db, but not commited for the meantime
-        self.db.add(inventory)
+        # insert into _db, but not commited for the meantime
+        self._db.add_all([inventory, products_details])
         
-        return products
+        # return the Products DTO
+        return ProductsDataDTO.model_validate(products, from_attributes=True)
     
     async def find_record(self, record_id: str) -> ProductInformationDTO:
         """
@@ -47,12 +46,13 @@ class ProductsRepository(UserInterface):
         :return: Product record or None
         """
         stmt = select(Products, Inventory.quantity, Inventory.low_stock_threshold,
+                      Inventory.reserved_stock, Inventory.cancelled_stock, Inventory.sold_stock,
                       ProductDetails.images, ProductDetails.description
                       ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
                                   ).outerjoin(Inventory, Products.id == Inventory.product_id
                                               ).where(Products.id == record_id)
         
-        result = await self.db.execute(stmt)
+        result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
         
         return ProductInformationDTO.model_validate(data[0], from_attributes=True) if data else None
@@ -71,7 +71,7 @@ class ProductsRepository(UserInterface):
                                   ).outerjoin(Inventory, Products.id == Inventory.product_id
                                               ).offset(offset).limit(limit)
         
-        result = await self.db.execute(stmt)
+        result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
         return data or None
     
@@ -82,7 +82,7 @@ class ProductsRepository(UserInterface):
         :return: the actual product data.
         """
         stmt = select(Products).where(Products.id == product_id)
-        result = await self.db.execute(stmt)
+        result = await self._db.execute(stmt)
         data = result.scalar_one_or_none()
         
         return data
@@ -96,15 +96,25 @@ class ProductsRepository(UserInterface):
         :return:
         """
         stmt = update(Products).where(Products.id == record_id).values(**data)
-        await self.db.execute(stmt)
+        await self._db.execute(stmt)
     
     async def update_product_details(self, product_id: str, data: dict):
         stmt = update(ProductDetails).where(ProductDetails.product_id == product_id).values(**data)
-        await self.db.execute(stmt)
+        await self._db.execute(stmt)
     
     async def update_product_inventory(self, product_id: str, data: dict):
-        stmt = update(Inventory).where(Inventory.product_id == product_id).values(**data)
-        await self.db.execute(stmt)
+        try:
+            """
+            Update the inventory table.
+            :param product_id: unique from product id.
+            :param data: A dict object to mapped columns and replace the new one data.
+            :return: Nothing
+            """
+            stmt = update(Inventory).where(Inventory.product_id == product_id).values(**data)
+            await self._db.execute(stmt)
+        
+        except Exception as e:
+            raise e
     
     # delete product
     async def delete_record(self, record_id: str):
@@ -114,4 +124,4 @@ class ProductsRepository(UserInterface):
         :return:
         """
         stmt = delete(Products).where(Products.id == record_id)
-        await self.db.execute(stmt)
+        await self._db.execute(stmt)

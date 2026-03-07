@@ -48,9 +48,6 @@ class ProductsServices:
             product_request.images = product_images
             # get the product status
             
-            product_request.status = Utility.get_product_status(product_request.quantity,
-                                                                product_request.low_stock_threshold)
-            
             await self.uow.products.insert_record(product_request)
             # insert into products details
             # return the output schemas
@@ -72,7 +69,8 @@ class ProductsServices:
         if not data:
             response.message = "No records to retrieve."
             return response
-        
+        # subtract the actual quantity by reserve stock for user side only.
+        data.quantity = data.quantity - data.reserved_stock
         response.data = data
         
         return response

@@ -62,3 +62,11 @@ class DomainInvalidFormatError(DomainError):
 
 class DomainLargeFileError(DomainError):
     pass
+
+
+class DomainJWTExpiredError(DomainError):
+    pass
+
+
+class DomainJWTInvalidError(DomainError):
+    pass

@@ -6,7 +6,7 @@ from pydantic import EmailStr
 from starlette import status
 
 from app.src.application.services.auth_services import AuthServices
-from app.src.core.constants import ConstantsKeyData
+from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import get_redis_services, get_uow
 from app.src.core.security import AppSecurity
 from app.src.exceptions.domain_exceptions import DomainOTPNotExpireError
@@ -18,10 +18,12 @@ from app.src.schema import SuccessfulResponseSchema
 from app.src.schema.auth_schema import CookieResponseSchema, LoginRequest, SignUpRequest
 from app.src.utils.successful_response import SuccessfulResponse
 
-v1_auth_router = APIRouter(tags=["Authentication"], prefix="/v1")
+__base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/auth"
+
+v1_auth_router = APIRouter(tags=[EndpointTags.AUTHENTICATION], prefix=__base_endpoint)
 
 
-@v1_auth_router.post("/signup")
+@v1_auth_router.post("/signup", tags=[EndpointTags.CUSTOMER])
 async def create_account(background_task: BackgroundTasks,
                          email: EmailStr | str = Body(),
                          uow: SQLUnitOfWork = Depends(get_uow),
@@ -70,7 +72,7 @@ async def create_account(background_task: BackgroundTasks,
         raise e
 
 
-@v1_auth_router.post("/verify-signup-otp")
+@v1_auth_router.post("/verify-otp", tags=[EndpointTags.CUSTOMER])
 async def verify_signup_otp(otp_code: str = Body(),
                             verification_token: str = Cookie(None),
                             uow: SQLUnitOfWork = Depends(get_uow),
@@ -109,7 +111,7 @@ async def verify_signup_otp(otp_code: str = Body(),
         raise e
 
 
-@v1_auth_router.post("/complete-signup")
+@v1_auth_router.post("/complete-signup", tags=[EndpointTags.CUSTOMER])
 async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sign_up_request_depends),
                           redis_services: RedisInfrastructure = Depends(get_redis_services),
                           uow: SQLUnitOfWork = Depends(get_uow),
@@ -143,7 +145,7 @@ async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sig
         raise e
 
 
-@v1_auth_router.post("/login")
+@v1_auth_router.post("/login", tags=[EndpointTags.CUSTOMER])
 async def login(background_task: BackgroundTasks,
                 form_data: OAuth2PasswordRequestForm = Depends(),
                 redis_services: RedisInfrastructure = Depends(get_redis_services),
@@ -198,7 +200,7 @@ async def login(background_task: BackgroundTasks,
         raise e
 
 
-@v1_auth_router.post('refresh-token')
+@v1_auth_router.post('/refresh-token', tags=[EndpointTags.CUSTOMER])
 async def refresh_token(refresh_token: str = Cookie(None),
                         uow: SQLUnitOfWork = Depends(get_uow)):
     try:

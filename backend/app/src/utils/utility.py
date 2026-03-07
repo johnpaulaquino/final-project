@@ -81,7 +81,6 @@ class Utility:
         if stock <= 0:
             return ProductStatusSchema.OUT_OF_STOCK
         elif stock <= low_stock_threshold:
-            
             return ProductStatusSchema.LOW_OF_STOCK
         return ProductStatusSchema.AVAILABLE
     

@@ -10,7 +10,6 @@ class ProductsFullInformationRequestSchema(BaseModel):
     product_name: Optional[str] = None
     price: Optional[float] = None
     category: Optional[str] = None
-    status: Optional[str] = None
     quantity: Optional[int] = Field(default=0)
     low_stock_threshold: Optional[int] = Field(default=20)
     description: Optional[str] = Field(default=None)
@@ -116,9 +115,16 @@ class ProductDetailsRequestSchema(BaseModel):
     images: list = Field(default=None)
 
 
+# to insert data in inventory
 class InventoryRequestSchema(BaseModel):
     quantity: int = Field(default=0)
     low_stock_threshold: int = Field(default=20)
+    
+    @staticmethod
+    def schema_depends(quantity: int = Field(default=0),
+                       low_stock_threshold: int = Field(default=20)):
+        return InventoryRequestSchema(quantity=quantity,
+                                      low_stock_threshold=low_stock_threshold)
 
 
 class Images(BaseModel):

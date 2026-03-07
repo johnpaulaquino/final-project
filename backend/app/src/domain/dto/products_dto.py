@@ -7,7 +7,6 @@ from pydantic import BaseModel
 class ProductsDataDTO(BaseModel):
     
     id: str
-    status: str
     product_name: str
     price: float
     category: str
@@ -16,9 +15,13 @@ class ProductsDataDTO(BaseModel):
 
 
 class ProductInformationDTO(BaseModel):
+    status: str | None = None
     Products: ProductsDataDTO | None = None
     quantity: int | None = None
     low_stock_threshold: int | None = None
+    reserved_stock: int | None = None
+    cancelled_stock: int | None = None
+    sold_stock: int | None = None
     description: str | None = None
     images: List[dict] | None = None
 

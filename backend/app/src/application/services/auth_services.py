@@ -269,10 +269,9 @@ class AuthServices:
         return refresh_access_token
     
     async def __insert_session_token(self, user_id: str) -> TokenDTO:
-        print("user", user_id)
         # get the access and refresh token
         access_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id,
-                             "role"                                 : ConstantsKeyData.TOKEN_DATA_KEY_ROLE}
+                             ConstantsKeyData.TOKEN_DATA_KEY_ROLE   : RoleSchema.CUSTOMER}
         refresh_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id}
         
         # generate access and refresh token also the refresh token expiration for database.

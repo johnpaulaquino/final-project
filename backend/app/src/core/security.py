@@ -4,10 +4,9 @@ from datetime import datetime, timedelta, timezone
 
 from jose import ExpiredSignatureError, jwt
 from passlib.context import CryptContext
-from starlette import status
 
 from app.src.core.constants import Constants
-from app.src.exceptions.http_exceptions import JWTExpiredException, JWTInvalidException
+from app.src.exceptions.domain_exceptions import DomainJWTExpiredError, DomainJWTInvalidError
 
 constants = Constants()
 
@@ -69,13 +68,8 @@ class AppSecurity:
     @staticmethod
     def decode_jwt_token(token: str, verify_exp=True):
         try:
-            err_message = JWTInvalidException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    
-                    message='Could not validate credentials',
-                    headers={"WWW-Authenticate": 'Bearer'})
             if not token:
-                raise err_message
+                raise DomainJWTInvalidError(message="Invalid token, cannot validate. Please back to login.")
             
             # decode the token
             payload = jwt.decode(token, key=constants.JWT_KEY, algorithms=[constants.JWT_ALGORITHM],
@@ -83,11 +77,11 @@ class AppSecurity:
             
             if not payload:
                 # then raise an exception
-                raise err_message
+                raise DomainJWTInvalidError("Couldn't validate token credentials. Please back to login.")
             # return the data
             return payload
         except ExpiredSignatureError:
-            raise JWTExpiredException("Token is expired, please back to login.")
+            raise DomainJWTExpiredError("Your token is expired. Please back to login.")
         except Exception as e:
             raise e
     

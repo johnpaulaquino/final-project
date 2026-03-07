@@ -47,3 +47,10 @@ class SessionTokenDTO(BaseModel):
     is_revoke: bool = None
     created_at: datetime = None
     updated_at: datetime = None
+
+
+class DecodedTokenDTO(BaseModel):
+    user_id: str
+    role: str
+    jti: str
+    exp: int

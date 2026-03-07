@@ -15,8 +15,8 @@ class Products(BaseProduct, table=True):
     __tablename__ = "products"
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), nullable=False, primary_key=True)
-    status: str = Field(nullable=False)
     created_at: datetime = Field(
-            sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
+            sa_column=Column(DateTime(timezone=True), default=func.now(), server_default=func.now(),
+                             onupdate=func.now()))
     updated_at: datetime = Field(
             sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))

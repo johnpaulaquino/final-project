@@ -9,13 +9,13 @@ from app.src.schema.auth_schema import TempUserRequest
 
 class TempUserRepository(UserInterface[TempUserRequest]):
     
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self, _db: AsyncSession):
+        self._db = _db
     
     async def insert_record(self, record: TempUserRequest):
         try:
             temp_user = TempUsers(email=record.email)
-            self.db.add(temp_user)
+            self._db.add(temp_user)
         except Exception as e:
             raise e
     
@@ -27,7 +27,7 @@ class TempUserRepository(UserInterface[TempUserRequest]):
         """
         stmt = select(TempUsers).where(TempUsers.email == email)
         
-        result = await self.db.execute(stmt)
+        result = await self._db.execute(stmt)
         data = result.scalar()
         return data
     
@@ -40,7 +40,7 @@ class TempUserRepository(UserInterface[TempUserRequest]):
         """
         try:
             stmt = update(TempUsers).where(TempUsers.email == record_id).values(sign_up_steps=2)
-            await self.db.execute(stmt)
+            await self._db.execute(stmt)
         except Exception as e:
             raise e
     
@@ -52,6 +52,6 @@ class TempUserRepository(UserInterface[TempUserRequest]):
         """
         try:
             stmt = delete(TempUsers).where(TempUsers.email == record_id)
-            await self.db.execute(stmt)
+            await self._db.execute(stmt)
         except Exception as e:
             raise e

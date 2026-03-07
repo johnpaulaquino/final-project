@@ -47,6 +47,19 @@ class UserRepository(UserInterface):
         
         return data[0] if data else data
     
+    async def find_record_by_id(self, user_id: str):
+        stmt = (select(Users,
+                       PersonalInfo,
+                       Address, )
+                .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
+                .outerjoin(Address, Users.id == Address.user_id)
+                .where(Users.id == user_id))
+        
+        result = await self.db.execute(stmt)
+        data = result.mappings().fetchall()
+        
+        return data[0] if data else data
+    
     async def update_record(self, record_id: str, data: dict | None = None):
         pass
     

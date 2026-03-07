@@ -12,5 +12,8 @@ class SessionToken(SQLModel, table=True):
     user_id: str = Field(default=None, nullable=True, foreign_key="users.id", ondelete="CASCADE")
     token: str = Field(nullable=False, index=True)
     is_revoke: bool = Field(default=False, nullable=False)
-    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), onupdate=func.now()))
+    created_at: datetime = Field(
+            sa_column=Column(DateTime(timezone=True), default=func.now(),
+                             server_default=func.now(),
+                             onupdate=func.now()))
     updated_at: datetime = Field(sa_column=Column(DateTime(timezone=True), onupdate=func.now()))

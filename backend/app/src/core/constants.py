@@ -9,6 +9,8 @@ load_dotenv()
 
 
 class Constants(BaseSettings):
+    # api versioning
+    API_V1_ENDPOINT: str = "/api/v1/bistoka"
     # this is for jwt configuration
     JWT_KEY: str
     JWT_ALGORITHM: str
@@ -73,6 +75,15 @@ class ConstantsKey(BaseModel):
     USER_ACTION_SIGNUP: str = "SIGNUP"
     USER_ACTION_LOGIN: str = "LOGIN"
     USER_ACTION_EMAIL_VERIFICATION: str = "EMAIL_VERIFICATION"
+
+
+# Constants for Tags
+class EndpointTags(str):
+    AUTHENTICATION = "Authentication"
+    CUSTOMER = "Customer"
+    ADMIN = "Admin"
+    PRODUCTS = "Products"
+    ORDERS = "Orders"
 
 
 # initialize classes

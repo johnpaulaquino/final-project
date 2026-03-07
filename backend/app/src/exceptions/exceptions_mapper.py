@@ -1,13 +1,16 @@
 from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainDeactivatedError,
-                                                  DomainError, DomainInvalidCredentialsError, DomainNotActivatedError,
+                                                  DomainError, DomainInvalidCredentialsError, DomainJWTExpiredError,
+                                                  DomainJWTInvalidError,
+                                                  DomainNotActivatedError,
                                                   DomainNotFoundError,
                                                   DomainOTPExpiredError, DomainOTPInvalidError, DomainOTPNotExpireError,
                                                   DomainUnAuthorizedError, DomainUnprocessableEntityError, )
-from app.src.exceptions.http_exceptions import (DataBadRequestException, DataConflictError, DataForbiddenException,
-                                                DataUnProcessableContent, )
+from app.src.exceptions.http_exceptions import (DataBadRequestException, DataBaseDataNotFoundException,
+                                                DataConflictError, DataForbiddenException,
+                                                DataUnProcessableContent, JWTExpiredException, JWTInvalidException, )
 
 EXCEPTION_MAPPER = {
-        DomainNotFoundError           : lambda e: DataBadRequestException('Account not found', message=str(e)),
+        DomainNotFoundError           : lambda e: DataBaseDataNotFoundException('Account not found', message=str(e)),
         DomainAlreadyExistsError      : lambda e: DataConflictError('Account already exists', message=str(e)),
         DomainOTPNotExpireError       : lambda e: DataBadRequestException("OTP not expired", message=str(e)),
         DomainDeactivatedError        : lambda e: DataBadRequestException('Account deactivated', message=str(e)),
@@ -23,4 +26,6 @@ EXCEPTION_MAPPER = {
                                                                            message=str(e)),
         DomainError                   : lambda e: DataBadRequestException(message_status='Domain error',
                                                                           message=str(e)),
+        DomainJWTInvalidError         : lambda e: JWTInvalidException(message_status='Invalid Token', message=str(e)),
+        DomainJWTExpiredError         : lambda e: JWTExpiredException(message_status='Expired Token', message=str(e)),
         }
