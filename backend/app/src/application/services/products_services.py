@@ -6,7 +6,6 @@ from app.src.core.constants import ConstantsData
 from app.src.exceptions.domain_exceptions import DomainLargeFileError, DomainNotFoundError
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.infrastructure.email_infrastructure import EmailInfrastructure
 from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
 from app.src.schema.products_schema import (InventoryRequestSchema, ProductDetailsRequestSchema, ProductRequestSchema,
                                             ProductsFullInformationRequestSchema,
@@ -16,10 +15,9 @@ from app.src.utils.utility import Utility
 
 class ProductsServices:
     
-    def __init__(self, uow: SQLUnitOfWork, email_infrastructure: EmailInfrastructure = None,
+    def __init__(self, uow: SQLUnitOfWork,
                  cloudinary_infrastructure: CloudinaryInfrastructure = None):
         self.uow = uow
-        self.email_infrastructure = email_infrastructure
         self.cloudinary_infrastructure = cloudinary_infrastructure
     
     # will inject the jwt oauth2 later

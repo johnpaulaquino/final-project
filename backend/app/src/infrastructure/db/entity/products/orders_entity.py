@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, func
 from sqlmodel import Field, SQLModel
 
-from app.src.schema.orders_schema import OrderPaymentMethod, OrderPaymentStatus, OrderStatus
+from app.src.schema.orders_schema import OrderStatus
 
 
 class Orders(SQLModel, table=True):
@@ -18,16 +18,10 @@ class Orders(SQLModel, table=True):
     user_id: str = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False))
     product_id: str = Field(sa_column=Column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False))
     quantity: int = Field(default=None, nullable=False)
-    payment_method: str = Field(
-            sa_column=Column(SQLEnum(OrderPaymentMethod, name='order_payment_method', create_type=True),
-                             nullable=False))
-    
-    total: float = Field(default=None, nullable=False)
+    price: float = Field(default=0, nullable=True)
     order_status: str = Field(
             sa_column=(Column(SQLEnum(OrderStatus, name="order_status_enum", create_type=True), nullable=False)))
-    payment_status: str = Field(
-            sa_column=(
-                    Column(SQLEnum(OrderPaymentStatus, name="payment_status_enum", create_type=True), nullable=False)))
+    
     created_at: datetime = Field(
             sa_column=Column(DateTime(timezone=True), default=func.now(), server_default=func.now()))
     updated_at: datetime = Field(

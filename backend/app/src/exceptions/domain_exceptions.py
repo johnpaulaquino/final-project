@@ -5,30 +5,7 @@ class DomainError(Exception):
         super().__init__(message)
 
 
-class DomainNotFoundError(DomainError):
-    pass
-
-
-class DomainAlreadyExistsError(DomainError):
-    pass
-
-
-class DomainDeactivatedError(DomainError):
-    pass
-
-
-class DomainOTPNotExpireError(DomainError):
-    pass
-
-
-class DomainOTPInvalidError(DomainError):
-    pass
-
-
-class DomainOTPExpiredError(DomainError):
-    pass
-
-
+# Authentication / Authorization
 class DomainInvalidCredentialsError(DomainError):
     """
     This error is for user invalid credentials. You can use this when the user input is invalid.
@@ -48,9 +25,7 @@ class DomainUnAuthorizedError(DomainError):
     pass
 
 
-class DomainUnprocessableEntityError(DomainError):
-    pass
-
+# Data Validation
 
 class DomainAttributeError(DomainError):
     pass
@@ -64,9 +39,44 @@ class DomainLargeFileError(DomainError):
     pass
 
 
+# JWT Error
 class DomainJWTExpiredError(DomainError):
     pass
 
 
 class DomainJWTInvalidError(DomainError):
+    pass
+
+
+# OTP Error
+class DomainOTPNotExpireError(DomainError):
+    pass
+
+
+class DomainOTPInvalidError(DomainError):
+    pass
+
+
+class DomainOTPExpiredError(DomainError):
+    pass
+
+
+# Entity error
+class DomainUnprocessableEntityError(DomainError):
+    pass
+
+
+class DomainNotFoundError(DomainError):
+    pass
+
+
+class DomainAlreadyExistsError(DomainError):
+    pass
+
+
+class DomainDeactivatedError(DomainError):
+    pass
+
+
+class DomainEntityStatusInvalidError(DomainError):
     pass

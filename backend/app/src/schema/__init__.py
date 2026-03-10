@@ -14,7 +14,7 @@ class SuccessfulResponseSchema(BaseModel):
     access_token: str = None
     refresh_token: str = None
     action: str = None
-    paginated: dict = None
+    paginated: dict | None = None
 
 
 class RoleSchema:
@@ -32,3 +32,10 @@ class SignInTypeSchema:
 class PaginatedSchema(BaseModel):
     skip: int = Field(ge=1, default=1)
     limit: int = Field(ge=10, default=10)
+
+
+class PaginatedOutput(BaseModel):
+    start_page: int
+    end_page: int
+    total_records: int
+    has_next: bool

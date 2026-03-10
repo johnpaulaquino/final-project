@@ -1,10 +1,9 @@
-from sqlalchemy import delete, update
+from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_, select
 
-from app.src.domain.dto.order_dto import OrderDTO
+from app.src.domain.dto.order_dto import OrderDTO, OrderDTOFullData, OrderDTOFullDataList
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import Orders, Products
+from app.src.infrastructure.db.entity import Inventory, Orders, Products, Transactions
 from app.src.schema.orders_schema import CreateOrder, OrderStatus
 
 
@@ -19,19 +18,119 @@ class OrdersRepository(UserInterface):
             self._db.add(order)
             await self._db.flush()
             
-            return OrderDTO.model_validate(order, from_attributes=True)
+            return OrderDTO(**order.model_dump())
         except Exception as e:
             raise e
     
-    async def find_record(self, record_id: str):
+    async def find_order_only(self, order_id, user_id, product_id) -> OrderDTO:
         try:
-            stmt = (select(Orders, Products.product_name, Products.price, Products.category)
+            stmt = (select(Orders)
+                    .where(and_(Orders.id == order_id,
+                                Orders.product_id == product_id,
+                                Orders.user_id == user_id)))
+            result = await self._db.execute(stmt)
+            data = result.scalars().first()
+            
+            return OrderDTO.model_validate(data)
+        except Exception as e:
+            raise e
+    
+    async def get_total_records(self, user_id: str,
+                                order_status: str):
+        try:
+            stmt = select(func.count(Orders.id)).where(and_(Orders.user_id == user_id,
+                                                            Orders.order_status == order_status))
+            result = await self._db.execute(stmt)
+            data = result.scalars().first()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def find_order(self, order_id, user_id, product_id) -> OrderDTOFullData:
+        try:
+            stmt = (select(Orders,
+                           Products.product_name,
+                           Products.price,
+                           Products.category,
+                           Inventory.quantity,
+                           Inventory.sold_stock,
+                           Inventory.reserved_stock,
+                           Inventory.cancelled_stock,
+                           Inventory.low_stock_threshold,
+                           Transactions.transaction_reference,
+                           Transactions.payment_status,
+                           Transactions.total_amount,
+                           Transactions.payment_provider_reference)
                     .outerjoin(Orders, Products.id == Orders.product_id)
-                    .where(Orders.id == record_id))
+                    .outerjoin(Inventory, Products.id == Inventory.product_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(and_(Orders.id == order_id,
+                                Orders.product_id == product_id,
+                                Orders.user_id == user_id)))
             result = await self._db.execute(stmt)
             data = result.mappings().fetchall()
-            return data
+            
+            return OrderDTOFullData(**data[0]) if data else None
         
+        except Exception as e:
+            raise e
+    
+    async def paginated_orders(self, user_id, offset: int, limit: int, order_status: str):
+        try:
+            
+            where_clause = None if order_status == "All" else Orders.order_status == order_status
+            stmt = (select(Orders,
+                           Products.product_name,
+                           Products.price,
+                           Products.category,
+                           Inventory.quantity,
+                           Inventory.sold_stock,
+                           Inventory.reserved_stock,
+                           Inventory.cancelled_stock,
+                           Inventory.low_stock_threshold,
+                           Transactions.transaction_reference,
+                           Transactions.payment_status,
+                           Transactions.total_amount,
+                           Transactions.payment_provider_reference)
+                    .outerjoin(Orders, Products.id == Orders.product_id)
+                    .outerjoin(Inventory, Products.id == Inventory.product_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(and_(Orders.user_id == user_id))
+                    .limit(limit)
+                    .offset(offset))
+            result = await self._db.execute(stmt)
+            data = result.mappings().fetchall()
+            data = {"Orders": data}
+            return OrderDTOFullDataList(**data)
+        except Exception as e:
+            raise e
+    
+    async def find_order_with_status(self, order_id, user_id, product_id, order_status) -> OrderDTOFullData:
+        try:
+            stmt = (select(Orders,
+                           Products.product_name,
+                           Products.price,
+                           Products.category,
+                           Inventory.quantity,
+                           Inventory.sold_stock,
+                           Inventory.reserved_stock,
+                           Inventory.cancelled_stock,
+                           Inventory.low_stock_threshold,
+                           Transactions.transaction_reference,
+                           Transactions.payment_status,
+                           Transactions.total_amount,
+                           Transactions.payment_provider_reference)
+                    .outerjoin(Orders, Products.id == Orders.product_id)
+                    .outerjoin(Inventory, Products.id == Inventory.product_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(and_(Orders.id == order_id,
+                                Orders.product_id == product_id,
+                                Orders.order_status == order_status,
+                                Orders.user_id == user_id)))
+            result = await self._db.execute(stmt)
+            data = result.mappings().fetchall()
+            
+            return OrderDTOFullData(**data[0]) if data else None
         
         except Exception as e:
             raise e
@@ -47,7 +146,7 @@ class OrdersRepository(UserInterface):
         :return:
         """
         try:
-            stmt = update(Orders).values(status=OrderStatus.CANCELLED).where(
+            stmt = update(Orders).values(status=OrderStatus.Cancelled).where(
                     and_(Orders.id == order_id, Orders.user_id == user_id))
             await self._db.execute(stmt)
         except Exception as e:

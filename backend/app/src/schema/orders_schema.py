@@ -15,7 +15,8 @@ class OrderStatus(str, Enum):
     Pending = "Pending"  # Order placed by user
     Approved = "Approved"  # Admin or system approved order
     Shipped = "Shipped"  # Order is on the way
-    Delivered = "Delivered"  # Customer received the order
+    Delivered = "Delivered"  # Rider delivered the order
+    Received = "Received"  # Customer received the order
     Cancelled = "Cancelled"  # Cancelled by admin or user
     Returned = "Returned"  # Customer returned order
 
@@ -31,9 +32,8 @@ class CreateOrder(BaseModel):
     user_id: str = None
     product_id: str
     quantity: int = 1
+    price: float = 0
     payment_method: OrderPaymentMethod = OrderPaymentMethod.COD
-    total: float = 0
-    payment_status: OrderPaymentStatus = OrderPaymentStatus.Unpaid
     order_status: OrderStatus = OrderStatus.Pending
     
     @staticmethod
@@ -41,10 +41,22 @@ class CreateOrder(BaseModel):
             quantity: int = Body(default=1, ge=1),
             product_id: str = Body(...),
             payment_method: OrderPaymentMethod = Body(...),
-            payment_status: OrderPaymentStatus = Body(...),
             order_status: OrderStatus = Body(...)):
         return CreateOrder(quantity=quantity,
                            payment_method=payment_method,
-                           payment_status=payment_status,
                            order_status=order_status,
                            product_id=product_id)
+
+
+class ConfirmOrderSchema(BaseModel):
+    order_id: int
+    user_id: str
+    product_id: str
+
+
+class CancelOrderSchema(ConfirmOrderSchema):
+    pass
+
+
+class ShippedOrderSchema(ConfirmOrderSchema):
+    pass

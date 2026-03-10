@@ -7,9 +7,8 @@ from starlette import status
 
 from app.src.application.services.auth_services import AuthServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
-from app.src.core.dependencies import get_redis_services, get_uow
+from app.src.core.dependencies import get_auth_service, get_email_infrastructure, get_redis_services, get_uow
 from app.src.core.security import AppSecurity
-from app.src.exceptions.domain_exceptions import DomainOTPNotExpireError
 from app.src.exceptions.http_exceptions import DataBadRequestException
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.infrastructure.email_infrastructure import EmailInfrastructure
@@ -26,14 +25,11 @@ v1_auth_router = APIRouter(tags=[EndpointTags.AUTHENTICATION], prefix=__base_end
 @v1_auth_router.post("/signup", tags=[EndpointTags.CUSTOMER])
 async def create_account(background_task: BackgroundTasks,
                          email: EmailStr | str = Body(),
-                         uow: SQLUnitOfWork = Depends(get_uow),
+                         email_infrastructure: EmailInfrastructure = Depends(get_email_infrastructure),
+                         auth_services: AuthServices = Depends(get_auth_service),
                          redis_services: RedisInfrastructure = Depends(get_redis_services)):
     try:
         # email infrastructure.
-        email_infrastructure = EmailInfrastructure()
-        # auth services.
-        auth_services = AuthServices(uow, email_infrastructure)
-        
         # otp from redis.
         otp_code_from_redis = await redis_services.get_otp(email)
         
@@ -53,7 +49,6 @@ async def create_account(background_task: BackgroundTasks,
         
         if services_response.otp_code:
             # set the otp code in redis.
-            
             redis_expiration = 3 * 60
             await redis_services.set_otp(email, services_response.otp_code, redis_expiration)
             success_response_schema.status_code = status.HTTP_202_ACCEPTED
@@ -75,11 +70,10 @@ async def create_account(background_task: BackgroundTasks,
 @v1_auth_router.post("/verify-otp", tags=[EndpointTags.CUSTOMER])
 async def verify_signup_otp(otp_code: str = Body(),
                             verification_token: str = Cookie(None),
-                            uow: SQLUnitOfWork = Depends(get_uow),
+                            auth_services: AuthServices = Depends(get_auth_service),
                             redis_services: RedisInfrastructure = Depends(get_redis_services)):
     try:
         # auth services.
-        auth_services = AuthServices(uow, None)
         user_email: str = ""
         try:
             # verify token
@@ -97,8 +91,10 @@ async def verify_signup_otp(otp_code: str = Body(),
         services_response = await auth_services.verify_signup_otp_code(otp_code=otp_code,
                                                                        otp_code_from_redis=otp_code_from_redis,
                                                                        email=user_email)
+        
         # if successful response
         success_response_schema = SuccessfulResponseSchema(message=services_response.message)
+        
         success_response_schema.status_code = status.HTTP_201_CREATED
         success_response_schema.status_message = "ok"
         response = SuccessfulResponse(success_response_schema)
@@ -114,17 +110,15 @@ async def verify_signup_otp(otp_code: str = Body(),
 @v1_auth_router.post("/complete-signup", tags=[EndpointTags.CUSTOMER])
 async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sign_up_request_depends),
                           redis_services: RedisInfrastructure = Depends(get_redis_services),
-                          uow: SQLUnitOfWork = Depends(get_uow),
+                          auth_services: AuthServices = Depends(get_auth_service),
                           verification_token: str = Cookie(None)):
     try:
-        auth_services = AuthServices(uow)
         
         # auth services response.
         services_response = await auth_services.manual_signup_final_step(signup_data, verification_token)
         # delete the otp code from redis.
         await redis_services.delete_otp(signup_data.email)
         # delete data from temp users table
-        await uow.temp_users.delete_record(signup_data.email)
         
         # if successful response
         # set the data from services response to the successful response schema, and return the response.
@@ -149,10 +143,10 @@ async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sig
 async def login(background_task: BackgroundTasks,
                 form_data: OAuth2PasswordRequestForm = Depends(),
                 redis_services: RedisInfrastructure = Depends(get_redis_services),
-                uow: SQLUnitOfWork = Depends(get_uow)):
+                email_infrastructure: EmailInfrastructure = Depends(get_email_infrastructure),
+                auth_services: AuthServices = Depends(get_auth_service),
+                ):
     try:
-        email_infrastructure = EmailInfrastructure()
-        auth_services = AuthServices(uow, email_infrastructure)
         
         credentials = LoginRequest(email=form_data.username, password=form_data.password)
         auth_response = await auth_services.manual_login(credentials=credentials)
@@ -160,32 +154,6 @@ async def login(background_task: BackgroundTasks,
         response_schema = SuccessfulResponseSchema(message=auth_response.message,
                                                    status_code=status.HTTP_200_OK,
                                                    status_message="ok")
-        
-        if auth_response.action == ConstantsKeyData.USER_ACTION_EMAIL_VERIFICATION:
-            generated_otp = AppSecurity.generate_otp_code()
-            
-            # first get if there is an existing otp code in redis, if there is, delete it and set the new one, if there isn't just set the new one.
-            existing_otp = await redis_services.get_otp(form_data.username)
-            
-            if existing_otp:
-                raise DomainOTPNotExpireError(message="Your code has not expired yet.")
-            
-            # if no otp in redis, then set otp and send email. also generate a verification token with 24 hours expiration time, and set it in the cookie.
-            data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_EMAIL: form_data.username}
-            response_schema.message = "Verification code sent to your email."
-            response_schema.status_code = status.HTTP_202_ACCEPTED
-            
-            # then return the response with the access token in the cookie, and send the email in background task.
-            response = SuccessfulResponse(response_schema)
-            
-            response.set_cookie(ConstantsKeyData.COOKIE_VERIFICATION_KEY,
-                                AppSecurity.generate_access_token(jti=str(uuid4()), data=data, exp=24 * 3600))
-            
-            otp_code = await redis_services.set_otp(form_data.username, generated_otp)
-            # send via background task.
-            background_task.add_task(email_infrastructure.send_email_verification_code, recipient=form_data.username,
-                                     verification_code=otp_code)
-            return response
         
         # if no errors, then return the response with the access token if there is one.
         response_schema.access_token = auth_response.access_token
@@ -218,3 +186,30 @@ async def refresh_token(refresh_token: str = Cookie(None),
     
     except Exception as e:
         raise e
+
+# Unuse code di ko tanda saang logic to
+# if auth_response.action == ConstantsKeyData.USER_ACTION_EMAIL_VERIFICATION:
+#     generated_otp = AppSecurity.generate_otp_code()
+#
+#     # first get if there is an existing otp code in redis, if there is, delete it and set the new one, if there isn't just set the new one.
+#     existing_otp = await redis_services.get_otp(form_data.username)
+#
+#     if existing_otp:
+#         raise DomainOTPNotExpireError(message="Your code has not expired yet.")
+#
+#     # if no otp in redis, then set otp and send email. also generate a verification token with 24 hours expiration time, and set it in the cookie.
+#     data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_EMAIL: form_data.username}
+#     response_schema.message = "Verification code sent to your email."
+#     response_schema.status_code = status.HTTP_202_ACCEPTED
+#
+#     # then return the response with the access token in the cookie, and send the email in background task.
+#     response = SuccessfulResponse(response_schema)
+#
+#     response.set_cookie(ConstantsKeyData.COOKIE_VERIFICATION_KEY,
+#                         AppSecurity.generate_access_token(jti=str(uuid4()), data=data, exp=24 * 3600))
+#
+#     otp_code = await redis_services.set_otp(form_data.username, generated_otp)
+#     # send via background task.
+#     background_task.add_task(email_infrastructure.send_email_verification_code, recipient=form_data.username,
+#                              verification_code=otp_code)
+#     return response

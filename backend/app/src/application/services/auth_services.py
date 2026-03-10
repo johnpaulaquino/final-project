@@ -12,7 +12,6 @@ from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, Doma
                                                   DomainInvalidCredentialsError, DomainNotFoundError,
                                                   DomainOTPNotExpireError, DomainUnAuthorizedError, )
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.infrastructure.email_infrastructure import EmailInfrastructure
 from app.src.schema import RoleSchema
 from app.src.schema.auth_schema import LoginRequest, SessionTokenRequest, SignUpRequest, TempUserRequest
 from app.src.utils.utility import Utility
@@ -22,10 +21,9 @@ from app.src.utils.utility import Utility
 
 class AuthServices:
     
-    def __init__(self, uow: SQLUnitOfWork, email_infrastructure: EmailInfrastructure = None):
+    def __init__(self, uow: SQLUnitOfWork):
         self.__uow = uow
         self.__verification_token = ConstantsKeyData.COOKIE_VERIFICATION_KEY
-        self.email_infrastructure = email_infrastructure
     
     @retry_on_transient
     async def manual_signup_initiate(self, email: EmailStr | str, old_otp_code: str):
@@ -45,7 +43,7 @@ class AuthServices:
             # check first if there's otp code in that email on redis before proceeding.
             
             if old_otp_code:
-                raise DomainOTPNotExpireError(message="Your code has not expired yet.", )
+                raise DomainOTPNotExpireError(message="Your code is not expired yet.", )
             
             # query from temp database
             temp_user_data = await self.__uow.temp_users.find_record(email)
@@ -79,6 +77,7 @@ class AuthServices:
                                      otp_code_from_redis: str,
                                      email: str):
         try:
+            
             # check first if the email is already verified
             temp_users_data = await self.__uow.temp_users.find_record(email)
             
@@ -108,6 +107,7 @@ class AuthServices:
         :param verification_token: verification token that will retrieve in cookie.
         :return: Successful Response Schema
         """
+        print(verification_token)
         try:
             
             try:
@@ -130,6 +130,9 @@ class AuthServices:
             user_id = user.id
             # insert data into address and personal info
             await self.__uow.users.insert_personal_info_address(user_id, new_user)
+            
+            # then delete data from temp user data
+            await self.__uow.temp_users.delete_record(email)
             
             # insert the token into db
             access_refresh_token = await self.__insert_session_token(user_id)
