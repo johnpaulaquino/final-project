@@ -2,6 +2,7 @@ import sys
 
 import uvicorn
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
 from app.src.api.v1.v1_auth_route import v1_auth_router
 from app.src.api.v1.v1_order_route import v1_order_router
@@ -14,7 +15,20 @@ from app.src.utils.life_span import app_lifespan
 app = FastAPI(lifespan=app_lifespan)
 
 # TODO CORS: Insert here
-
+origins = [
+        'https://my-personal-portfolio-one-steel.vercel.app',
+        'https://my-personal-portfolio-one-steel.vercel.app/projects/all',
+        'https://my-personal-portfolio-one-steel.vercel.app/certificates/all',
+        'https://my-personal-portfolio-one-steel.vercel.app/testimonials/all',
+        'https://my-personal-portfolio-one-steel.vercel.app/skills/all',
+        ]
+app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        )
 
 app.include_router(v1_auth_router)
 app.include_router(v1_products_router)

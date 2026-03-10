@@ -150,7 +150,8 @@ class OrderServices:
         except Exception as e:
             raise e
     
-    async def get_paginated_orders(self, paginated: PaginatedSchema, order_status: str,
+    async def get_paginated_orders(self, paginated: PaginatedSchema,
+                                   order_status: str,
                                    current_user: DecodedTokenDTO,
                                    ):
         
@@ -166,9 +167,8 @@ class OrderServices:
                                                                 offset,
                                                                 paginated.limit,
                                                                 order_status)
-            
-            total_records = await self.uof.orders.get_total_records()
-            print(total_records)
+            total_records = await self.uof.orders.get_total_records(user_id=current_user.user_id,
+                                                                    order_status=order_status)
             curr_page = offset + 1
             end_page = paginated.skip * paginated.limit
             has_next = True if (total_records - end_page) > 0 else False

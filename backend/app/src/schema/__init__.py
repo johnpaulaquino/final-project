@@ -1,3 +1,5 @@
+from typing import Any, List
+
 from pydantic import BaseModel, Field
 
 """
@@ -10,7 +12,7 @@ class SuccessfulResponseSchema(BaseModel):
     headers: dict = None
     status_code: int = None
     status_message: str = "ok"
-    data: dict = None
+    data: Any = None
     access_token: str = None
     refresh_token: str = None
     action: str = None

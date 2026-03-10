@@ -24,6 +24,7 @@ class OrdersRepository(UserInterface):
     
     async def find_order_only(self, order_id, user_id, product_id) -> OrderDTO:
         try:
+            
             stmt = (select(Orders)
                     .where(and_(Orders.id == order_id,
                                 Orders.product_id == product_id,
@@ -38,8 +39,10 @@ class OrdersRepository(UserInterface):
     async def get_total_records(self, user_id: str,
                                 order_status: str):
         try:
-            stmt = select(func.count(Orders.id)).where(and_(Orders.user_id == user_id,
-                                                            Orders.order_status == order_status))
+            conditions = [Orders.user_id == user_id]
+            if order_status in OrderStatus:
+                conditions.append(Orders.order_status == order_status)
+            stmt = select(func.count(Orders.id)).where(and_(*conditions))
             result = await self._db.execute(stmt)
             data = result.scalars().first()
             return data
@@ -61,12 +64,11 @@ class OrdersRepository(UserInterface):
                            Transactions.payment_status,
                            Transactions.total_amount,
                            Transactions.payment_provider_reference)
-                    .outerjoin(Orders, Products.id == Orders.product_id)
-                    .outerjoin(Inventory, Products.id == Inventory.product_id)
-                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
-                    .where(and_(Orders.id == order_id,
-                                Orders.product_id == product_id,
-                                Orders.user_id == user_id)))
+            .outerjoin(Orders, Products.id == Orders.product_id)
+            .outerjoin(Inventory, Products.id == Inventory.product_id)
+            .outerjoin(Transactions, Orders.id == Transactions.order_id)
+            .where(and_(
+                    Orders.user_id == user_id)))
             result = await self._db.execute(stmt)
             data = result.mappings().fetchall()
             
@@ -78,7 +80,9 @@ class OrdersRepository(UserInterface):
     async def paginated_orders(self, user_id, offset: int, limit: int, order_status: str):
         try:
             
-            where_clause = None if order_status == "All" else Orders.order_status == order_status
+            conditions = [Orders.user_id == user_id]
+            if order_status in OrderStatus:
+                conditions.append(Orders.order_status == order_status)
             stmt = (select(Orders,
                            Products.product_name,
                            Products.price,
@@ -95,7 +99,7 @@ class OrdersRepository(UserInterface):
                     .outerjoin(Orders, Products.id == Orders.product_id)
                     .outerjoin(Inventory, Products.id == Inventory.product_id)
                     .outerjoin(Transactions, Orders.id == Transactions.order_id)
-                    .where(and_(Orders.user_id == user_id))
+                    .where(and_(*conditions))
                     .limit(limit)
                     .offset(offset))
             result = await self._db.execute(stmt)

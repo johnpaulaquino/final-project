@@ -27,6 +27,7 @@ async def insert_order_item(item_order: CreateOrder = Depends(CreateOrder.depend
         
         # set the status response
         orders_response.status_code = status.HTTP_201_CREATED
+      
         
         return SuccessfulResponse(orders_response)
     except Exception as e:
