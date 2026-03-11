@@ -32,7 +32,7 @@ class OrdersRepository(UserInterface):
             result = await self._db.execute(stmt)
             data = result.scalars().first()
             
-            return OrderDTO.model_validate(data)
+            return OrderDTO.model_validate(data) if data else data
         except Exception as e:
             raise e
     
@@ -51,6 +51,8 @@ class OrdersRepository(UserInterface):
     
     async def find_order(self, order_id, user_id, product_id) -> OrderDTOFullData:
         try:
+            conditions = [Orders.user_id == user_id, Orders.id == order_id, Orders.product_id == product_id]
+            
             stmt = (select(Orders,
                            Products.product_name,
                            Products.price,
@@ -64,11 +66,10 @@ class OrdersRepository(UserInterface):
                            Transactions.payment_status,
                            Transactions.total_amount,
                            Transactions.payment_provider_reference)
-            .outerjoin(Orders, Products.id == Orders.product_id)
-            .outerjoin(Inventory, Products.id == Inventory.product_id)
-            .outerjoin(Transactions, Orders.id == Transactions.order_id)
-            .where(and_(
-                    Orders.user_id == user_id)))
+                    .outerjoin(Orders, Products.id == Orders.product_id)
+                    .outerjoin(Inventory, Products.id == Inventory.product_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(and_(*conditions)))
             result = await self._db.execute(stmt)
             data = result.mappings().fetchall()
             
@@ -81,7 +82,9 @@ class OrdersRepository(UserInterface):
         try:
             
             conditions = [Orders.user_id == user_id]
+            print(order_status)
             if order_status in OrderStatus:
+                
                 conditions.append(Orders.order_status == order_status)
             stmt = (select(Orders,
                            Products.product_name,
@@ -142,15 +145,16 @@ class OrdersRepository(UserInterface):
     async def update_record(self, record_id: str, data: dict | None = None):
         pass
     
-    async def cancel_order(self, order_id: str, user_id: str):
+    async def update_order(self, order_id: str, user_id: str, data: dict):
         """
         This function is to cancel specific order of a user. This is a user function.
         :param order_id: Unique id from order.
+        :param data: to map the columns on database and insert the actual data on itS.
         :param user_id: unique id from user.
-        :return:
+        :return:S
         """
         try:
-            stmt = update(Orders).values(status=OrderStatus.Cancelled).where(
+            stmt = update(Orders).values(**data).where(
                     and_(Orders.id == order_id, Orders.user_id == user_id))
             await self._db.execute(stmt)
         except Exception as e:

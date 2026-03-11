@@ -10,11 +10,13 @@ load_dotenv()
 
 class Constants(BaseSettings):
     # api versioning
-    API_V1_ENDPOINT: str = "/api/v1/bistoka"
+    API_V1_ENDPOINT: str = "/api/v1/biskota"
     # this is for jwt configuration
     JWT_KEY: str
     JWT_ALGORITHM: str
     JWT_EXPIRATION: int
+    
+    ENVIRONMENT: str
     
     # this is for database
     # this is for database

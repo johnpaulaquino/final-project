@@ -1,7 +1,10 @@
+import socket
+
 from starlette import status
 
+from app.src.core.constants import ConstantsData
 from app.src.exceptions.domain_exceptions import DomainInvalidFormatError, DomainOTPExpiredError, DomainOTPInvalidError
-from app.src.schema import SuccessfulResponseSchema
+from app.src.schema import EnvironmentStatus, SuccessfulResponseSchema
 from app.src.schema.products_schema import ProductStatusSchema
 
 
@@ -113,3 +116,21 @@ class Utility:
                     raise e
         
         return is_file_upload
+    
+    @staticmethod
+    def get_cors():
+        ip_add = ''
+        if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
+            # This is for CORS Middleware
+            origins = [
+                    'http://localhost:5173',
+                    'http://127.0.0.1:5173',
+                    'http://127.0.0.1:3000',
+                    'http://127.0.0.1:4040', ]
+        else:
+            # for production
+            origins = [
+                    'https://my-personal-portfolio-one-steel.vercel.app',
+                    ]
+        
+        return origins

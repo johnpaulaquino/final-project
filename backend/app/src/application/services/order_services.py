@@ -1,7 +1,8 @@
 from fastapi.encoders import jsonable_encoder
 
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.exceptions.domain_exceptions import DomainEntityStatusInvalidError, DomainNotFoundError
+from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError, DomainJWTInvalidError,
+                                                  DomainNotFoundError, )
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedOutput, PaginatedSchema, SuccessfulResponseSchema
 from app.src.schema.orders_schema import (CancelOrderSchema, ConfirmOrderSchema, CreateOrder, OrderStatus,
@@ -26,13 +27,13 @@ class OrderServices:
             
             # check if user not exists
             if not user:
-                raise DomainNotFoundError("User not found.")
+                raise DomainJWTInvalidError("No user not found. Please back to login.")
             
             # find products
             product_data = await self.uof.products.find_record(new_order.product_id)
             # check if product not exists.
             if not product_data:
-                raise DomainNotFoundError("Product not found.")
+                raise DomainNotFoundError("You cannot place an order that the product is not exist.")
             
             # products
             product = product_data.Products
@@ -80,19 +81,25 @@ class OrderServices:
     
     async def confirm_order(self, order_update: ConfirmOrderSchema):
         try:
+            # finf if the user exists
+            user_data = await self.uof.users.find_record_by_id(order_update.user_id)
+            if not user_data:
+                raise DomainNotFoundError("Cannot confirm order, because no user found.")
             
             # first get the orders
             data = await self.uof.orders.find_order(order_update.order_id,
                                                     order_update.user_id,
                                                     order_update.product_id)
             
-            # if the order status is not Pending, then raise an error.
+            if not data:
+                raise DomainNotFoundError("Cannot confirm order that is not exists.")
+                # if the order status is not Pending, then raise an error.
             if data.Orders.order_status != OrderStatus.Pending:
                 raise DomainEntityStatusInvalidError("Can't confirm order that is not pending.")
             
             # update order status
             to_update = {"order_status": OrderStatus.Approved}
-            await self.uof.orders.update_record(order_update.order_id, to_update)
+            await self.uof.orders.update_order(order_update.order_id, order_update.user_id, to_update)
             
             new_quantity = data.quantity - data.reserved_stock
             sold_stock = data.sold_stock + data.reserved_stock
@@ -110,24 +117,30 @@ class OrderServices:
             data = await self.uof.orders.find_order_only(order_update.order_id,
                                                          order_update.user_id,
                                                          order_update.product_id)
-            
+            if not data:
+                raise DomainNotFoundError("Cannot ship order that is not exists.")
+            validated_order_status = data.order_status
             # if the order status is not Pending or approved, then raise an error.
-            if data.order_status not in [OrderStatus.Pending, OrderStatus.Approved]:
+            if validated_order_status != OrderStatus.Approved:
                 
                 raise DomainEntityStatusInvalidError("Can't confirm order that is not pending.")
             
             # update order status
             to_update = {"order_status": OrderStatus.Shipped}
-            await self.uof.orders.update_record(order_update.order_id, to_update)
+            await self.uof.orders.update_order(order_update.order_id,
+                                               order_update.user_id,
+                                               to_update)
             
             return SuccessfulResponseSchema(message="Successfully Shipped order.")
         
         except Exception as e:
             raise e
     
-    async def cancel_order(self, order_cancel: CancelOrderSchema):
+    async def cancel_order(self, order_cancel: CancelOrderSchema,
+                           current_user: DecodedTokenDTO):
         try:
             # first get the orders
+            order_cancel.user_id = current_user.user_id
             data = await self.uof.orders.find_order(order_cancel.order_id,
                                                     order_cancel.user_id,
                                                     order_cancel.product_id)
@@ -136,7 +149,9 @@ class OrderServices:
             
             # update order status into cancel
             to_update = {"order_status": OrderStatus.Cancelled}
-            await self.uof.orders.update_record(order_cancel.order_id, to_update)
+            await self.uof.orders.update_order(order_cancel.order_id,
+                                               current_user.user_id,
+                                               to_update)
             
             # back to its original quantity
             new_quantity = data.quantity + data.sold_stock
@@ -162,13 +177,16 @@ class OrderServices:
                 raise DomainNotFoundError("User not found. Please back to login.")
             
             offset = Utility.get_offset(paginated.skip, paginated.limit)
+            validated_order_status = Utility.capitalize_first_letters(order_status)
+            if validated_order_status not in OrderStatus and validated_order_status != "All":
+                raise DomainEntityStatusInvalidError(f"{order_status} is not a valid order status.")
             
             order_data = await self.uof.orders.paginated_orders(current_user.user_id,
                                                                 offset,
                                                                 paginated.limit,
-                                                                order_status)
+                                                                validated_order_status)
             total_records = await self.uof.orders.get_total_records(user_id=current_user.user_id,
-                                                                    order_status=order_status)
+                                                                    order_status=validated_order_status)
             curr_page = offset + 1
             end_page = paginated.skip * paginated.limit
             has_next = True if (total_records - end_page) > 0 else False

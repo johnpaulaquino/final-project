@@ -41,3 +41,9 @@ class PaginatedOutput(BaseModel):
     end_page: int
     total_records: int
     has_next: bool
+
+
+class EnvironmentStatus(str):
+    Dev = 'dev'
+    Test = 'test'
+    Production = 'production'

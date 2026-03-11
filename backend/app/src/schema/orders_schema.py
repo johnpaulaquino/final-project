@@ -40,11 +40,9 @@ class CreateOrder(BaseModel):
     def depends(
             quantity: int = Body(default=1, ge=1),
             product_id: str = Body(...),
-            payment_method: OrderPaymentMethod = Body(...),
-            order_status: OrderStatus = Body(...)):
+            payment_method: OrderPaymentMethod = Body(...)):
         return CreateOrder(quantity=quantity,
                            payment_method=payment_method,
-                           order_status=order_status,
                            product_id=product_id)
 
 

@@ -9,8 +9,8 @@ from app.src.exceptions.http_exceptions import (DataBadRequestException, DataBas
                                                 DataUnProcessableContent, JWTExpiredException, JWTInvalidException, )
 
 EXCEPTION_MAPPER = {
-        DomainNotFoundError           : lambda e: DataBaseDataNotFoundException('Account not found', message=str(e)),
-        DomainAlreadyExistsError      : lambda e: DataConflictError('Account already exists', message=str(e)),
+        DomainNotFoundError           : lambda e: DataBaseDataNotFoundException('Entity not found', message=str(e)),
+        DomainAlreadyExistsError      : lambda e: DataConflictError('Entity already exists', message=str(e)),
         DomainOTPNotExpireError       : lambda e: DataBadRequestException("OTP not expired", message=str(e)),
         DomainDeactivatedError        : lambda e: DataBadRequestException('Account deactivated', message=str(e)),
         DomainOTPInvalidError         : lambda e: DataBadRequestException('Invalid OTP', message=str(e)),

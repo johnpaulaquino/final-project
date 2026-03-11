@@ -11,17 +11,11 @@ from app.src.core.constants import ConstantsData
 from app.src.exceptions import BaseAppExceptions, app_exception_handler
 from app.src.exceptions.domain_exceptions import DomainError
 from app.src.utils.life_span import app_lifespan
+from app.src.utils.utility import Utility
 
 app = FastAPI(lifespan=app_lifespan)
 
-# TODO CORS: Insert here
-origins = [
-        'https://my-personal-portfolio-one-steel.vercel.app',
-        'https://my-personal-portfolio-one-steel.vercel.app/projects/all',
-        'https://my-personal-portfolio-one-steel.vercel.app/certificates/all',
-        'https://my-personal-portfolio-one-steel.vercel.app/testimonials/all',
-        'https://my-personal-portfolio-one-steel.vercel.app/skills/all',
-        ]
+origins = Utility.get_cors()
 app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
