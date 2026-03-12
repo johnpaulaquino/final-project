@@ -127,6 +127,15 @@ class InventoryRequestSchema(BaseModel):
                                       low_stock_threshold=low_stock_threshold)
 
 
+class UpdateProductsInventorySchema(BaseModel):
+    quantity: int | None = None
+    low_stock_threshold: int | None = None
+    reserved_stock: int | None = None
+    cancelled_stock: int | None = None
+    sold_stock: int | None = None
+    product_id: str | None = None
+
+
 class Images(BaseModel):
     public_key: str = Field(default=None)
     image_url: str = Field(default=None)

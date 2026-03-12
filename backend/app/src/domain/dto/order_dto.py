@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 class OrderDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int | None = None
+    string_id: str | None = None
     user_id: str | None = None
     product_id: str | None = None
     quantity: int | None = None

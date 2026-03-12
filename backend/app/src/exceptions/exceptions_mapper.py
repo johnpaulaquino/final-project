@@ -1,12 +1,14 @@
 from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainDeactivatedError,
                                                   DomainEntityStatusInvalidError, DomainError,
-                                                  DomainInvalidCredentialsError, DomainJWTExpiredError,
+                                                  DomainForbiddenAccessError, DomainInvalidCredentialsError,
+                                                  DomainInvalidSignInType, DomainJWTExpiredError,
                                                   DomainJWTInvalidError, DomainNotActivatedError, DomainNotFoundError,
                                                   DomainOTPExpiredError, DomainOTPInvalidError, DomainOTPNotExpireError,
-                                                  DomainUnAuthorizedError, DomainUnprocessableEntityError, )
+                                                  DomainUnprocessableEntityError, )
 from app.src.exceptions.http_exceptions import (DataBadRequestException, DataBaseDataNotFoundException,
                                                 DataConflictError, DataForbiddenException,
-                                                DataUnProcessableContent, JWTExpiredException, JWTInvalidException, )
+                                                DataUnProcessableContent, JWTExpiredException, JWTInvalidException,
+                                                UnAuthorizeAccessException, )
 
 EXCEPTION_MAPPER = {
         DomainNotFoundError           : lambda e: DataBaseDataNotFoundException('Entity not found', message=str(e)),
@@ -17,12 +19,14 @@ EXCEPTION_MAPPER = {
         DomainOTPExpiredError         : lambda e: DataBadRequestException(message_status='OTP Expired', message=str(e)),
         DomainEntityStatusInvalidError: lambda e: DataBadRequestException(message_status='Invalid Status',
                                                                           message=str(e)),
+        DomainForbiddenAccessError    : lambda e: DataForbiddenException(message_status='Invalid Status',
+                                                                         message=str(e)),
         DomainInvalidCredentialsError : lambda e: DataBadRequestException(message_status='Invalid Credentials',
                                                                           message=str(e)),
         DomainNotActivatedError       : lambda e: DataForbiddenException(message_status='Account not verified',
                                                                          message=str(e)),
-        DomainUnAuthorizedError       : lambda e: DataForbiddenException(message_status='Invalid Sign-in type',
-                                                                         message=str(e)),
+        DomainInvalidSignInType       : lambda e: DataBadRequestException(message_status='Invalid Sign-in type',
+                                                                          message=str(e)),
         DomainUnprocessableEntityError: lambda e: DataUnProcessableContent(message_status='Unprocessable Entity',
                                                                            message=str(e)),
         DomainError                   : lambda e: DataBadRequestException(message_status='Domain error',

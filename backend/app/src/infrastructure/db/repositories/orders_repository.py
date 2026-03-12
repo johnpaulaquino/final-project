@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.src.domain.dto.order_dto import OrderDTO, OrderDTOFullData, OrderDTOFullDataList
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.infrastructure.db.entity import Inventory, Orders, Products, Transactions
-from app.src.schema.orders_schema import CreateOrder, OrderStatus
+from app.src.schema.orders_schema import CreateOrderSchema, OrderStatusSchema
 
 
 class OrdersRepository(UserInterface):
@@ -12,7 +12,7 @@ class OrdersRepository(UserInterface):
     def __init__(self, _db: AsyncSession):
         self._db = _db
     
-    async def insert_record(self, record: CreateOrder):
+    async def insert_record(self, record: CreateOrderSchema):
         try:
             order = Orders(**record.model_dump())
             self._db.add(order)
@@ -22,12 +22,11 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
-    async def find_order_only(self, order_id, user_id, product_id) -> OrderDTO:
+    async def find_order_only(self, order_id, user_id) -> OrderDTO:
         try:
             
             stmt = (select(Orders)
-                    .where(and_(Orders.id == order_id,
-                                Orders.product_id == product_id,
+                    .where(and_(Orders.string_id == order_id,
                                 Orders.user_id == user_id)))
             result = await self._db.execute(stmt)
             data = result.scalars().first()
@@ -40,7 +39,7 @@ class OrdersRepository(UserInterface):
                                 order_status: str):
         try:
             conditions = [Orders.user_id == user_id]
-            if order_status in OrderStatus:
+            if order_status in OrderStatusSchema:
                 conditions.append(Orders.order_status == order_status)
             stmt = select(func.count(Orders.id)).where(and_(*conditions))
             result = await self._db.execute(stmt)
@@ -49,12 +48,12 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
-    async def find_order(self, order_id, user_id, product_id) -> OrderDTOFullData:
+    async def find_order(self, order_id, user_id) -> OrderDTOFullData:
         try:
-            conditions = [Orders.user_id == user_id, Orders.id == order_id, Orders.product_id == product_id]
-            
+            conditions = [Orders.user_id == user_id, Orders.string_id == order_id]
             stmt = (select(Orders,
                            Products.product_name,
+                           Products.id,
                            Products.price,
                            Products.category,
                            Inventory.quantity,
@@ -66,7 +65,8 @@ class OrdersRepository(UserInterface):
                            Transactions.payment_status,
                            Transactions.total_amount,
                            Transactions.payment_provider_reference)
-                    .outerjoin(Orders, Products.id == Orders.product_id)
+                    .select_from(Orders)
+                    .join(Products, Products.id == Orders.product_id)
                     .outerjoin(Inventory, Products.id == Inventory.product_id)
                     .outerjoin(Transactions, Orders.id == Transactions.order_id)
                     .where(and_(*conditions)))
@@ -82,8 +82,7 @@ class OrdersRepository(UserInterface):
         try:
             
             conditions = [Orders.user_id == user_id]
-            print(order_status)
-            if order_status in OrderStatus:
+            if order_status in OrderStatusSchema:
                 
                 conditions.append(Orders.order_status == order_status)
             stmt = (select(Orders,
@@ -99,7 +98,8 @@ class OrdersRepository(UserInterface):
                            Transactions.payment_status,
                            Transactions.total_amount,
                            Transactions.payment_provider_reference)
-                    .outerjoin(Orders, Products.id == Orders.product_id)
+                    .select_from(Orders)
+                    .join(Products, Products.id == Orders.product_id)
                     .outerjoin(Inventory, Products.id == Inventory.product_id)
                     .outerjoin(Transactions, Orders.id == Transactions.order_id)
                     .where(and_(*conditions))
@@ -112,7 +112,7 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
-    async def find_order_with_status(self, order_id, user_id, product_id, order_status) -> OrderDTOFullData:
+    async def find_order_with_status(self, order_id, user_id, order_status) -> OrderDTOFullData:
         try:
             stmt = (select(Orders,
                            Products.product_name,
@@ -127,11 +127,11 @@ class OrdersRepository(UserInterface):
                            Transactions.payment_status,
                            Transactions.total_amount,
                            Transactions.payment_provider_reference)
-                    .outerjoin(Orders, Products.id == Orders.product_id)
+                    .select_from(Orders)
+                    .join(Products, Products.id == Orders.product_id)
                     .outerjoin(Inventory, Products.id == Inventory.product_id)
                     .outerjoin(Transactions, Orders.id == Transactions.order_id)
-                    .where(and_(Orders.id == order_id,
-                                Orders.product_id == product_id,
+                    .where(and_(Orders.string_id == order_id,
                                 Orders.order_status == order_status,
                                 Orders.user_id == user_id)))
             result = await self._db.execute(stmt)
@@ -148,14 +148,14 @@ class OrdersRepository(UserInterface):
     async def update_order(self, order_id: str, user_id: str, data: dict):
         """
         This function is to cancel specific order of a user. This is a user function.
-        :param order_id: Unique id from order.
+        :param order_id: Unique from orders.
         :param data: to map the columns on database and insert the actual data on itS.
         :param user_id: unique id from user.
         :return:S
         """
         try:
             stmt = update(Orders).values(**data).where(
-                    and_(Orders.id == order_id, Orders.user_id == user_id))
+                    and_(Orders.string_id == order_id, Orders.user_id == user_id))
             await self._db.execute(stmt)
         except Exception as e:
             raise e
@@ -171,7 +171,7 @@ class OrdersRepository(UserInterface):
         :return:
         """
         try:
-            stmt = delete(Orders).where(and_(Orders.user_id == user_id, Orders.id == order_id))
+            stmt = delete(Orders).where(and_(Orders.user_id == user_id, Orders.string_id == order_id))
             await self._db.execute(stmt)
         except Exception as e:
             raise e

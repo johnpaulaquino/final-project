@@ -21,7 +21,7 @@ class DomainNotActivatedError(DomainError):
     pass
 
 
-class DomainUnAuthorizedError(DomainError):
+class DomainForbiddenAccessError(DomainError):
     pass
 
 
@@ -36,6 +36,10 @@ class DomainInvalidFormatError(DomainError):
 
 
 class DomainLargeFileError(DomainError):
+    pass
+
+
+class DomainInvalidSignInType(DomainError):
     pass
 
 

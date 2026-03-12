@@ -1,3 +1,4 @@
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -38,6 +39,7 @@ class UserRepository(UserInterface):
         stmt = (select(Users,
                        PersonalInfo,
                        Address, )
+                .select_from(Users)
                 .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
                 .outerjoin(Address, Users.id == Address.user_id)
                 .where(Users.email == email))
@@ -61,78 +63,22 @@ class UserRepository(UserInterface):
         return data[0] if data else data
     
     async def update_record(self, record_id: str, data: dict | None = None):
-        pass
+        try:
+            stmt = update(Users).values(**data).where(Users.id == record_id)
+            await self.db.execute(stmt)
+        except Exception as e:
+            raise e
     
     async def soft_delete_record(self, record_id: str) -> None:
-        pass
+        try:
+            stmt = update(Users).values(is_deleted=True).where(Users.id == record_id)
+            await self.db.execute(stmt)
+        except Exception as e:
+            raise e
     
     async def delete_record(self, record_id: str):
-        pass
-
-# @staticmethod
-# async def find_user_by_email(email: str):
-#     async with create_session() as db:
-#         try:
-#             stmt = (select(Users,
-#                            PersonalInfo,
-#                            Address,
-#                            )
-#                     .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
-#                     .outerjoin(Address, Users.id == Address.user_id)
-#                     .where(Users.email == email))
-#
-#             result = await safe_execute(db, stmt)
-#             data = result.mappings().fetchall()
-#
-#             return data
-#         except Exception as e:
-#             raise e
-#
-# @staticmethod
-# async def find_user_by_id(user_id: str):
-#     async with create_session() as db:
-#         try:
-#             stmt = (select(Users,
-#                            PersonalInfo,
-#                            Address,
-#                            )
-#                     .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
-#                     .outerjoin(Address, Users.id == Address.user_id)
-#                     .where(Users.email == user_id))
-#
-#             result = await safe_execute(db, stmt)
-#             data = result.scalars().fetchall()
-#
-#             return data
-#         except Exception as e:
-#             raise e
-#
-# @staticmethod
-# async def update_user_password(user_id: str, data: dict):
-#     async with create_session() as db:
-#         try:
-#             stmt = update(Users).where(Users.id == user_id).values(**data)
-#             await safe_execute(db, stmt)
-#             await safe_commit(db)
-#         except Exception as e:
-#             raise e
-#
-# @staticmethod
-# async def soft_delete_user(user_id: str):
-#     async with create_session() as db:
-#         try:
-#             stmt = update(Users).values(Users.is_deleted == True).where(Users.id == user_id)
-#             await safe_execute(db, stmt)
-#             await safe_commit(db)
-#         except Exception as e:
-#             raise e
-#
-# @staticmethod
-# async def hard_delete(user_id: str):
-#     async with create_session() as db:
-#         try:
-#             stmt = delete(Users).where(Users.id == user_id)
-#             await safe_execute(db, stmt)
-#             await safe_commit(db)
-#         except Exception as e:
-#             raise e
+        try:
+            stmt = delete(Users).where(Users.id == record_id)
+            await self.db.execute(stmt)
+        except Exception as e:
+            raise e

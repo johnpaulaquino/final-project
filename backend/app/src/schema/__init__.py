@@ -7,16 +7,11 @@ This schema is for global access and has a single purpose.
 """
 
 
-class SuccessfulResponseSchema(BaseModel):
-    message: str
-    headers: dict = None
-    status_code: int = None
-    status_message: str = "ok"
-    data: Any = None
-    access_token: str = None
-    refresh_token: str = None
-    action: str = None
-    paginated: dict | None = None
+class PaginatedOutput(BaseModel):
+    start_page: int
+    end_page: int
+    total_records: int
+    has_next: bool
 
 
 class RoleSchema:
@@ -36,14 +31,19 @@ class PaginatedSchema(BaseModel):
     limit: int = Field(ge=10, default=10)
 
 
-class PaginatedOutput(BaseModel):
-    start_page: int
-    end_page: int
-    total_records: int
-    has_next: bool
-
-
 class EnvironmentStatus(str):
     Dev = 'dev'
     Test = 'test'
     Production = 'production'
+
+
+class SuccessfulResponseSchema(BaseModel):
+    message: str
+    headers: dict = None
+    status_code: int = None
+    status_message: str = "ok"
+    data: Any = None
+    access_token: str = None
+    refresh_token: str = None
+    action: str = None
+    paginated: PaginatedOutput | None = None

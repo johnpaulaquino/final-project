@@ -1,12 +1,12 @@
-from fastapi.encoders import jsonable_encoder
-
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError, DomainJWTInvalidError,
+from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError, DomainForbiddenAccessError,
+                                                  DomainJWTInvalidError,
                                                   DomainNotFoundError, )
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import PaginatedOutput, PaginatedSchema, SuccessfulResponseSchema
-from app.src.schema.orders_schema import (CancelOrderSchema, ConfirmOrderSchema, CreateOrder, OrderStatus,
-                                          ShippedOrderSchema, )
+from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
+from app.src.schema.orders_schema import (ConfirmOrderSchema, CreateOrderSchema, OrderStatusSchema, UpdateOrdersSchema,
+                                          )
+from app.src.schema.products_schema import UpdateProductsInventorySchema
 from app.src.schema.transaction_schema import CreateTransactionSchema
 from app.src.utils.utility import Utility
 
@@ -17,13 +17,19 @@ class OrderServices:
     
     # the user id depends on the user who are logged in.
     # will insert safe router to this
-    async def insert_order(self, new_order: CreateOrder, user_id: str):
+    async def insert_order(self, new_order: CreateOrderSchema, current_user: DecodedTokenDTO):
+        
         try:
-            # add the user_id from current user
-            new_order.user_id = user_id
             
-            # find user if exists
-            user = await self.uof.users.find_record_by_id(user_id)
+            # add the user_id from current user
+            new_order.user_id = current_user.user_id
+            
+            # validate the role
+            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            
+            # get user in db.
+            user = await self.uof.users.find_record_by_id(current_user.user_id)
             
             # check if user not exists
             if not user:
@@ -68,6 +74,7 @@ class OrderServices:
             raise e
     
     async def handle_gcash_payment(self):
+        
         try:
             pass
         except Exception as e:
@@ -79,96 +86,143 @@ class OrderServices:
         except Exception as e:
             raise e
     
-    async def confirm_order(self, order_update: ConfirmOrderSchema):
+    async def confirm_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
+        
         try:
-            # finf if the user exists
-            user_data = await self.uof.users.find_record_by_id(order_update.user_id)
-            if not user_data:
-                raise DomainNotFoundError("Cannot confirm order, because no user found.")
+            # validate the role
+            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.CUSTOMER:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
             
-            # first get the orders
-            data = await self.uof.orders.find_order(order_update.order_id,
-                                                    order_update.user_id,
-                                                    order_update.product_id)
+            # check the product and order
+            order_data, product_data = await self.__check_product_orders_user_exist(order_id, data.user_id,
+                                                                                    "Cannot confirm order that is not exist.")
             
-            if not data:
-                raise DomainNotFoundError("Cannot confirm order that is not exists.")
-                # if the order status is not Pending, then raise an error.
-            if data.Orders.order_status != OrderStatus.Pending:
+            if order_data.Orders.order_status != OrderStatusSchema.Pending:
                 raise DomainEntityStatusInvalidError("Can't confirm order that is not pending.")
             
             # update order status
-            to_update = {"order_status": OrderStatus.Approved}
-            await self.uof.orders.update_order(order_update.order_id, order_update.user_id, to_update)
+            order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Approved).model_dump(exclude_none=True,
+                                                                                                     exclude_unset=True)
+            await self.uof.orders.update_order(order_id, current_user.user_id, order_to_update)
             
-            new_quantity = data.quantity - data.reserved_stock
-            sold_stock = data.sold_stock + data.reserved_stock
-            inventory_to_update = {"quantity": new_quantity, "sold_stock": sold_stock, "reserved_stock": 0}
-            await self.uof.products.update_product_inventory(order_update.product_id, inventory_to_update)
+            # update the inventory
+            new_quantity = order_data.quantity - order_data.reserved_stock
+            sold_stock = order_data.sold_stock + order_data.reserved_stock
+            # call the class and make it dict using model dump.
+            inventory_to_update = UpdateProductsInventorySchema(quantity=new_quantity,
+                                                                sold_stock=sold_stock,
+                                                                reserved_stock=0).model_dump(
+                    exclude_unset=True, exclude_none=True)
+            await self.uof.products.update_product_inventory(product_data.Products.id, inventory_to_update)
             
             return SuccessfulResponseSchema(message="Successfully Confirmed order.")
         except Exception as e:
             raise e
     
-    async def ship_order(self, order_update: ShippedOrderSchema):
+    async def ship_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
         try:
+            # validate the role
+            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.CUSTOMER:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
             
-            # first get the orders
-            data = await self.uof.orders.find_order_only(order_update.order_id,
-                                                         order_update.user_id,
-                                                         order_update.product_id)
-            if not data:
-                raise DomainNotFoundError("Cannot ship order that is not exists.")
-            validated_order_status = data.order_status
+            # check the product and order
+            order_data, product_data = await self.__check_product_orders_user_exist(order_id, data.user_id,
+                                                                                    "Cannot ship order that is not exist.")
+            # set the validated
+            validated_order_status = Utility.capitalize_first_letters(order_data.Orders.order_status)
             # if the order status is not Pending or approved, then raise an error.
-            if validated_order_status != OrderStatus.Approved:
-                
-                raise DomainEntityStatusInvalidError("Can't confirm order that is not pending.")
+            if validated_order_status != OrderStatusSchema.Approved:
+                raise DomainEntityStatusInvalidError("Can't ship order that is not Approved.")
             
-            # update order status
-            to_update = {"order_status": OrderStatus.Shipped}
-            await self.uof.orders.update_order(order_update.order_id,
-                                               order_update.user_id,
-                                               to_update)
+            # call the class and make the dict to update order status
+            order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Shipped).model_dump(
+                    exclude_none=True, exclude_unset=True
+                    )
+            await self.uof.orders.update_order(order_id,
+                                               current_user.user_id,
+                                               order_to_update)
             
             return SuccessfulResponseSchema(message="Successfully Shipped order.")
         
         except Exception as e:
             raise e
     
-    async def cancel_order(self, order_cancel: CancelOrderSchema,
+    async def cancel_order(self, order_id,
                            current_user: DecodedTokenDTO):
         try:
-            # first get the orders
-            order_cancel.user_id = current_user.user_id
-            data = await self.uof.orders.find_order(order_cancel.order_id,
-                                                    order_cancel.user_id,
-                                                    order_cancel.product_id)
-            if data.Orders.order_status not in [OrderStatus.Approved, OrderStatus.Pending]:
+            # validate the role
+            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            
+            # check the product and order
+            order_data, product_data = await self.__check_product_orders_user_exist(order_id, current_user.user_id,
+                                                                                    "Cannot cancel order that is not exist.")
+            # then check if the status of order not in Approved or pending then raise an error.
+            if order_data.Orders.order_status not in [OrderStatusSchema.Approved, OrderStatusSchema.Pending]:
                 raise DomainEntityStatusInvalidError(message="Cancellation of order is not valid at this phase.")
             
             # update order status into cancel
-            to_update = {"order_status": OrderStatus.Cancelled}
-            await self.uof.orders.update_order(order_cancel.order_id,
+            order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Cancelled).model_dump(
+                    exclude_none=True, exclude_unset=True
+                    )
+            await self.uof.orders.update_order(order_id,
                                                current_user.user_id,
-                                               to_update)
+                                               order_to_update)
             
             # back to its original quantity
-            new_quantity = data.quantity + data.sold_stock
-            sold_stock = data.sold_stock - data.Orders.quantity
+            new_quantity = order_data.quantity + order_data.sold_stock
+            sold_stock = order_data.sold_stock - order_data.Orders.quantity
             
-            inventory_to_update = {"quantity": new_quantity, "sold_stock": sold_stock}
-            await self.uof.products.update_product_inventory(order_cancel.product_id, inventory_to_update)
+            inventory_to_update = UpdateProductsInventorySchema(quantity=new_quantity,
+                                                                sold_stock=sold_stock).model_dump(
+                    exclude_unset=True, exclude_none=True
+                    )
+            await self.uof.products.update_product_inventory(product_data.Products.id, inventory_to_update)
             
             return SuccessfulResponseSchema(message="Successfully cancelled order.")
         
         except Exception as e:
             raise e
     
+    async def delivered_order(self, order_id, user_id, current_user: DecodedTokenDTO):
+        
+        try:
+            pass
+        except Exception as e:
+            raise e
+    
+    async def received_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
+        try:
+            # validate the role
+            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            
+            # check the product and order
+            order_data, product_data = await self.__check_product_orders_user_exist(order_id, data.user_id,
+                                                                                    "Cannot ship order that is not exist.")
+            # set the validated
+            validated_order_status = Utility.capitalize_first_letters(order_data.order_status)
+            # if the order status is not Delivered, then raise an error.
+            if validated_order_status != OrderStatusSchema.Delivered:
+                raise DomainEntityStatusInvalidError("Can't set as received the order that is not Delivered.")
+            
+            # update order status
+            
+            order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Received).model_dump(
+                    exclude_none=True, exclude_unset=True
+                    )
+            await self.uof.orders.update_order(order_id,
+                                               current_user.user_id,
+                                               order_to_update)
+            
+            return SuccessfulResponseSchema(message="Successfully Received order.")
+        
+        except Exception as e:
+            raise e
+    
     async def get_paginated_orders(self, paginated: PaginatedSchema,
                                    order_status: str,
-                                   current_user: DecodedTokenDTO,
-                                   ):
+                                   current_user: DecodedTokenDTO):
         
         try:
             # get the current order of a user
@@ -178,7 +232,7 @@ class OrderServices:
             
             offset = Utility.get_offset(paginated.skip, paginated.limit)
             validated_order_status = Utility.capitalize_first_letters(order_status)
-            if validated_order_status not in OrderStatus and validated_order_status != "All":
+            if validated_order_status not in OrderStatusSchema and validated_order_status != "All":
                 raise DomainEntityStatusInvalidError(f"{order_status} is not a valid order status.")
             
             order_data = await self.uof.orders.paginated_orders(current_user.user_id,
@@ -187,14 +241,39 @@ class OrderServices:
                                                                 validated_order_status)
             total_records = await self.uof.orders.get_total_records(user_id=current_user.user_id,
                                                                     order_status=validated_order_status)
-            curr_page = offset + 1
-            end_page = paginated.skip * paginated.limit
-            has_next = True if (total_records - end_page) > 0 else False
-            paginated_data = PaginatedOutput(start_page=curr_page, end_page=end_page,
-                                             total_records=total_records,
-                                             has_next=has_next)
             
+            paginated_data = Utility.get_paginated_data(offset=offset,
+                                                        total_records=total_records,
+                                                        skip=paginated.skip,
+                                                        limit=paginated.limit)
             return SuccessfulResponseSchema(message="Successfully retrieved orders.", data=order_data,
-                                            paginated=jsonable_encoder(paginated_data))
+                                            paginated=paginated_data)
+        except Exception as e:
+            raise e
+    
+    async def __check_product_orders_user_exist(self, order_id, user_id, message):
+        
+        try:
+            
+            # find if the user exists.
+            user_data = await self.uof.users.find_record_by_id(user_id)
+            if not user_data:
+                raise DomainNotFoundError("Cannot process this order, because no user found.")
+            
+            # find order first.
+            order_data = await self.uof.orders.find_order(order_id,
+                                                          user_id)
+            # check if order s not exist, then raise an error.
+            if not order_data:
+                raise DomainNotFoundError(message)
+            
+            # fin product.
+            product = await self.uof.products.find_record(order_data.Orders.product_id)
+            # check if not product exists.
+            if not product:
+                raise DomainNotFoundError("Cannot process this order,because product not found.")
+            
+            # if no error then return a tuple of Order and product object.
+            return order_data, product
         except Exception as e:
             raise e

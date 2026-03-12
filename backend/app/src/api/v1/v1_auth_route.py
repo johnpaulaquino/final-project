@@ -74,7 +74,6 @@ async def verify_signup_otp(otp_code: str = Body(),
                             redis_services: RedisInfrastructure = Depends(get_redis_services)):
     try:
         # auth services.
-        user_email: str = ""
         try:
             # verify token
             payload = AppSecurity.decode_jwt_token(verification_token)
@@ -140,10 +139,7 @@ async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sig
 
 
 @v1_auth_router.post("/login", tags=[EndpointTags.CUSTOMER])
-async def login(background_task: BackgroundTasks,
-                form_data: OAuth2PasswordRequestForm = Depends(),
-                redis_services: RedisInfrastructure = Depends(get_redis_services),
-                email_infrastructure: EmailInfrastructure = Depends(get_email_infrastructure),
+async def login(form_data: OAuth2PasswordRequestForm = Depends(),
                 auth_services: AuthServices = Depends(get_auth_service),
                 ):
     try:
@@ -186,30 +182,3 @@ async def refresh_token(refresh_token: str = Cookie(None),
     
     except Exception as e:
         raise e
-
-# Unuse code di ko tanda saang logic to
-# if auth_response.action == ConstantsKeyData.USER_ACTION_EMAIL_VERIFICATION:
-#     generated_otp = AppSecurity.generate_otp_code()
-#
-#     # first get if there is an existing otp code in redis, if there is, delete it and set the new one, if there isn't just set the new one.
-#     existing_otp = await redis_services.get_otp(form_data.username)
-#
-#     if existing_otp:
-#         raise DomainOTPNotExpireError(message="Your code has not expired yet.")
-#
-#     # if no otp in redis, then set otp and send email. also generate a verification token with 24 hours expiration time, and set it in the cookie.
-#     data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_EMAIL: form_data.username}
-#     response_schema.message = "Verification code sent to your email."
-#     response_schema.status_code = status.HTTP_202_ACCEPTED
-#
-#     # then return the response with the access token in the cookie, and send the email in background task.
-#     response = SuccessfulResponse(response_schema)
-#
-#     response.set_cookie(ConstantsKeyData.COOKIE_VERIFICATION_KEY,
-#                         AppSecurity.generate_access_token(jti=str(uuid4()), data=data, exp=24 * 3600))
-#
-#     otp_code = await redis_services.set_otp(form_data.username, generated_otp)
-#     # send via background task.
-#     background_task.add_task(email_infrastructure.send_email_verification_code, recipient=form_data.username,
-#                              verification_code=otp_code)
-#     return response

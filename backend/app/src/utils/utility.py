@@ -4,7 +4,7 @@ from starlette import status
 
 from app.src.core.constants import ConstantsData
 from app.src.exceptions.domain_exceptions import DomainInvalidFormatError, DomainOTPExpiredError, DomainOTPInvalidError
-from app.src.schema import EnvironmentStatus, SuccessfulResponseSchema
+from app.src.schema import EnvironmentStatus, PaginatedOutput, SuccessfulResponseSchema
 from app.src.schema.products_schema import ProductStatusSchema
 
 
@@ -134,3 +134,17 @@ class Utility:
                     ]
         
         return origins
+    
+    @staticmethod
+    def get_paginated_data(*, offset, skip, limit, total_records) -> PaginatedOutput:
+        """
+        To get the paginated data.
+        """
+        curr_page = offset + 1
+        end_page = skip * limit
+        has_next = True if (total_records - end_page) > 0 else False
+        paginated_data = PaginatedOutput(start_page=curr_page, end_page=end_page,
+                                         total_records=total_records,
+                                         has_next=has_next)
+        
+        return paginated_data if paginated_data.total_records else None

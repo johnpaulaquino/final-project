@@ -76,16 +76,29 @@ class ProductsServices:
     @retry_on_transient
     async def get_product_information_paginated(self, paginated: PaginatedSchema):
         
+        # calculate the offset
         offset = Utility.get_offset(paginated.skip, paginated.limit)
+        # retrieve data from database
         data = await self.uow.products.get_paginated_record(offset, paginated.limit)
         response = SuccessfulResponseSchema(message="Successfully retrieved data.", )
         
+        # retrieved total records from db
+        total_records = await self.uow.products.get_total_records()
+        # get the paginated if there's a record.
+        paginated_data = Utility.get_paginated_data(offset=offset, skip=paginated.skip,
+                                                    limit=paginated.limit,
+                                                    total_records=total_records
+                                                    )
+        
+        # then check if there's a data
         if not data:
             response.message = "No records to retrieve."
             return response
-        
+        # set the paginated data
+        response.paginated = paginated_data
         response.data = data
         
+        # return response
         return response
     
     @retry_on_transient

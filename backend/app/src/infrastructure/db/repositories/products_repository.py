@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.src.domain.dto.products_dto import ProductInformationDTO, ProductsDataDTO
@@ -48,9 +48,9 @@ class ProductsRepository(UserInterface):
         stmt = select(Products, Inventory.quantity, Inventory.low_stock_threshold,
                       Inventory.reserved_stock, Inventory.cancelled_stock, Inventory.sold_stock,
                       ProductDetails.images, ProductDetails.description
-                      ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
-                                  ).outerjoin(Inventory, Products.id == Inventory.product_id
-                                              ).where(Products.id == record_id)
+                      ).select_from(Products).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
+                                                        ).outerjoin(Inventory, Products.id == Inventory.product_id
+                                                                    ).where(Products.id == record_id)
         
         result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
@@ -67,13 +67,22 @@ class ProductsRepository(UserInterface):
         stmt = select(Products,
                       Inventory.quantity, Inventory.low_stock_threshold,
                       ProductDetails.description, ProductDetails.images
-                      ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
-                                  ).outerjoin(Inventory, Products.id == Inventory.product_id
-                                              ).offset(offset).limit(limit)
+                      ).select_from(Products).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
+                                                        ).outerjoin(Inventory, Products.id == Inventory.product_id
+                                                                    ).offset(offset).limit(limit)
         
         result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
         return data or None
+    
+    async def get_total_records(self):
+        try:
+            stmt = select(func.count(Products.id))
+            result = await self._db.execute(stmt)
+            data = result.scalars().first()
+            return data
+        except Exception as e:
+            raise e
     
     async def get_product_only(self, product_id: str) -> ProductsDataDTO:
         """

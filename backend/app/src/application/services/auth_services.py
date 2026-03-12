@@ -9,8 +9,11 @@ from app.src.core.constants import ConstantsData, ConstantsKeyData
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import SessionTokenDTO, SignUpModelDTO, TokenDTO
 from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainDeactivatedError, DomainError,
-                                                  DomainInvalidCredentialsError, DomainNotFoundError,
-                                                  DomainOTPNotExpireError, DomainUnAuthorizedError, )
+                                                  DomainInvalidCredentialsError, DomainInvalidSignInType,
+                                                  DomainJWTExpiredError,
+                                                  DomainJWTInvalidError,
+                                                  DomainNotFoundError,
+                                                  DomainOTPNotExpireError, )
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import RoleSchema
 from app.src.schema.auth_schema import LoginRequest, SessionTokenRequest, SignUpRequest, TempUserRequest
@@ -135,7 +138,7 @@ class AuthServices:
             await self.__uow.temp_users.delete_record(email)
             
             # insert the token into db
-            access_refresh_token = await self.__insert_session_token(user_id)
+            access_refresh_token = await self.__insert_session_token(user_id, user.role)
             # prepare the response
             response = SignUpModelDTO(message="Successfully created account.",
                                       access_token=access_refresh_token.access_token,
@@ -169,14 +172,14 @@ class AuthServices:
             hashed_password = curr_users.password
             # check first if the signin_type is password
             if "password" not in curr_users.signin_type:
-                raise DomainUnAuthorizedError(
+                raise DomainInvalidSignInType(
                         message="This email is registered with other signin type. Please login with the correct signin type.")
             
             if not AppSecurity.verify_hash_password(credentials.password, hashed_password):
                 raise DomainInvalidCredentialsError(message="Incorrect password.")
             
             # insert the token into db
-            access_refresh_token = await self.__insert_session_token(curr_users.id)
+            access_refresh_token = await self.__insert_session_token(curr_users.id, curr_users.role)
             
             # prepare the response
             response = SignUpModelDTO(message="Successfully logged in.",
@@ -202,9 +205,9 @@ class AuthServices:
             return response
         
         except ExpiredSignatureError as e:
-            raise DomainUnAuthorizedError(message="Refresh token has expired. Please login again.", )
+            raise DomainJWTExpiredError(message="Refresh token has expired. Please login again.", )
         except JWTError as e:
-            raise DomainUnAuthorizedError(message="Invalid refresh token. Please login again.", )
+            raise DomainJWTInvalidError(message="Invalid refresh token. Please login again.", )
         except Exception as e:
             raise e
     
@@ -244,10 +247,10 @@ class AuthServices:
         refresh_token_db = await self.__uow.token_session.find_record(hashed_token)
         
         if not refresh_token_db:
-            raise DomainUnAuthorizedError(message="Refresh token does not exist. Please login again.", )
+            raise DomainJWTInvalidError(message="Refresh token does not exist. Please login again.", )
         
         if refresh_token_db.is_revoke:
-            raise DomainUnAuthorizedError(message="Refresh token has been revoked. Please login again.", )
+            raise DomainJWTInvalidError(message="Refresh token has been revoked. Please login again.", )
         
         return refresh_token_db
     
@@ -271,10 +274,10 @@ class AuthServices:
         
         return refresh_access_token
     
-    async def __insert_session_token(self, user_id: str) -> TokenDTO:
+    async def __insert_session_token(self, user_id: str, role: str) -> TokenDTO:
         # get the access and refresh token
         access_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id,
-                             ConstantsKeyData.TOKEN_DATA_KEY_ROLE   : RoleSchema.CUSTOMER}
+                             ConstantsKeyData.TOKEN_DATA_KEY_ROLE   : role}
         refresh_token_data = {ConstantsKeyData.TOKEN_DATA_KEY_USER_ID: user_id}
         
         # generate access and refresh token also the refresh token expiration for database.
