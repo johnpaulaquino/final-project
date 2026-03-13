@@ -32,7 +32,7 @@ async def insert_order_item(item_order: CreateOrderSchema = Depends(CreateOrderS
         raise e
 
 
-@v1_order_router.put("/{order_id}/confirm", tags=[EndpointTags.ADMIN])
+@v1_order_router.patch("/{order_id}/confirm", tags=[EndpointTags.ADMIN])
 async def confirm_order(order_id: str,
                         data: ConfirmOrderSchema,
                         current_user: DecodedTokenDTO = Depends(get_current_user),
@@ -50,7 +50,7 @@ async def confirm_order(order_id: str,
         raise e
 
 
-@v1_order_router.put("/{order_id}/shipped", tags=[EndpointTags.ADMIN])
+@v1_order_router.patch("/{order_id}/shipped", tags=[EndpointTags.ADMIN])
 async def update_order_to_shipped(order_id: str,
                                   data: ConfirmOrderSchema,
                                   current_user: DecodedTokenDTO = Depends(get_current_user),
@@ -66,7 +66,7 @@ async def update_order_to_shipped(order_id: str,
         raise e
 
 
-@v1_order_router.put("/{order_id}/cancel", tags=[EndpointTags.CUSTOMER])
+@v1_order_router.patch("/{order_id}/cancel", tags=[EndpointTags.CUSTOMER])
 async def cancel_order(order_id: str,
                        current_user: DecodedTokenDTO = Depends(get_current_user),
                        order_services: OrderServices = Depends(get_order_service)):

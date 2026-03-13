@@ -59,7 +59,7 @@ class CloudinaryInfrastructure:
             # then update the profile picture
             new_profile_picture = Images(image_url=image_url, public_key=public_id)
             # return image
-            return new_profile_picture.model_dump()
+            return new_profile_picture
         
         except Exception as e:
             # delete the image if error occurred

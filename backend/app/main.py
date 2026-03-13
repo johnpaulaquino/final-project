@@ -4,6 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
+from app.src.api.v1.user_route import v1_user_router
 from app.src.api.v1.v1_auth_route import v1_auth_router
 from app.src.api.v1.v1_order_route import v1_order_router
 from app.src.api.v1.v1_products_route import v1_products_router
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(v1_auth_router)
 app.include_router(v1_products_router)
 app.include_router(v1_order_router)
+app.include_router(v1_user_router)
 
 # to handle custom exception
 app.add_exception_handler(handler=app_exception_handler,

@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.src.application.services.auth_services import AuthServices
 from app.src.application.services.order_services import OrderServices
 from app.src.application.services.products_services import ProductsServices
+from app.src.application.services.user_services import UserServices
 from app.src.core.constants import ConstantsData
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
@@ -76,6 +77,14 @@ def get_auth_service(
         uow: SQLUnitOfWork = Depends(get_uow),
         ) -> AuthServices:
     return AuthServices(uow)
+
+
+def get_user_service(
+        uow: SQLUnitOfWork = Depends(get_uow),
+        cloudinary_infrastructure: CloudinaryInfrastructure = Depends(__cloudinary_products),
+        
+        ) -> UserServices:
+    return UserServices(uow, cloudinary_infrastructure=cloudinary_infrastructure)
 
 
 def get_products_service(

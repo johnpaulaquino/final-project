@@ -104,12 +104,14 @@ class ProductsRepository(UserInterface):
         :param data: This is the actual data to be update in database. This is a dict and will map the actual column name.
         :return:
         """
+        
         stmt = update(Products).where(Products.id == record_id).values(**data)
         await self._db.execute(stmt)
     
     async def update_product_details(self, product_id: str, data: dict):
         stmt = update(ProductDetails).where(ProductDetails.product_id == product_id).values(**data)
         await self._db.execute(stmt)
+        print("hey")
     
     async def update_product_inventory(self, product_id: str, data: dict):
         try:

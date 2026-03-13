@@ -142,9 +142,6 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
-    async def update_record(self, record_id: str, data: dict | None = None):
-        pass
-    
     async def update_order(self, order_id: str, user_id: str, data: dict):
         """
         This function is to cancel specific order of a user. This is a user function.
@@ -159,9 +156,6 @@ class OrdersRepository(UserInterface):
             await self._db.execute(stmt)
         except Exception as e:
             raise e
-    
-    async def delete_record(self, user_id: str):
-        pass
     
     async def delete_record_two_param(self, user_id: str, order_id: str):
         """

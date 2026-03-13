@@ -157,7 +157,7 @@ class AuthServices:
             if not data:
                 raise DomainNotFoundError(message="Email does not exist.")
             
-            curr_users = data["Users"]
+            curr_users = data.Users
             
             if curr_users.is_deleted:
                 raise DomainDeactivatedError("This email is deactivated.")

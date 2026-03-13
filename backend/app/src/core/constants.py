@@ -86,6 +86,7 @@ class EndpointTags(str):
     ADMIN = "Admin"
     PRODUCTS = "Products"
     ORDERS = "Orders"
+    USERS = "Users"
 
 
 # initialize classes

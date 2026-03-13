@@ -6,10 +6,6 @@ from sqlalchemy import Column, Date, ForeignKey, JSON
 from sqlmodel import Field, SQLModel
 
 
-class ProfileImage(BaseModel):
-    image_url: Optional[str] = None
-    public_key: Optional[str] = None
-
 
 class PersonalInfo(SQLModel, table=True):
     __tablename__ = "personal_info"

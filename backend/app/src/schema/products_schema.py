@@ -1,9 +1,15 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import Body
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.src.exceptions.domain_exceptions import DomainInvalidFormatError
+
+
+class Images(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    public_key: str = Field(default=None)
+    image_url: str = Field(default=None)
 
 
 class ProductsFullInformationRequestSchema(BaseModel):
@@ -81,7 +87,7 @@ class UpdateProductsInformationRequestSchema(BaseModel):
     quantity: Optional[int] = Field(default=0)
     low_stock_threshold: Optional[int] = Field(default=20)
     description: Optional[str] = Field(default=None)
-    images: Optional[List[dict | None]] = Field(default=None)
+    images: Optional[List[Images | None]] = Field(default=None)
     
     public_ids: Optional[List[str]] = Body(None)
     
@@ -112,7 +118,7 @@ class ProductRequestSchema(BaseModel):
 
 class ProductDetailsRequestSchema(BaseModel):
     description: str = Field(default=None)
-    images: list = Field(default=None)
+    images: list[Images] = Field(default=None)
 
 
 # to insert data in inventory
@@ -134,11 +140,6 @@ class UpdateProductsInventorySchema(BaseModel):
     cancelled_stock: int | None = None
     sold_stock: int | None = None
     product_id: str | None = None
-
-
-class Images(BaseModel):
-    public_key: str = Field(default=None)
-    image_url: str = Field(default=None)
 
 
 class ProductStatus(BaseModel):

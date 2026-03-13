@@ -6,7 +6,7 @@ from starlette import status
 
 from app.src.application.services.products_services import ProductsServices
 from app.src.core.constants import ConstantsData, EndpointTags
-from app.src.core.dependencies import get_order_service, get_uow
+from app.src.core.dependencies import get_order_service, get_products_service, get_uow
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema
 from app.src.schema.products_schema import ProductsFullInformationRequestSchema, UpdateProductsInformationRequestSchema
@@ -21,8 +21,7 @@ v1_products_router = APIRouter(tags=[EndpointTags.PRODUCTS], prefix=__base_endpo
 async def insert_product(
         products_schema: ProductsFullInformationRequestSchema = Depends(
                 ProductsFullInformationRequestSchema.depends_schema),
-        product_services: ProductsServices = Depends(get_order_service),
-        
+        product_services: ProductsServices = Depends(get_products_service),
         images: Optional[List[UploadFile]] = File(None)):
     try:
         
@@ -42,7 +41,8 @@ async def insert_product(
 
 
 @v1_products_router.get("/{product_id}", tags=[EndpointTags.CUSTOMER])
-async def get_product_information(product_id: str, product_services: ProductsServices = Depends(get_order_service)):
+async def get_product_information(product_id: str,
+                                  product_services: ProductsServices = Depends(get_products_service)):
     try:
         
         response_dto = await product_services.get_product_information(product_id)
@@ -57,9 +57,9 @@ async def get_product_information(product_id: str, product_services: ProductsSer
 
 @v1_products_router.get("/", tags=[EndpointTags.CUSTOMER])
 async def get_product_information_paginated(paginated: PaginatedSchema = Query(),
-                                            uow: SQLUnitOfWork = Depends(get_uow)):
+                                            product_services: ProductsServices = Depends(get_products_service),
+                                            ):
     try:
-        product_services = ProductsServices(uow)
         
         response_dto = await product_services.get_product_information_paginated(paginated)
         response_dto.status_code = status.HTTP_200_OK
@@ -72,12 +72,12 @@ async def get_product_information_paginated(paginated: PaginatedSchema = Query()
 
 
 # will insert safe route here.
-@v1_products_router.put("/{product_id}", tags=[EndpointTags.ADMIN])
+@v1_products_router.patch("/{product_id}", tags=[EndpointTags.ADMIN])
 async def update_product_information(product_id: str,
                                      new_data: UpdateProductsInformationRequestSchema = Depends(
                                              UpdateProductsInformationRequestSchema.update_depends_schema),
                                      images: List[UploadFile] = File(None),
-                                     product_services: ProductsServices = Depends(get_order_service),
+                                     product_services: ProductsServices = Depends(get_products_service),
                                      ):
     
     try:
@@ -98,7 +98,7 @@ async def update_product_information(product_id: str,
 
 # will inject the safe route here
 @v1_products_router.delete("/{product_id}", tags=[EndpointTags.ADMIN])
-async def delete_product(product_id: str, product_services: ProductsServices = Depends(get_order_service)):
+async def delete_product(product_id: str, product_services: ProductsServices = Depends(get_products_service)):
     try:
         
         services_response = await product_services.delete_product_information(product_id)

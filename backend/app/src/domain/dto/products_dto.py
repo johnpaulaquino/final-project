@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 
 class ProductsDataDTO(BaseModel):
-    
     id: str
     product_name: str
     price: float
