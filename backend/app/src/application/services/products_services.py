@@ -3,7 +3,8 @@ from uuid import uuid4
 
 from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
-from app.src.exceptions.domain_exceptions import DomainNotFoundError
+from app.src.exceptions.domain_exceptions import (DomainNotFoundError,
+                                                  DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
@@ -37,6 +38,10 @@ class ProductsServices(SharedServices):
         is_images_uploaded = False
         product_images = []
         try:
+            # check if the images uploaded in the server exceed to maximum 5, then raise an error.
+            if len(filenames) > 5:
+                raise DomainUnprocessableEntityError(
+                        f"You exceed the maximum 5 of images to upload per product.")
             
             # Upload the images on the cloudinary and retrieve the url and public key
             product_images = await self.upload_images_and_get(filenames, img_bytes)
@@ -47,16 +52,18 @@ class ProductsServices(SharedServices):
             product_request.images = product_images
             # get the product status
             
+            # insert into products
             await self.__uow.products.insert_record(product_request)
-            # insert into products details
+            
             # return the output schemas
             successful_response = SuccessfulResponseSchema(message="Successfully inserted product.")
             return successful_response
         
         except Exception as e:
+            # remove all the uploaded file in cloudinary if encountered error.
             if is_images_uploaded:
                 for product_image in product_images:
-                    public_key = product_image.get("public_key")
+                    public_key = product_image.public_key
                     await self.cloudinary_infrastructure.destroy_images(public_key)
             raise e
     
@@ -119,13 +126,22 @@ class ProductsServices(SharedServices):
             inventory = InventoryRequestSchema(**data.model_dump())
             details = ProductDetailsRequestSchema(**data.model_dump())
             # then make a copy on the original data and replace the old one
+            
+            # check first if images is 5 in database then raise an error. Only update the Not None value.
+            if filenames:
+                available_image_to_upload = len(filenames) - len(details.images)
+                if available_image_to_upload <= 0 or len(filenames) > 5:
+                    raise DomainUnprocessableEntityError(
+                            f"You exceed the maximum of images to upload per product.")
+            
+            # then copy the old data and update by the new one.
             new_product = product.model_copy(
                     update=new_data.model_dump(exclude_none=True, exclude_unset=True))
             new_inventory = inventory.model_copy(
                     update=new_data.model_dump(exclude_none=True, exclude_unset=True))
             new_details = details.model_copy(
                     update=new_data.model_dump(exclude_unset=True, exclude_none=True))
-            # set the quantity if not specified or 0 then set the actual quan in db and also the treshold.
+            # set the quantity if not specified or 0 then set the actual quan in db and also the threshold.
             if not new_inventory.quantity:
                 new_inventory.quantity = inventory.quantity
             

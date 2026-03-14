@@ -31,15 +31,15 @@ class DomainAttributeError(DomainError):
     pass
 
 
-class DomainInvalidFormatError(DomainError):
-    pass
-
-
 class DomainLargeFileError(DomainError):
     pass
 
 
 class DomainInvalidSignInType(DomainError):
+    pass
+
+
+class DomainMaximumDataExceed(DomainError):
     pass
 
 

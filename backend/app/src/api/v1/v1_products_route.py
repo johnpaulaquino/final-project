@@ -4,6 +4,7 @@ from alembic.util import status
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from starlette import status
 
+from app.src.api.v1 import get_filenames_and_image_bytes
 from app.src.application.services.products_services import ProductsServices
 from app.src.core.constants import ConstantsData, EndpointTags
 from app.src.core.dependencies import get_order_service, get_products_service, get_uow
@@ -25,7 +26,7 @@ async def insert_product(
         images: Optional[List[UploadFile]] = File(None)):
     try:
         
-        filenames, images_bytes = await __get_filenames_and_image_bytes(images)
+        filenames, images_bytes = await get_filenames_and_image_bytes(images)
         
         product_services_result = await product_services.insert_products(product_request=products_schema,
                                                                          filenames=filenames,
@@ -82,7 +83,7 @@ async def update_product_information(product_id: str,
     
     try:
         
-        filenames, images_bytes = await __get_filenames_and_image_bytes(images)
+        filenames, images_bytes = await get_filenames_and_image_bytes(images)
         response_schema = await product_services.update_product_information(product_id,
                                                                             new_data,
                                                                             filenames,
@@ -111,19 +112,3 @@ async def delete_product(product_id: str, product_services: ProductsServices = D
         return response
     except Exception as e:
         raise e
-
-
-async def __get_filenames_and_image_bytes(images: Optional[List[UploadFile]] = File(None)):
-    filenames = []
-    images_bytes = []
-    
-    # check if not null
-    if images:
-        for image in images:
-            if image:
-                filename = image.filename
-                image_byte = await image.read()
-                filenames.append(filename)
-                images_bytes.append(image_byte)
-    
-    return filenames, images_bytes

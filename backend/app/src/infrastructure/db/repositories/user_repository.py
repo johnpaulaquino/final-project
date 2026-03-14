@@ -3,11 +3,13 @@ from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select
 
+from app.src.core.constants import ConstantsData
 from app.src.domain.dto.auth_dto import UserDTO
 from app.src.domain.dto.users_dto import UserAddressDTO, UserFullInformationDTO, UserPersonalInfoDTO
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
 from app.src.infrastructure.db.entity import Address, PersonalInfo, Users
+from app.src.schema import EnvironmentStatus
 from app.src.schema.auth_schema import SignUpRequest
 
 
@@ -136,6 +138,8 @@ class UserRepository(UserInterface):
             await self.__db.execute(stmt)
         except Exception as e:
             # log error message
+            if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
+                raise DomainError(str(e))
             raise DomainError
     
     async def update_user_address(self, user_id, address_id, data: dict):
@@ -145,6 +149,8 @@ class UserRepository(UserInterface):
             await self.__db.execute(stmt)
         except Exception as e:
             # log error message
+            if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
+                return DomainError(str(e))
             raise DomainError
     
     async def delete_user_address(self, user_id, address_id):

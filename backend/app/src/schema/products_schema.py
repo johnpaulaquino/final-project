@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from fastapi import Body
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.src.exceptions.domain_exceptions import DomainInvalidFormatError
+from app.src.exceptions.domain_exceptions import DomainUnprocessableEntityError
 
 
 class Images(BaseModel):
@@ -50,7 +50,7 @@ class ProductsFullInformationRequestSchema(BaseModel):
     @field_validator("product_name")
     def validate_product_name_field(cls, value):
         if not value:
-            raise DomainInvalidFormatError("Product name should not be empty.")
+            raise DomainUnprocessableEntityError("Product name should not be empty.")
         
         return value
     
@@ -59,15 +59,15 @@ class ProductsFullInformationRequestSchema(BaseModel):
         # convert first into string, to check whether is empty or not.
         
         # then back to float
-        if value < 0:
-            raise DomainInvalidFormatError("Price should not be negative.")
+        if value <= 0:
+            raise DomainUnprocessableEntityError("Price should not be greater than 0.")
         
         return value
     
     @field_validator("category")
     def validate_category_field(cls, value):
         if not value:
-            raise DomainInvalidFormatError("Category should not be empty.")
+            raise DomainUnprocessableEntityError("Category should not be empty.")
         
         return value
     
@@ -75,7 +75,6 @@ class ProductsFullInformationRequestSchema(BaseModel):
     def validate_quantity_field(cls, value):
         if value < 0:
             return 0
-        
         return value
 
 

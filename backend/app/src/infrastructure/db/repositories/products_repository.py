@@ -23,16 +23,12 @@ class ProductsRepository(UserInterface):
         # insert into _db, but not commited for the meantime
         self._db.add(products)
         await self._db.flush()
-        
-        product_id = products.id
-        
+
         # insert into product details
-        products_details = ProductDetails(product_id=product_id, images=request.images, description=request.description)
-        # insert into _db, but not commited for the meantime
+        products_details = ProductDetails(**request.model_dump())
         
         # insert into inventory
-        inventory = Inventory(product_id=product_id, quantity=request.quantity,
-                              low_stock_threshold=request.low_stock_threshold)
+        inventory = Inventory(**request.model_dump())
         # insert into _db, but not commited for the meantime
         self._db.add_all([inventory, products_details])
         
@@ -111,7 +107,6 @@ class ProductsRepository(UserInterface):
     async def update_product_details(self, product_id: str, data: dict):
         stmt = update(ProductDetails).where(ProductDetails.product_id == product_id).values(**data)
         await self._db.execute(stmt)
-        print("hey")
     
     async def update_product_inventory(self, product_id: str, data: dict):
         try:
