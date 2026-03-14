@@ -10,7 +10,7 @@ interface AuthModalProps {
   initialView?: 'login' | 'signup'; // para malaman kung anong view ang ipapakita pag nag open yung modal, default is 'login'
 }
 
-export default function AuthModal({ isOpen, onClose, initialView = 'login' }: AuthModalProps) {
+export default function authModal({ isOpen, onClose, initialView = 'login' }: AuthModalProps) {
   const [currentView, setCurrentView] = useState<'login' | 'signup' | 'forgot-password'>(initialView);
 
   useEffect(() => {

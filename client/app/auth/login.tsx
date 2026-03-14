@@ -14,7 +14,7 @@ export default function login({ onGoToSignup, onGoToForgotPassword }: LoginFormP
   
   const handleLogin = async () => {
 
-    router.push('/client');
+  router.push('/customer');
 
   };
   return (

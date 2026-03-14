@@ -4,7 +4,7 @@ interface SignupFormProps {
   onGoToLogin: () => void;
 }
 
-export default function SignupForm({ onGoToLogin }: SignupFormProps) {
+export default function signup({ onGoToLogin }: SignupFormProps) {
   return (
     <div className='flex flex-col h-auto animate-in fade-in duration-300'>
       <div className='mb-4 text-left'>

@@ -7,7 +7,7 @@ interface FeatureCardProps {
   desc: string;
 }
 
-export default function FeatureCard({ imageSrc, title, desc }: FeatureCardProps) {
+export default function featureCard({ imageSrc, title, desc }: FeatureCardProps) {
   return (
     <div className='bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow'>
       
