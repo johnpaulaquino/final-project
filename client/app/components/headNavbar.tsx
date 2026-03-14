@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import AuthModal from '../auth/authModal';
 
-export default function HeadNavbar() {
+export default function headNavbar() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   // Add state to track which view should open
   const [modalView, setModalView] = useState<'login' | 'signup'>('login');
