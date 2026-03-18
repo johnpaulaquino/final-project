@@ -41,3 +41,8 @@ class UpdateUserAddressSchema(BaseModel):
     barangay: str | None = None
     postal_code: str | None = None
     st_bd_hno: Optional[SubAddress] | None = None
+
+
+class ChangePasswordSchema(BaseModel):
+    old_password: str
+    new_password: str

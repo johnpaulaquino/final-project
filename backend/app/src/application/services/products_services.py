@@ -3,11 +3,13 @@ from uuid import uuid4
 
 from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
-from app.src.exceptions.domain_exceptions import (DomainNotFoundError,
+from app.src.domain.dto.auth_dto import DecodedTokenDTO
+from app.src.exceptions.domain_exceptions import (DomainForbiddenAccessError, DomainJWTInvalidError,
+                                                  DomainNotFoundError,
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
+from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
 from app.src.schema.products_schema import (InventoryRequestSchema, ProductDetailsRequestSchema, ProductRequestSchema,
                                             ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
@@ -26,18 +28,29 @@ class ProductsServices(SharedServices):
     @retry_on_transient
     async def insert_products(self, product_request: ProductsFullInformationRequestSchema,
                               filenames: List[str],
+                              current_user: DecodedTokenDTO,
                               img_bytes: List[bytes]) -> SuccessfulResponseSchema:
         
         """
         To insert products information in database, including product data, details and inventory.
         :param product_request: The full information of product.
         :param filenames: The full information of product.
+        :param current_user: dependency for authentication.
         :param img_bytes: The full information of product.
         :return: Successful response.
         """
         is_images_uploaded = False
         product_images = []
         try:
+            
+            # retrieved data first
+            data = await self.__uow.users.get_personal_info_only(current_user.user_id)
+            if not data:
+                raise DomainJWTInvalidError("Invalid user, please back to login.")
+            
+            # hen check if it's admin
+            if not current_user.role or current_user.role != RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
             # check if the images uploaded in the server exceed to maximum 5, then raise an error.
             if len(filenames) > 5:
                 raise DomainUnprocessableEntityError(
@@ -113,9 +126,13 @@ class ProductsServices(SharedServices):
     async def update_product_information(self, product_id: str,
                                          new_data: UpdateProductsInformationRequestSchema,
                                          filenames: List[str],
+                                         current_user: DecodedTokenDTO,
                                          img_bytes: List[bytes]):
         new_product_images = None
         is_images_uploaded = False
+        # hen check if it's admin
+        if not current_user.role or current_user.role != RoleSchema.ADMIN:
+            raise DomainForbiddenAccessError("You don't have rights to access this.")
         try:
             # first query the data from db
             data = await self.__uow.products.find_record(product_id)
@@ -210,9 +227,10 @@ class ProductsServices(SharedServices):
             raise e
     
     @retry_on_transient
-    async def delete_product_information(self, product_id):
+    async def delete_product_information(self, product_id, current_user: DecodedTokenDTO):
         try:
-            
+            if not current_user.role or current_user.role != RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
             data = await self.__uow.products.find_record(product_id)
             if not data:
                 raise DomainNotFoundError("Cannot delete product that does not exist.")

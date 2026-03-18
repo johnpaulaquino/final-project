@@ -23,12 +23,14 @@ class ProductsRepository(UserInterface):
         # insert into _db, but not commited for the meantime
         self._db.add(products)
         await self._db.flush()
-
+        
         # insert into product details
         products_details = ProductDetails(**request.model_dump())
+        products_details.product_id = products.id
         
         # insert into inventory
         inventory = Inventory(**request.model_dump())
+        inventory.product_id = products.id
         # insert into _db, but not commited for the meantime
         self._db.add_all([inventory, products_details])
         

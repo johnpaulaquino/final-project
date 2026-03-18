@@ -1070,6 +1070,7 @@ dependencies = [
     { name = "fastapi-mail" },
     { name = "msgpack" },
     { name = "passlib", extra = ["argon2"] },
+    { name = "phonenumbers" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "python-jose", extra = ["cryptography"] },
@@ -1090,6 +1091,7 @@ requires-dist = [
     { name = "fastapi-mail" },
     { name = "msgpack" },
     { name = "passlib", extras = ["argon2"] },
+    { name = "phonenumbers" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "python-jose", extras = ["cryptography"] },
@@ -1112,6 +1114,15 @@ wheels = [
 [package.optional-dependencies]
 argon2 = [
     { name = "argon2-cffi" },
+]
+
+[[package]]
+name = "phonenumbers"
+version = "9.0.26"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/a3/3720326431a23c8e8944a07cdf51520608f1fded87e32e991116fdb801bd/phonenumbers-9.0.26.tar.gz", hash = "sha256:9e582c827f0f5503cddeebef80099475a52ffa761551d8384099c7ec71298cbf", size = 2298587, upload-time = "2026-03-13T11:34:19.656Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/93/8825b3c9c23e595f34aa11735b29550c27a0f57fe4fc8c9ee737390566ca/phonenumbers-9.0.26-py2.py3-none-any.whl", hash = "sha256:ff473da5712965b6c7f7a31cbff8255864df694eb48243771133ecb761e807c1", size = 2584969, upload-time = "2026-03-13T11:34:16.671Z" },
 ]
 
 [[package]]

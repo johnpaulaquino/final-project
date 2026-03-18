@@ -1,14 +1,21 @@
 from typing import List
+import phonenumbers
 
 from app.src.application.services.shared_services import SharedServices
+from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.exceptions.domain_exceptions import DomainNotFoundError
-from app.src.exceptions.http_exceptions import JWTInvalidException, UnAuthorizeAccessException
+from app.src.exceptions.domain_exceptions import (DomainInvalidCredentialsError, DomainJWTInvalidError,
+                                                  DomainNotFoundError,
+                                                  DomainOTPInvalidError, DomainOTPNotExpireError,
+                                                  DomainUnprocessableEntityError, )
+from app.src.exceptions.http_exceptions import JWTInvalidException
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import SuccessfulResponseSchema
-from app.src.schema.products_schema import Images
-from app.src.schema.user_schema import UpdateUserSchema
+from app.src.schema import SignInTypeSchema, SuccessfulResponseSchema
+from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserAddressSchema, UpdateUserSchema
+from phonenumbers import geocoder
+
+from app.src.utils.utility import Utility
 
 
 class UserServices(SharedServices):
@@ -32,8 +39,13 @@ class UserServices(SharedServices):
             to_update_personal_data = old_personal_data.copy(update=data.model_dump(
                     exclude_unset=True, exclude_none=True
                     ))
+            # validate and set the age
+            to_update_personal_data.age = Utility.validate_birthdate(to_update_personal_data.birth_date)
+            
+            # store old image in db
             old_image = old_personal_data.profile_image
             
+            # then process the image.
             new_image = await self.upload_images_and_get(filenames=filename, img_bytes=img_byte)
             
             # if there's an images uploaded, then remove from cloudinary
@@ -42,21 +54,21 @@ class UserServices(SharedServices):
                 to_update_personal_data.profile_image = new_image[0]
                 is_uploaded = True
                 # check if there's an old image, then remove it.
-            
+            if old_personal_data == to_update_personal_data:
+                return SuccessfulResponseSchema(message="No changes made.")
             # update the records from database.
             await self.__uof.users.update_user_personal_info(current_user.user_id,
                                                              to_update_personal_data)
+            # check if the old image, then destroy it in the cloudinary
             if old_image:
                 # then destroy the old images in cloudinary and add a new one.
                 await self.__cloudinary_infrastructure.destroy_images(old_image.public_key)
             return SuccessfulResponseSchema(message="Successfully update personal information.")
         except Exception as e:
-            print(data.profile_image)
             # upload again the images in cloudinary here.
             if is_uploaded and to_update_personal_data.profile_image is not None:
                 
                 await self.__cloudinary_infrastructure.destroy_images(to_update_personal_data.profile_image.public_key)
-            # then upload the old one again.
             
             raise e
     
@@ -68,5 +80,139 @@ class UserServices(SharedServices):
             
             return SuccessfulResponseSchema(message="Successfully retrieved information.",
                                             data=data)
+        except Exception as e:
+            raise e
+    
+    async def send_sms_otp(self, contact_number: str, current_user: DecodedTokenDTO, old_otp: str):
+        try:
+            # Implement dito yung, isang verification lang kada 1 device per hour para maiwasan ang spam verification.
+            # sa ngayon ay wag muna, kapag sinuggest na lang siguro.
+            
+            # check if PH number
+            parsed_number = phonenumbers.parse(contact_number, "PH")
+            if geocoder.description_for_number(parsed_number, 'en') != "Philippines":
+                raise DomainUnprocessableEntityError("Invalid format, it should be Philippines format.")
+            
+            data = await self.__uof.users.get_personal_info_only(current_user.user_id)
+            if not data:
+                raise DomainJWTInvalidError("Invalid user. Please back to login.")
+            
+            # then check if there's an OTP in redis.
+            if old_otp:
+                raise DomainOTPNotExpireError("Your OTP is not expired yet.")
+            
+            # send an otp to the sms
+            otp_code = Utility.generate_otp_code()
+            # then update contact number in database
+            to_update = {"phone_number": contact_number}
+            
+            await self.__uof.users.update_user_personal_info(current_user.user_id, to_update)
+            return SuccessfulResponseSchema(message="Successfully sent OTP to you mobile number.", otp_code=otp_code)
+        except Exception as e:
+            raise e
+    
+    async def verify_sms_otp(self, otp_code: str, otp_from_redis: str, current_user: DecodedTokenDTO):
+        try:
+            # check otp
+            if not otp_code:
+                raise DomainUnprocessableEntityError("OTP code should not be empty.")
+            # retrieved user data
+            data = await self.__uof.users.get_personal_info_only(current_user.user_id)
+            
+            # check if user exists
+            if not data:
+                raise DomainJWTInvalidError("Invalid user. Please back to login.")
+            
+            # verify otp code
+            if not Utility.verify_otp(otp_from_redis, otp_code):
+                raise DomainOTPInvalidError("Incorrect OTP.")
+            
+            # then update the number, and the mark as valid or verified number.
+            to_update = {"is_phone_verified": True}
+            
+            # then update the is phone verified to true.
+            await self.__uof.users.update_user_personal_info(current_user.user_id, to_update)
+            return SuccessfulResponseSchema(message="Successfully verified phone number.")
+        except Exception as e:
+            raise e
+    
+    async def update_address(self, address: UpdateUserAddressSchema, current_user: DecodedTokenDTO):
+        try:
+            data = await self.__uof.users.get_address_only(current_user.user_id)
+            # check if user exists
+            if not data:
+                raise DomainJWTInvalidError("Invalid user. Please back to login.")
+            
+            # copy original data and update the new address and exclude None
+            to_update = data.model_copy(update=address.model_dump(exclude_none=True, exclude_unset=True))
+            
+            # check if no changes in the schema
+            if data == to_update:
+                return SuccessfulResponseSchema(message="No changes made.")
+            # then update the address
+            await self.__uof.users.update_user_address(current_user.user_id,
+                                                       to_update.model_dump(exclude_none=True,
+                                                                            exclude_unset=True))
+            
+            return SuccessfulResponseSchema(message="Successfully updated address.")
+        except Exception as e:
+            raise e
+    
+    async def change_password(self, change_password: ChangePasswordSchema, current_user: DecodedTokenDTO):
+        
+        try:
+            data = await self.__uof.users.get_user_info_only_with_password(current_user.user_id)
+            if not data:
+                raise DomainJWTInvalidError("Invalid user. Please back to login.")
+            # validate password
+            hashed_new_password = None
+            to_update = data.copy()
+            # for password that is none and the sign in type is in Google, or apple or facebook
+            if not data.password and (
+                    SignInTypeSchema.GOOGLE in data.signin_type
+                    or SignInTypeSchema.APPLE in data.signin_type
+                    or SignInTypeSchema.FACEBOOK in data.signin_type):
+                
+                # update the password with the new hashed password.
+                to_update.password = AppSecurity.hash_plain_password(change_password.new_password)
+                # then append the Password sign in type.
+                to_update.signin_type.append(SignInTypeSchema.PASSWORD)
+                await self.__uof.users.update_user_personal_info(current_user.user_id,
+                                                                 to_update.model_dump(exclude_none=True,
+                                                                                      exclude_unset=True))
+                return SuccessfulResponseSchema(message="Successfully update password.")
+            
+            # Verify if the inputted old password is matched to the database.
+            if not change_password.old_password:
+                raise DomainUnprocessableEntityError("Old password must not be empty.")
+            
+            # verify the old password
+            if not AppSecurity.verify_hash_password(plain_password=change_password.old_password,
+                                                    hashed_password=data.password):
+                raise DomainInvalidCredentialsError("Incorrect old password.")
+            
+            # then set the old password with the new hashed password
+            to_update.password = AppSecurity.hash_plain_password(change_password.new_password)
+            await self.__uof.users.update_user_personal_info(current_user.user_id,
+                                                             to_update.model_dump(exclude_none=True,
+                                                                                  exclude_unset=True))
+            return SuccessfulResponseSchema(message="Successfully update password.")
+        
+        except Exception as e:
+            raise e
+    
+    async def change_email(self, new_email: str, current_user: DecodedTokenDTO):
+        # TODO Project To follow na lang muna
+        try:
+            data = await self.__uof.users.get_user_info_only(current_user.user_id)
+            if not data:
+                raise DomainJWTInvalidError("Invalid user. Please back to login.")
+            
+            # check if the new email is not specified
+            if not new_email:
+                raise DomainUnprocessableEntityError("New email should not be empty.")
+        
+            
+        
         except Exception as e:
             raise e

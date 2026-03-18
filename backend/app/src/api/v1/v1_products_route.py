@@ -7,7 +7,8 @@ from starlette import status
 from app.src.api.v1 import get_filenames_and_image_bytes
 from app.src.application.services.products_services import ProductsServices
 from app.src.core.constants import ConstantsData, EndpointTags
-from app.src.core.dependencies import get_order_service, get_products_service, get_uow
+from app.src.core.dependencies import get_current_user, get_order_service, get_products_service, get_uow
+from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema
 from app.src.schema.products_schema import ProductsFullInformationRequestSchema, UpdateProductsInformationRequestSchema
@@ -22,6 +23,8 @@ v1_products_router = APIRouter(tags=[EndpointTags.PRODUCTS], prefix=__base_endpo
 async def insert_product(
         products_schema: ProductsFullInformationRequestSchema = Depends(
                 ProductsFullInformationRequestSchema.depends_schema),
+        current_user: DecodedTokenDTO = Depends(get_current_user),
+        
         product_services: ProductsServices = Depends(get_products_service),
         images: Optional[List[UploadFile]] = File(None)):
     try:
@@ -30,6 +33,7 @@ async def insert_product(
         
         product_services_result = await product_services.insert_products(product_request=products_schema,
                                                                          filenames=filenames,
+                                                                         current_user=current_user,
                                                                          img_bytes=images_bytes)
         
         product_services_result.status_code = status.HTTP_201_CREATED
@@ -78,6 +82,7 @@ async def update_product_information(product_id: str,
                                      new_data: UpdateProductsInformationRequestSchema = Depends(
                                              UpdateProductsInformationRequestSchema.update_depends_schema),
                                      images: List[UploadFile] = File(None),
+                                     current_user: DecodedTokenDTO = Depends(get_current_user),
                                      product_services: ProductsServices = Depends(get_products_service),
                                      ):
     
@@ -87,6 +92,7 @@ async def update_product_information(product_id: str,
         response_schema = await product_services.update_product_information(product_id,
                                                                             new_data,
                                                                             filenames,
+                                                                            current_user,
                                                                             images_bytes)
         
         response_schema.status_code = status.HTTP_200_OK
@@ -99,10 +105,13 @@ async def update_product_information(product_id: str,
 
 # will inject the safe route here
 @v1_products_router.delete("/{product_id}", tags=[EndpointTags.ADMIN])
-async def delete_product(product_id: str, product_services: ProductsServices = Depends(get_products_service)):
+async def delete_product(product_id: str,
+                         product_services: ProductsServices = Depends(get_products_service),
+                         current_user: DecodedTokenDTO = Depends(get_current_user),
+                         ):
     try:
         
-        services_response = await product_services.delete_product_information(product_id)
+        services_response = await product_services.delete_product_information(product_id, current_user)
         services_response.status_code = status.HTTP_200_OK
         
         # set the response for

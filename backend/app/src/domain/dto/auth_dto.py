@@ -18,6 +18,21 @@ class UserDTO(BaseModel):
     sign_up_steps: int = None
 
 
+class UserWithPasswordDTO(BaseModel):
+    id: str | None = None
+    email: str | EmailStr = None
+    is_active: bool = None
+    is_deleted: bool = None
+    signin_type: List[str] = None
+    login_at: datetime = None
+    created_at: datetime = None
+    role: str = None
+    updated_at: datetime = None
+    deleted_at: datetime = None
+    sign_up_steps: int = None
+    password: str = None
+
+
 class TokenDTO(BaseModel):
     access_token: str
     refresh_token: str

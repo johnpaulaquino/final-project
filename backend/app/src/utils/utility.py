@@ -1,3 +1,4 @@
+import secrets
 import socket
 from datetime import date
 
@@ -158,6 +159,8 @@ class Utility:
         To validate birthdate, it ,must be at least 18 years old.
         """
         # date today must not be greater than to today's year
+        if not birthdate:
+            return 0
         user_age = cls.calculate_age(birthdate)
         if user_age < 18:
             DomainUnprocessableEntityError("Age must be at least 18 years old.")
@@ -198,3 +201,9 @@ class Utility:
             age = 1
         # then return age
         return age
+    
+    @staticmethod
+    def generate_otp_code():
+        otp = str(secrets.randbelow(900000) + 100000)  # 6-digit
+        
+        return otp

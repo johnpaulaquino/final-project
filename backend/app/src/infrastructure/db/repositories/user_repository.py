@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select
 
 from app.src.core.constants import ConstantsData
-from app.src.domain.dto.auth_dto import UserDTO
+from app.src.domain.dto.auth_dto import UserDTO, UserWithPasswordDTO
 from app.src.domain.dto.users_dto import UserAddressDTO, UserFullInformationDTO, UserPersonalInfoDTO
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
@@ -69,6 +69,20 @@ class UserRepository(UserInterface):
         return UserFullInformationDTO(**data[0]) if data else data
     
     async def get_user_info_only(self, user_id: str) -> UserDTO:
+        """
+        To get the personal info only.
+        :param user_id: is a unique from user.
+        :return: Personal Information only.
+        """
+        stmt = (select(Users)
+                .where(Users.user_id == user_id))
+        
+        result = await self.__db.execute(stmt)
+        data = result.scalars().first()
+        
+        return UserDTO.model_validate(data) if data else data
+    
+    async def get_user_info_only_with_password(self, user_id: str) -> UserWithPasswordDTO:
         """
         To get the personal info only.
         :param user_id: is a unique from user.

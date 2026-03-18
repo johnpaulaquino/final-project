@@ -4,6 +4,7 @@ from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 
 from app.src.application.services.auth_services import AuthServices
+from app.src.application.services.carts_services import CartsServices
 from app.src.application.services.order_services import OrderServices
 from app.src.application.services.products_services import ProductsServices
 from app.src.application.services.user_services import UserServices
@@ -93,3 +94,9 @@ def get_products_service(
         ) -> ProductsServices:
     return ProductsServices(uow,
                             cloudinary_infrastructure=cloudinary_infrastructure)
+
+
+def get_cart_service(
+        uow: SQLUnitOfWork = Depends(get_uow),
+        ) -> CartsServices:
+    return CartsServices(uow)

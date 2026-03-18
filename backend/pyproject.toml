@@ -14,6 +14,7 @@ dependencies = [
     "python-jose[cryptography]",
     "requests",
     "msgpack",
+    "phonenumbers",
     "redis",
     "cloudinary",
     "fastapi-mail",

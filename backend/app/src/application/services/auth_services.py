@@ -51,7 +51,7 @@ class AuthServices:
             # query from temp database
             temp_user_data = await self.__uow.temp_users.find_record(email)
             # generate an otp_code
-            otp_code = AppSecurity.generate_otp_code()
+            otp_code = Utility.generate_otp_code()
             
             # Check if the user email is already verified.
             if temp_user_data:
@@ -110,7 +110,6 @@ class AuthServices:
         :param verification_token: verification token that will retrieve in cookie.
         :return: Successful Response Schema
         """
-        print(verification_token)
         try:
             
             try:

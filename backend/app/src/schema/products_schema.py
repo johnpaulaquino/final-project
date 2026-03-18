@@ -60,7 +60,7 @@ class ProductsFullInformationRequestSchema(BaseModel):
         
         # then back to float
         if value <= 0:
-            raise DomainUnprocessableEntityError("Price should not be greater than 0.")
+            raise DomainUnprocessableEntityError("Price should not be less than 0.")
         
         return value
     

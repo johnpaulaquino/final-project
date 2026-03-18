@@ -47,3 +47,4 @@ class SuccessfulResponseSchema(BaseModel):
     refresh_token: str = None
     action: str = None
     paginated: PaginatedOutput | None = None
+    otp_code: str | None = None
