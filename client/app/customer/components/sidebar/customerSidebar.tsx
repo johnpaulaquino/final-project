@@ -1,6 +1,6 @@
 'use client';
 
-import{ useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import SideProducts from './sideProducts';
 
 export interface Product {
@@ -9,9 +9,11 @@ export interface Product {
   price: string;
   rating: string;
   image: string;
+  description?: string;
+  category?: string;
 }
 
-export default function customerS() {
+export default function CustomerSidebar() {
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,27 +24,27 @@ export default function customerS() {
       try {
       const mockData: Product[] = [
         { id: 1, 
-          name: 'Chocolate Roll Bites', 
-          price: '$0.80', rating: '4.8', 
-          image: '' },
+          name: 'Dubai Cinnamon Rolls', 
+          price: '₱100', 
+          rating: '4.8', 
+          image: '/products/dubai-cinnamon-rolls.jpg' },
 
         { id: 2, 
-          name: 'Strawberry Pastry', 
-          price: '$1.20', rating: '4.9', 
-          image: '' },
+          name: 'Tiramisu Cinnamon Rolls', 
+          price: '₱95', 
+          rating: '4.9', 
+          image: '/products/tiramisu-cinnamon-rolls.jpg' },
 
         { id: 3, 
-          name: 'Matcha Treat', 
-          price: '$1.50', 
-          rating: '5.0', 
-          image: '' }
+          name: 'Korean Garlic Bun', 
+          price: '₱95', 
+          rating: '5.0',
+          image: '/products/korean-garlic-bun.jpg' }
       ];
       
       setBestSellers(mockData);
       setNewProducts(mockData);
-      setIsLoading(false);
-      
-    
+
     } catch (error) {
         console.error("Failed to load recommended products", error);
     } finally {
@@ -61,6 +63,7 @@ export default function customerS() {
         </aside>
       );
     }
+    
   return (
     <aside className="w-full xl:w-[320px] bg-white rounded-[10px] p-6 shadow-xl flex-shrink-0 h-max">
       

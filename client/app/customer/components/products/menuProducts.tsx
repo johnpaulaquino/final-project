@@ -1,18 +1,11 @@
 'use client';
 
-
-// temporary muna 
-export interface Product {
-  id: number;
-  name: string;
-  price: string;
-  rating: string;
-  image: string;
-  description?: string; 
-  category?: string;    
-}
+import Image from 'next/image';
+import { useCart, Product } from '../../context/contextCart';
 
 export default function menuProducts({ product }: { product: Product }) {
+  const { addToCart } = useCart();
+
   return (
     <div className="bg-white rounded-[10px] shadow-sm overflow-hidden hover:shadow-md transition duration-300 cursor-pointer flex flex-col group">
       
@@ -42,8 +35,23 @@ export default function menuProducts({ product }: { product: Product }) {
           </p>
         )}
         
-        <span className="text-sm font-bold text-[#800000]">{product.price}</span>
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-sm font-bold text-[#800000]">{product.price}</span>
+          <button
+            onClick={() => addToCart(product)} 
+            className="cursor-pointer flex items-center justify-center w-8 h-8 rounded-full bg-black hover:bg-gray-800 transition-colors"
+          >
+            
+            <Image 
+              src="/icons/add-to-cart.png" 
+              alt="Add to Cart" 
+              width={10} 
+              height={10} 
+            />
+          </button>
+        </div>
       </div>
+
     </div>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ProductCard, { Product } from './menuProducts';
+import ProductCard from '../products/menuProducts';
+import { Product } from '../../context/contextCart';
 
 export default function customerRecommendation() {
   const [products, setProducts] = useState<Product[]>([]);
