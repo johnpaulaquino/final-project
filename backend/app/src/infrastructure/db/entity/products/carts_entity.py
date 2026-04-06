@@ -22,8 +22,19 @@ class Carts(BaseCarts, table=True):
 
 
 class CreateCart(BaseCarts):
-    pass
     
     @staticmethod
-    def depends(product_id: str = Body(...), quantity: int = Body(default=1)):
+    def depends(product_id: str = Body(...),
+                quantity: int = Body(default=1)):
         return CreateCart(product_id=product_id, quantity=quantity)
+
+
+class GetCart(BaseCarts):
+    cart_id: str = Body(...)
+    
+    @staticmethod
+    def depends(
+            product_id: str = Body(...),
+            cart_id: str = Body(...),
+            ):
+        return CreateCart(product_id=product_id, cart_id=cart_id)

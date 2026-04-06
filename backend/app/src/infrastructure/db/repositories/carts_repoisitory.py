@@ -4,23 +4,35 @@ from sqlmodel import and_
 
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.infrastructure.db.entity import Products
-from app.src.infrastructure.db.entity.products.carts_entity import Carts, CreateCarts
+from app.src.infrastructure.db.entity.products.carts_entity import Carts, CreateCart
 
 
 class CartsRepository(UserInterface):
     def __init__(self, db: AsyncSession):
         self.__db = db
     
-    async def insert_record(self, record: CreateCarts):
+    async def insert_record(self, record: CreateCart):
         try:
             cart = Carts(**record.model_dump())
             self.__db.add(cart)
         except Exception as e:
             raise e
     
-    async def get_cart(self, cart_id: str, user_id: str) -> Carts:
+    async def get_cart(self, user_id: str, product_id: str) -> Carts:
+        try:
+            stmt = select(Carts).where(and_(Carts.product_id == product_id,
+                                            Carts.user_id == user_id
+                                            ))
+            result = await self.__db.execute(stmt)
+            data = result.scalars().one_or_none()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_cart_with_cart_id(self, cart_id: str, user_id: str, product_id: str) -> Carts:
         try:
             stmt = select(Carts).where(and_(Carts.id == cart_id,
+                                            Carts.product_id == product_id,
                                             Carts.user_id == user_id
                                             ))
             result = await self.__db.execute(stmt)

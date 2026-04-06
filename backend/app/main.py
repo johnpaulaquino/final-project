@@ -4,10 +4,11 @@ import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from app.src.api.v1.v1_user_route import v1_user_router
 from app.src.api.v1.v1_auth_route import v1_auth_router
+from app.src.api.v1.v1_cart_route import v1_cart_router
 from app.src.api.v1.v1_order_route import v1_order_router
 from app.src.api.v1.v1_products_route import v1_products_router
+from app.src.api.v1.v1_user_route import v1_user_router
 from app.src.core.constants import ConstantsData
 from app.src.exceptions import BaseAppExceptions, app_exception_handler
 from app.src.exceptions.domain_exceptions import DomainError
@@ -26,6 +27,7 @@ app.add_middleware(
         )
 
 app.include_router(v1_auth_router)
+app.include_router(v1_cart_router)
 app.include_router(v1_products_router)
 app.include_router(v1_order_router)
 app.include_router(v1_user_router)

@@ -1,4 +1,3 @@
-from jinja2.nodes import Add
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select
@@ -75,11 +74,10 @@ class UserRepository(UserInterface):
         :return: Personal Information only.
         """
         stmt = (select(Users)
-                .where(Users.user_id == user_id))
+                .where(Users.id == user_id))
         
         result = await self.__db.execute(stmt)
         data = result.scalars().first()
-        
         return UserDTO.model_validate(data) if data else data
     
     async def get_user_info_only_with_password(self, user_id: str) -> UserWithPasswordDTO:
@@ -89,7 +87,7 @@ class UserRepository(UserInterface):
         :return: Personal Information only.
         """
         stmt = (select(Users)
-                .where(Users.user_id == user_id))
+                .where(Users.id == user_id))
         
         result = await self.__db.execute(stmt)
         data = result.scalars().first()

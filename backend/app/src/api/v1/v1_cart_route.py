@@ -20,6 +20,7 @@ async def insert_cart(cart_data: CreateCart = Depends(CreateCart.depends),
                       cart_services: CartsServices = Depends(get_cart_service),
                       ):
     try:
+        
         cart_response = await cart_services.insert_cart(cart_data, current_user)
         cart_response.status_code = status.HTTP_201_CREATED
         

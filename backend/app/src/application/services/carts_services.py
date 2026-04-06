@@ -3,7 +3,7 @@ from app.src.exceptions.domain_exceptions import DomainForbiddenAccessError, Dom
 from app.src.exceptions.http_exceptions import JWTInvalidException
 from app.src.infrastructure.db.entity.products.carts_entity import CreateCart
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import PaginatedOutput, PaginatedSchema, RoleSchema, SuccessfulResponseSchema
+from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
 from app.src.utils.utility import Utility
 
 
@@ -19,21 +19,28 @@ class CartsServices:
             # check the role
             if current_user.role == RoleSchema.ADMIN:
                 raise DomainForbiddenAccessError("You don't have rights to access this.")
+            
+            # check first if product exists
+            product_data = await self.__uof.products.get_product_only(cart_data.product_id)
+            if not product_data:
+                raise DomainNotFoundError("Product not found.")
             # to check if there's a data inserted into carts
-            data = await self.__uof.carts.get_cart(product_id=cart_data.product_id,
-                                                   user_id=current_user.user_id)
+            data = await self.__uof.carts.get_cart(
+                    product_id=cart_data.product_id,
+                    user_id=current_user.user_id)
             if data:
                 # then if there's a data then update the cart quantity only
                 self.__uof.carts.update_cart(**data.model_dump())
                 return SuccessfulResponseSchema(message="Successfully update quantity.")
             # set the user_id
             cart_data.user_id = current_user.user_id
-            
+            # then insert into database
+            await self.__uof.carts.insert_record(cart_data)
             return SuccessfulResponseSchema(message="Successfully added product to cart.")
         except Exception as e:
             raise e
     
-    async def get_product_cart(self, cart_id: str, current_user: DecodedTokenDTO):
+    async def get_product_cart(self, cart_id: str, product_id: str, current_user: DecodedTokenDTO):
         try:
             # check first if there's a user
             await self.check_user_exists(current_user)
@@ -41,11 +48,12 @@ class CartsServices:
             # check the role
             if current_user.role == RoleSchema.ADMIN:
                 raise DomainForbiddenAccessError("You don't have rights to access this.")
-            data = await self.__uof.carts.get_cart(cart_id=cart_id, user_id=current_user.user_id)
+            data = await self.__uof.carts.get_cart_with_cart_id(cart_id=cart_id,
+                                                                product_id=product_id,
+                                                                user_id=current_user.user_id)
             if not data:
                 raise DomainNotFoundError("No cart found.")
             
-            print(data.schema())
             return SuccessfulResponseSchema(message="Successfully retrieved cart.", data=data)
         except Exception as e:
             raise e
