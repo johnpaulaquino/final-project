@@ -4,8 +4,8 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../../context/contextCart';
 
-export default function CartDropdown({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
-  const { cart, totalItems, totalPrice } = useCart();
+export default function cartDropDown({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+  const { cart, totalItems, totalPrice, updateQuantity, removeFromCart } = useCart();
 
   const handleCheckout = () => {
     setActiveTab('Checkout');
@@ -22,22 +22,61 @@ export default function CartDropdown({ setActiveTab }: { setActiveTab: (tab: str
       </div>
 
       {/* cart items */}
-      <div className="flex flex-col gap-4 mb-4 max-h-60 overflow-y-auto">
+      <div className="flex flex-col gap-4 mb-4 max-h-[260px] overflow-y-auto pr-2 scrollbar-thin">
         {cart.length === 0 ? (
           <p className="text-gray-500 text-sm text-center py-4">Your cart is empty.</p>
         ) : (
           cart.map((item) => (
-            <div key={item.id} className="flex gap-4 items-center">
-              <div className="w-14 h-14 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+            <div key={item.id} className="flex gap-3 items-center group">
+              
+              {/* Product Image */}
+              <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
               </div>
-              <div className="flex-grow">
-                <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
+              
+              <div className="flex-grow flex flex-col justify-between h-16">
                 
-                {/*item price an quantitiy */}
-                <div className="flex justify-between items-center mt-0.5">
+                {/* product name and delete button */}
+                <div className="flex justify-between items-start">
+                  <h3 className="text-sm font-bold text-gray-900 line-clamp-1 pr-2">{item.name}</h3>
+                  <button 
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 -mr-1 flex-shrink-0"
+                    title="Remove item"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* quantity controls */}
+                <div className="flex justify-between items-end">
                   <span className="text-[#800000] font-bold text-sm">{item.price}</span>
-                  <span className="text-gray-500 text-xs font-normal">x{item.quantity}</span>
+                  
+                  <div className="flex items-center bg-gray-50 rounded-lg border border-gray-100">
+                    <button 
+                      onClick={() => item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeFromCart(item.id)}
+                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-l-lg transition-colors cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                      </svg>
+                    </button>
+                    
+                    <span className="text-xs font-bold w-5 text-center text-gray-900">
+                      {item.quantity}
+                    </span>
+                    
+                    <button 
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-r-lg transition-colors cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 
               </div>
@@ -51,13 +90,13 @@ export default function CartDropdown({ setActiveTab }: { setActiveTab: (tab: str
         <div className="flex justify-between items-center mb-4">
           <span className="text-gray-500 font-semibold">Total</span>
           <span className="text-xl font-black text-gray-900">
-            ${totalPrice.toFixed(2)}
+            ₱{totalPrice.toFixed(2)}
           </span>
         </div>
 
         <button 
           onClick={handleCheckout}
-          className="cursor-pointer w-full bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-colors flex justify-center items-center gap-2"
+          className="cursor-pointer w-full bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-colors flex justify-center items-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
           disabled={cart.length === 0}
         >
           Checkout Now

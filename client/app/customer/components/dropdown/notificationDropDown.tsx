@@ -18,7 +18,7 @@ interface NotificationDropdownProps {
   onClearHistory: () => void;
 }
 
-export default function NotificationDropdown({ 
+export default function notificationDropDown({ 
   notifications, 
   onClose, 
   onMarkAllRead, 

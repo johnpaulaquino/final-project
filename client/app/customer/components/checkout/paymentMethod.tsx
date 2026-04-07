@@ -7,7 +7,7 @@ interface PaymentMethodProps {
   setActivePayment: (method: string) => void;
 }
 
-export default function PaymentMethod({ activePayment, setActivePayment }: PaymentMethodProps) {
+export default function paymentMethod({ activePayment, setActivePayment }: PaymentMethodProps) {
   const methods = [
     { id: 'cc', 
       title: 'Credit / Debit Card', 

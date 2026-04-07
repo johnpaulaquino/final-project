@@ -9,7 +9,7 @@ interface OrderSummaryProps {
   isAddressSaved: boolean;
 }
 
-export default function OrderSummary({ onProcessPayment, isAddressSaved }: OrderSummaryProps) {
+export default function orderSummary({ onProcessPayment, isAddressSaved }: OrderSummaryProps) {
   const { cart, totalPrice } = useCart();
   const shippingCost: number = 0;
   const finalTotal = totalPrice + shippingCost;
@@ -50,7 +50,7 @@ export default function OrderSummary({ onProcessPayment, isAddressSaved }: Order
                 <p className="text-gray-500 text-sm">Qty: {item.quantity}</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="font-bold text-gray-900">${(item.numericPrice * item.quantity).toFixed(2)}</p>
+                <p className="font-bold text-gray-900">₱{(item.numericPrice * item.quantity).toFixed(2)}</p>
               </div>
             </div>
           ))
@@ -61,7 +61,7 @@ export default function OrderSummary({ onProcessPayment, isAddressSaved }: Order
       <div className="border-t border-gray-100 pt-6 space-y-3">
         <div className="flex justify-between text-gray-500">
           <span>Subtotal</span>
-          <span className="font-medium text-gray-900">${totalPrice.toFixed(2)}</span>
+          <span className="font-medium text-gray-900">₱{totalPrice.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-gray-500">
           <span>Shipping</span>
@@ -79,10 +79,10 @@ export default function OrderSummary({ onProcessPayment, isAddressSaved }: Order
           <span className="text-lg font-bold text-gray-900 block">Total</span>
           <span className="text-xs text-gray-500">Including taxes</span>
         </div>
-        <span className="text-3xl font-black text-gray-900">${finalTotal.toFixed(2)}</span>
+        <span className="text-3xl font-black text-gray-900">₱{finalTotal.toFixed(2)}</span>
       </div>
 
-      {/* Checkout Button */}
+      {/* checkout button */}
       <button 
         onClick={onProcessPayment}
         disabled={cart.length === 0 || !isAddressSaved}

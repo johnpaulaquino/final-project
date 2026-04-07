@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-export default function UserDropdown({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+export default function profileDropDown({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
 
   const handleProfileClick = () => {
     setActiveTab('AccountSetting');

@@ -44,6 +44,12 @@ export default function headNavbar({activeTab, setActiveTab}: HeadNavbarProps) {
   };  
 
   useEffect(() => {
+    setIsCartOpen(false);
+    setIsNotifOpen(false);
+    setIsProfileOpen(false);
+  }, [activeTab]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
@@ -56,7 +62,6 @@ export default function headNavbar({activeTab, setActiveTab}: HeadNavbarProps) {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
       }
-
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -147,14 +152,16 @@ export default function headNavbar({activeTab, setActiveTab}: HeadNavbarProps) {
           <div className="relative flex items-center" ref={dropdownRef}>
             
             <button 
-              className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isNotifOpen ? 'bg-[#fff5f5]' : ''}`}
+              className={`cursor-pointer relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isNotifOpen ? 'bg-[#fff5f5]' : ''}`}
               onClick={() => {
                 setIsNotifOpen(!isNotifOpen);
                 setIsCartOpen(false);
                 setIsProfileOpen(false);
               }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#9e9e9e" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="21" height="21" fill="none" 
+                   stroke={isNotifOpen ? "#800000" : "#9e9e9e"} 
+                   strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="transition-colors">
                 <path d="M14 21H10M18 8C18 6.4087 17.3679 4.88258 16.2427 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.8826 2.63214 7.75738 3.75736C6.63216 4.88258 6.00002 6.4087 6.00002 8C6.00002 11.0902 5.22049 13.206 4.34968 14.6054C3.61515 15.7859 3.24788 16.3761 3.26134 16.5408C3.27626 16.7231 3.31488 16.7926 3.46179 16.9016C3.59448 17 4.19261 17 5.38887 17H18.6112C19.8074 17 20.4056 17 20.5382 16.9016C20.6852 16.7926 20.7238 16.7231 20.7387 16.5408C20.7522 16.3761 20.3849 15.7859 19.6504 14.6054C18.7795 13.206 18 11.0902 18 8Z" />
               </svg>
               
@@ -178,14 +185,16 @@ export default function headNavbar({activeTab, setActiveTab}: HeadNavbarProps) {
           {/* Cart */}
           <div className="relative flex items-center" ref={cartRef}>
             <button 
-              className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? 'bg-[#fff5f5]' : ''}`}
+              className={`cursor-pointer relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? 'bg-[#fff5f5]' : ''}`}
               onClick={() => {
                 setIsCartOpen(!isCartOpen);
                 setIsNotifOpen(false);
                 setIsProfileOpen(false);
               }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#9e9e9e" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" 
+                   stroke={isCartOpen ? "#800000" : "#9e9e9e"} 
+                   strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="transition-colors">
                 <path d="M4 9L6.5 4h11L20 9" />
                 <path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" />
                 <path d="M4 9h16" />
@@ -203,7 +212,7 @@ export default function headNavbar({activeTab, setActiveTab}: HeadNavbarProps) {
 
           </div>
 
-          {/* icon */}
+          {/* profile icon */}
           <div className="relative flex items-center" ref={profileRef}>
           <button 
             className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? 'bg-[#fff5f5]' : ''}`}
