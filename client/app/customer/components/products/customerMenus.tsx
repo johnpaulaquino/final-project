@@ -4,33 +4,25 @@ import { useState, useEffect } from 'react';
 import ProductCard from '../products/menuProducts'; 
 import ProductModal from '../products/productModal';
 import { Product } from '../../context/contextCart';
-import { biskotaMenuData } from '../../data/mockDataCard';
+// We don't need biskotaMenuData here anymore because useProduct() already includes it!
+import { useCategory } from '../../context/contextCategory';
+import { useProduct } from '../../context/contextProduct';
 
-export default function customerMenus() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function CustomerMenus() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const { categories } = useCategory();
+  const { products } = useProduct();
   
-  const filters = ['All', 'Cinnamon Rolls', 'Savories', 'Cake in a Cup', 'Brownies', 'Cinnamon Bites', 'Pasta', 'Protein Cookies', 'Bento Sizes', 'Drinks', 'Others'];
+  const filters = ['All', ...categories];
   
   useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        setIsLoading(true);
-        
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-        
-        // imported the mock data for the menu
-        setProducts(biskotaMenuData);
-      } catch (error) {
-        console.error("Failed to load products", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    fetchMenu();
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -44,7 +36,6 @@ export default function customerMenus() {
         navbar.style.opacity = '1';
       }
     }
-    
     return () => {
       if (navbar) {
         navbar.style.visibility = 'visible';
@@ -97,7 +88,7 @@ export default function customerMenus() {
               </div>
             ))
           ) : (
-            <div className="col-span-full py-12 text-center text-gray-500">
+            <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-2xl border border-gray-100 border-dashed">
               No products found in "{activeFilter}" right now.
             </div>
           )}

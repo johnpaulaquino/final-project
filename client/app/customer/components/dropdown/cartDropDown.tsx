@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../../context/contextCart';
 
-export default function cartDropDown({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+export default function CartDropDown({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
   const { cart, totalItems, totalPrice, updateQuantity, removeFromCart } = useCart();
 
   const handleCheckout = () => {
@@ -41,7 +41,7 @@ export default function cartDropDown({ setActiveTab }: { setActiveTab: (tab: str
                   <h3 className="text-sm font-bold text-gray-900 line-clamp-1 pr-2">{item.name}</h3>
                   <button 
                     onClick={() => removeFromCart(item.id)}
-                    className="text-gray-400 hover:text-red-500 transition-colors p-1 -mr-1 flex-shrink-0"
+                    className="text-gray-400 hover:text-red-500 transition-colors p-1 -mr-1 flex-shrink-0 cursor-pointer"
                     title="Remove item"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,9 +52,11 @@ export default function cartDropDown({ setActiveTab }: { setActiveTab: (tab: str
                 
                 {/* quantity controls */}
                 <div className="flex justify-between items-end">
-                  <span className="text-[#800000] font-bold text-sm">{item.price}</span>
+                  <span className="text-[#800000] font-bold text-sm">₱{item.numericPrice.toFixed(2)}</span>
                   
                   <div className="flex items-center bg-gray-50 rounded-lg border border-gray-100">
+                    
+                    {/* MINUS BUTTON */}
                     <button 
                       onClick={() => item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeFromCart(item.id)}
                       className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-l-lg transition-colors cursor-pointer"
@@ -68,14 +70,28 @@ export default function cartDropDown({ setActiveTab }: { setActiveTab: (tab: str
                       {item.quantity}
                     </span>
                     
+                    {/* PLUS BUTTON (NOW PROTECTED BY STOCK!) */}
                     <button 
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-r-lg transition-colors cursor-pointer"
+                      onClick={() => {
+                        if (item.quantity < item.stock) {
+                          updateQuantity(item.id, item.quantity + 1);
+                        } else {
+                          alert(`Sorry, you've reached the maximum stock available (${item.stock}).`);
+                        }
+                      }}
+                      // Visually disable the button if they max out the stock
+                      className={`w-7 h-7 flex items-center justify-center rounded-r-lg transition-colors ${
+                        item.quantity >= item.stock 
+                          ? 'text-gray-300 bg-gray-50 cursor-not-allowed' 
+                          : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900 cursor-pointer'
+                      }`}
+                      title={item.quantity >= item.stock ? "Max stock reached" : "Increase quantity"}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                     </button>
+
                   </div>
                 </div>
                 

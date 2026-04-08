@@ -1,13 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { initialChatMessages, chatQuickActions, ChatMessage } from '../../data/mockDataChatBot';
 
-export default function chatBot() {
+// FIXED: Capitalized the component name (React requirement)
+export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(initialChatMessages);
   const [inputValue, setInputValue] = useState('');
+  
+  // FIXED: Added mounted state to prevent hydration errors with dates/times
+  const [isMounted, setIsMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true); // Tells React the component is now safely on the client
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -103,8 +111,9 @@ export default function chatBot() {
               }`}>
                 {msg.text}
               </div>
-              <span className="text-[9px] text-gray-400 mt-1 px-1 font-medium">
-                {msg.timestamp}
+              {/* FIXED: Applied isMounted check & suppressHydrationWarning */}
+              <span suppressHydrationWarning className="text-[9px] text-gray-400 mt-1 px-1 font-medium">
+                {isMounted ? msg.timestamp : ''}
               </span>
             </div>
           ))}

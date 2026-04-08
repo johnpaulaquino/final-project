@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 export interface Banner {
-  id: number;
+  id: number | string; 
   image: string;
 }
 
@@ -12,7 +12,7 @@ interface CarouselProps {
   autoPlayInterval?: number;
 }
 
-export default function carouselBanner({ slides, autoPlayInterval = 3000 }: CarouselProps) {
+export default function CarouselBanner({ slides, autoPlayInterval = 3000 }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function carouselBanner({ slides, autoPlayInterval = 3000 }: Caro
   return (
     <div className="w-full h-full relative overflow-hidden group shadow-md rounded-[10px]">
       
-      {/*ito yung sa images ng carousel*/}
+      {/* Images */}
       <div 
         className="flex w-full h-full transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -58,7 +58,7 @@ export default function carouselBanner({ slides, autoPlayInterval = 3000 }: Caro
         ))}
       </div>
 
-      {/*dots*/}
+      {/* Dots */}
       <div className="absolute bottom-4 left-8 flex gap-3 z-30">
         {slides.map((_, index) => (
           <button
@@ -72,30 +72,31 @@ export default function carouselBanner({ slides, autoPlayInterval = 3000 }: Caro
         ))}
       </div>
 
-      {/*arrow para sa previous at next*/}
+      {/* Previous Arrow */}
       <button 
         onClick={handlePrev}
         type="button" 
         className="absolute top-0 left-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group/arrow focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
       >
         <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover/arrow:bg-white/50 focus:ring-4 focus:ring-white focus:outline-none backdrop-blur-sm">
-          {/*nag hahanap pa ko ng magandang icon*/}
-          <span className="sr-only">
-            Previous
-          </span>
+          <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          <span className="sr-only">Previous</span>
         </span>
       </button>
       
+      {/* Next Arrow */}
       <button 
         onClick={handleNext}
         type="button" 
         className="absolute top-0 right-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group/arrow focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
       >
         <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover/arrow:bg-white/50 focus:ring-4 focus:ring-white focus:outline-none backdrop-blur-sm">
-          {/*nag hahanap pa ko ng magandang icon*/}
-          <span className="sr-only">
-            Next
-          </span>
+          <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path>
+          </svg>
+          <span className="sr-only">Next</span>
         </span>
       </button>
     </div>

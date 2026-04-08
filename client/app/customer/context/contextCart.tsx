@@ -2,28 +2,28 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
-// Note: If you moved this to src/types/product.ts as suggested earlier, 
-// you can remove this block and import it instead.
 export interface Product {
-  id: number;
+  id: number | string; 
   name: string;
   price: string;
+  numericPrice: number; // <--- ADD THIS BACK!
   rating: string;
   image: string;
   description?: string; 
-  category?: string;    
+  category?: string;
+  stock: number;
 }
 
+// Since numericPrice is now in Product, CartItem just needs quantity!
 export type CartItem = Product & { 
   quantity: number;
-  numericPrice: number; 
 };
 
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, newQuantity: number) => void;
+  removeFromCart: (id: number | string) => void; 
+  updateQuantity: (id: number | string, newQuantity: number) => void; 
   totalItems: number;
   totalPrice: number;
 }
@@ -34,12 +34,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product) => {
+    // PROTECT CART: Prevent adding if out of stock!
+    if (product.stock <= 0) {
+      alert("Sorry, this item is out of stock!");
+      return;
+    }
+
     const parsedPrice = parseFloat(product.price.replace(/[^0-9.-]+/g, ""));
 
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
 
       if (existingItem) {
+        // PROTECT CART: Prevent adding more than what's in stock
+        if (existingItem.quantity >= product.stock) {
+          alert(`You cannot add more! Only ${product.stock} left in stock.`);
+          return prevCart;
+        }
         return prevCart.map((item) =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -49,11 +60,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const removeFromCart = (id: number) => {
+  // FIXED: id is now (number | string)
+  const removeFromCart = (id: number | string) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
-  const updateQuantity = (id: number, newQuantity: number) => {
+  // FIXED: id is now (number | string)
+  const updateQuantity = (id: number | string, newQuantity: number) => {
     if (newQuantity < 1) return; 
     
     setCart((prevCart) => 
