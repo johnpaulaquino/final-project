@@ -47,6 +47,12 @@ export default function headNavbar({
   };
 
   useEffect(() => {
+    setIsCartOpen(false);
+    setIsNotifOpen(false);
+    setIsProfileOpen(false);
+  }, [activeTab]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -221,7 +227,7 @@ export default function headNavbar({
             {isCartOpen && <CartDropdown setActiveTab={setActiveTab} />}
           </div>
 
-          {/* icon */}
+          {/* profile icon */}
           <div className="relative flex items-center" ref={profileRef}>
             <button
               className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? "bg-[#fff5f5]" : ""}`}

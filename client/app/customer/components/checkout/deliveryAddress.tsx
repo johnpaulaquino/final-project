@@ -1,30 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-
-export type Address = {
-  name: string;
-  phone: string;
-  fullAddress: string;
-};
+import { Address } from '../../context/contextAccount'; 
 
 interface DeliveryAddressProps {
   savedAddresses: Address[];
-  selectedIndex: number | null;
-  setSelectedIndex: (index: number) => void;
+  onSetDefault: (id: string) => void;
   onOpenModal: () => void;
 }
 
-export default function DeliveryAddress({ 
+export default function deliveryAddress({ 
   savedAddresses, 
-  selectedIndex, 
-  setSelectedIndex, 
+  onSetDefault, 
   onOpenModal 
 }: DeliveryAddressProps) {
   
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const activeAddress = selectedIndex !== null ? savedAddresses[selectedIndex] : null;
+  const activeAddress = savedAddresses.find(addr => addr.isDefault) || savedAddresses[0];
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
@@ -38,18 +31,13 @@ export default function DeliveryAddress({
           <h2 className="text-lg font-bold text-[#0B1527]">Delivery Address</h2>
         </div>
 
-        {/* show the change when button is clicked */}
         {!isExpanded && savedAddresses.length > 0 && (
-          <button 
-            onClick={() => setIsExpanded(true)} 
-            className="text-sm font-bold text-[#800000] hover:underline"
-          >
+          <button onClick={() => setIsExpanded(true)} className="text-sm font-bold text-[#800000] hover:underline">
             Change
           </button>
         )}
       </div>
 
-      {/* ui for displaying saved addresses */}
       {savedAddresses.length === 0 ? (
         <div onClick={onOpenModal} className="w-full border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#800000] hover:bg-red-50 transition-colors">
           <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 mb-3">+</div>
@@ -58,20 +46,18 @@ export default function DeliveryAddress({
         </div>
       ) : isExpanded ? (
         
-        // choosing address state
         <div className="space-y-3 animate-in fade-in duration-200">
-          {savedAddresses.map((address, index) => {
-            const isSelected = selectedIndex === index;
+          {savedAddresses.map((address) => {
+            const isSelected = address.isDefault;
             
             return (
               <div 
-                key={index}
-                onClick={() => setSelectedIndex(index)}
+                key={address.id}
+                onClick={() => onSetDefault(address.id)} // Updates the GLOBAL state
                 className={`cursor-pointer border bg-[#fcfcfc] rounded-xl p-4 flex items-start gap-3 transition-colors ${
                   isSelected ? 'border-[#800000] bg-red-50/20' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                {/* current location */}
                 <div className={`mt-1 w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 ${
                   isSelected ? 'border-[#800000]' : 'border-gray-400'
                 }`}>
@@ -93,24 +79,16 @@ export default function DeliveryAddress({
           })}
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-            <button 
-              onClick={() => setIsExpanded(false)} // This makes "Done" collapse the list!
-              className="flex-1 bg-[#F4F4F5] text-[#0B1527] font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
-            >
+            <button onClick={() => setIsExpanded(false)} className="flex-1 bg-[#F4F4F5] text-[#0B1527] font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors">
               Done
             </button>
-            <button 
-              onClick={onOpenModal} 
-              className="flex-1 bg-[#0B1527] text-white font-bold py-3 px-4 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-            >
+            <button onClick={onOpenModal} className="flex-1 bg-[#0B1527] text-white font-bold py-3 px-4 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
               <span className="text-lg font-light leading-none">+</span> Add New Address
             </button>
           </div>
         </div>
 
       ) : (
-
-        // State 3: COLLAPSED SUMMARY (After clicking "Done")
         <div className="border border-gray-100 bg-[#fcfcfc] rounded-xl p-5 animate-in fade-in duration-200">
           {activeAddress && (
             <>
@@ -122,7 +100,6 @@ export default function DeliveryAddress({
             </>
           )}
         </div>
-
       )}
     </div>
   );
