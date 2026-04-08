@@ -1,53 +1,76 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product } from './contextCart'; 
-import { biskotaMenuData } from '../data/mockDataCard';
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { Product } from "./contextCart";
+import { apiClient } from "@/lib/api"; // Assuming you have this from your previous setup
 
 interface ProductContextType {
   products: Product[];
+  isLoading: boolean;
+  fetchProducts: (
+    category: string,
+    skip?: number,
+    limit?: number,
+  ) => Promise<void>;
   addProduct: (product: Product) => void;
   deleteProduct: (id: number | string) => void;
-  updateProduct: (updatedProduct: Product) => void; // Named it updateProduct to match your UI
+  updateProduct: (updatedProduct: Product) => void;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export function ProductProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(biskotaMenuData);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const savedProducts = localStorage.getItem('biskota_products');
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    }
-    setIsLoaded(true);
-  }, []);
+  // Function to fetch products from your API
+  const fetchProducts = useCallback(
+    async (category: string, skip = 0, limit = 10) => {
+      setIsLoading(true);
+      try {
+        const endpoint = `/products/with?${category}skip=${skip}&limit=${limit}`;
 
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('biskota_products', JSON.stringify(products));
-    }
-  }, [products, isLoaded]);
+        const response = await apiClient.publicGet(endpoint);
 
+        // Adjust this depending on your API's exact response structure (e.g., response.data or response.products)
+        const fetchedProducts = response.data || [];
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        setProducts([]); // Clear products on error, or handle gracefully
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Standard optimistic UI updates
   const addProduct = (newProduct: Product) => {
-    setProducts((prev) => [newProduct, ...prev]); 
+    setProducts((prev) => [newProduct, ...prev]);
   };
 
   const deleteProduct = (id: number | string) => {
-    setProducts((prev) => prev.filter(product => product.id !== id));
+    setProducts((prev) => prev.filter((product) => product.id !== id));
   };
 
-  // Logic to find the product and swap it with the updated version
   const updateProduct = (updatedProduct: Product) => {
-    setProducts((prev) => 
-      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p)),
     );
   };
 
   return (
-    <ProductContext.Provider value={{ products, addProduct, deleteProduct, updateProduct }}>
+    <ProductContext.Provider
+      value={{
+        products,
+        isLoading,
+        fetchProducts,
+        addProduct,
+        deleteProduct,
+        updateProduct,
+      }}
+    >
       {children}
     </ProductContext.Provider>
   );
@@ -56,7 +79,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
 export function useProduct() {
   const context = useContext(ProductContext);
   if (context === undefined) {
-    throw new Error('useProduct must be used within a ProductProvider');
+    throw new Error("useProduct must be used within a ProductProvider");
   }
   return context;
 }

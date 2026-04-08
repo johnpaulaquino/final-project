@@ -44,7 +44,38 @@ async def insert_product(
         raise e
 
 
-@v1_products_router.get("/with", tags=[EndpointTags.CUSTOMER])
+@v1_products_router.get('/categories', tags=[EndpointTags.CUSTOMER])
+async def get_product_categories(product_services: ProductsServices = Depends(
+        get_products_service)):
+    try:
+        
+        product_response = await product_services.get_product_categories()
+        product_response.status_code = 200
+        response = SuccessfulResponse(product_response)
+        
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.get("/with")
+async def get_products_by_categories(category: str = Query(), paginated: PaginatedSchema = Depends(),
+                                     product_services
+                                     : ProductsServices = Depends(
+                                             get_products_service)):
+    
+    try:
+        product_response = await product_services.get_products_by_categories(category, paginated)
+        product_response.status_code = 200
+        response = SuccessfulResponse(product_response)
+        print(product_response.data)
+        
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.get("/tags", tags=[EndpointTags.CUSTOMER])
 async def get_product_information_paginated_with_tags(paginated: PaginatedSchema = Depends(),
                                                       product_services: ProductsServices = Depends(
                                                               get_products_service)):

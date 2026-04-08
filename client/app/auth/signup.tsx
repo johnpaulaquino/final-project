@@ -35,10 +35,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
     setError(null);
 
     try {
-      const data = await apiClient.publicPost(
-        "/api/v1/biskota/auth/signup",
-        email,
-      );
+      const data = await apiClient.publicPost("/auth/signup", email);
 
       if (data.status_code === 202) {
         setStep(2); // OTP sent
@@ -47,8 +44,8 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
       }
     } catch (err: any) {
       // Intercept the specific OTP error from the backend
-      if (err.message === "Your code is not expired yet.") {
-        setError(err.message); // Clear the error state so it doesn't show in red
+      if (err.message === "Your code is note expired yet.") {
+        setError(err.message); // Clear th error state so it doesn't show in red
         setStep(2); // Proceed to the OTP input step
       } else {
         // Handle all other actual errors
@@ -76,10 +73,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
 
     try {
       // Sends the OTP string directly, matching FastAPI: otp_code: str = Body()
-      const data = await apiClient.post(
-        "/api/v1/biskota/auth/verify-otp",
-        otpString,
-      );
+      const data = await apiClient.post("/auth/verify-otp", otpString);
 
       // Backend returns status_code 201 Created on success
       if (data.status_code === 201) {
@@ -126,17 +120,13 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
         password: details.password,
       };
 
-      const data = await apiClient.post(
-        "/api/v1/biskota/auth/complete-signup",
-        payload,
-      );
+      const data = await apiClient.post("/auth/complete-signup", payload);
 
       if (data.status_code === 201) {
         // Save the access token returned by the backend into our apiClient memory
         if (data.access_token) {
           setAccessToken(data.access_token);
         }
-
         setStep(4);
       }
     } catch (err: any) {

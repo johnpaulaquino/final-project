@@ -1,10 +1,10 @@
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, distinct, func, select, update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.src.domain.dto.products_dto import ProductDetailsDTO, ProductInformationDTO, ProductsDataDTO
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.infrastructure.db.entity import Inventory, ProductDetails, ProductRatings, Products
-from app.src.schema.products_schema import ProductsFullInformationRequestSchema, ProductsTags
+from app.src.schema.products_schema import ProductCategories, ProductsFullInformationRequestSchema, ProductsTags
 
 
 class ProductsRepository(UserInterface):
@@ -36,6 +36,16 @@ class ProductsRepository(UserInterface):
         
         # return the Products DTO
         return ProductsDataDTO.model_validate(products, from_attributes=True)
+    
+    async def get_product_categories(self):
+        try:
+            # select only the distinc category or unique.
+            stmt = select(distinct(Products.category).label("category"))
+            result = await self._db.execute(stmt)
+            data = result.scalars().fetchall()
+            return data
+        except Exception as e:
+            raise e
     
     async def find_record(self, record_id: str) -> ProductInformationDTO:
         """
@@ -88,6 +98,50 @@ class ProductsRepository(UserInterface):
         data = result.mappings().fetchall()
         return data or None
     
+    async def get_paginated_record_with_category(self, category, offset: int, limit: int):
+        """
+        To get the paginated data.
+        :param offset: Where the data retrieval start.
+        :param limit: How many data will retrieve.
+        :param category: category of the product and it will use for filtering.
+        :return: Paginated data or None.
+        """
+        ratings_subq = (
+                select(
+                        ProductRatings.product_id,
+                        func.avg(ProductRatings.rates).label("avg_rating"),
+                        )
+                .group_by(ProductRatings.product_id)
+                .subquery()
+        )
+        stmt = (select(Products,
+                       Inventory.quantity,
+                       ratings_subq.c.avg_rating,
+                       ProductDetails.description,
+                       ProductDetails.images)
+                .outerjoin(ProductDetails, Products.id == ProductDetails.product_id)
+                .outerjoin(Inventory, Products.id == Inventory.product_id)
+                .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
+                .offset(offset).limit(limit))
+        
+        if category.lower() in [ProductCategories.PASTRY.lower(), ProductCategories.DRINKS.lower()]:
+            stmt = stmt.where(Products.category == category).offset(offset).limit(limit)
+        
+        result = await self._db.execute(stmt)
+        data = result.mappings().fetchall()
+        return data or None
+    
+    async def get_paginated_record_with_category_total_records(self, category):
+        try:
+            stmt = select(func.count(Products.id))
+            if category.lower() in [ProductCategories.PASTRY.lower(), ProductCategories.DRINKS.lower()]:
+                stmt = stmt.where(Products.category == category)
+            result = await self._db.execute(stmt)
+            data = result.scalars().first()
+            return data
+        except Exception as e:
+            raise e
+    
     async def get_paginated_record_with_best_seller_tag(self, offset: int, limit: int):
         """
         To get the paginated data.
@@ -120,6 +174,15 @@ class ProductsRepository(UserInterface):
         
         return data or None
     
+    async def get_paginated_record_with_best_seller_tag_total_records(self):
+        try:
+            stmt = select(func.count(Products.id).where(Products.tags.any(ProductsTags.BEST_SELLER)))
+            result = await self._db.execute(stmt)
+            data = result.scalars().first()
+            return data
+        except Exception as e:
+            raise e
+    
     async def get_paginated_record_with_new_products_tag(self, offset: int, limit: int):
         """
            To get the paginated data.
@@ -150,6 +213,15 @@ class ProductsRepository(UserInterface):
         result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
         return data or None
+    
+    async def get_paginated_record_with_new_products_tag_total_records(self):
+        try:
+            stmt = select(func.count(Products.id).where(Products.tags.any(ProductsTags.NEW_PRODUCT)))
+            result = await self._db.execute(stmt)
+            data = result.scalars().first()
+            return data
+        except Exception as e:
+            raise e
     
     async def get_total_records(self):
         try:

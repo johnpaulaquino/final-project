@@ -32,12 +32,9 @@ export default function customerSidebar({
   useEffect(() => {
     const fetchSidebarProducts = async () => {
       try {
-        // 2. Use publicGet because this route doesn't need auth
         const response = await apiClient.publicGet(
-          "/api/v1/biskota/products/with?skip=1&limit=10",
+          "/products/tags?skip=1&limit=10",
         );
-
-        // Safely extract the data (handling potential nulls from the backend)
         // Adjust response.data depending on your exact FastAPI response wrapper
         const bestSellersRaw =
           response?.data?.best_sellers || response?.best_sellers || [];

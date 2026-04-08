@@ -174,17 +174,14 @@ export const apiClient = {
 
     // Login is technically a "public" route because we don't have a token yet,
     // but we use form-urlencoded for FastAPI's OAuth2 dependencies.
-    const res = await fetchWithTimeout(
-      `${API_BASE_URL}/api/v1/biskota/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: body,
-        credentials: "include", // Required so the browser saves the set-cookie header!
+    const res = await fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-    );
+      body: body,
+      credentials: "include", // Required so the browser saves the set-cookie header!
+    });
 
     let data;
     try {

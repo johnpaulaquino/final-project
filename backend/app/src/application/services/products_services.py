@@ -10,7 +10,8 @@ from app.src.exceptions.domain_exceptions import (DomainForbiddenAccessError, Do
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
-from app.src.schema.products_schema import (InventoryRequestSchema, ProductDetailsRequestSchema, ProductRequestSchema,
+from app.src.schema.products_schema import (InventoryRequestSchema, ProductCategories, ProductDetailsRequestSchema,
+                                            ProductRequestSchema,
                                             ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
 from app.src.utils.utility import Utility
@@ -84,6 +85,55 @@ class ProductsServices(SharedServices):
             raise e
     
     @retry_on_transient
+    async def get_product_categories(self):
+        try:
+            data = await self.__uow.products.get_product_categories()
+            response = SuccessfulResponseSchema(message="Successfully retrieved data.", )
+            if not data:
+                response.message = "No records to retrieve."
+                return response
+            
+            response.data = data
+            return response
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def get_products_by_categories(self, category: str, paginated: PaginatedSchema):
+        try:
+            # calculate the offset
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            if category.lower() not in [categ.value.lower() for categ in ProductCategories]:
+                raise DomainUnprocessableEntityError(
+                        f"Category must be in {[categ.value for categ in ProductCategories]}")
+            # retrieve data from database
+            category = Utility.capitalize_first_letters(category)
+            data = await self.__uow.products.get_paginated_record_with_category(category, offset, paginated.limit)
+            response = SuccessfulResponseSchema(message="Successfully retrieved data.", )
+            
+            # retrieved total records from db
+            total_records = await self.__uow.products.get_paginated_record_with_category_total_records(category)
+            # get the paginated if there's a record.
+            paginated_data = Utility.get_paginated_data(offset=offset, skip=paginated.skip,
+                                                        limit=paginated.limit,
+                                                        total_records=total_records)
+            
+            # then check if there's a data
+            if not data:
+                response.message = "No records to retrieve."
+                return response
+            # set the paginated data
+            response.paginated = paginated_data
+            response.data = data
+            
+            # return response
+            return response
+        
+        except Exception as e:
+            print(str(e))
+            raise e
+    
+    @retry_on_transient
     async def get_product_information(self, product_id: str) -> SuccessfulResponseSchema:
         data = await self.__uow.products.find_record(product_id)
         response = SuccessfulResponseSchema(message="Successfully retrieved data.", )
@@ -133,13 +183,6 @@ class ProductsServices(SharedServices):
                                                                                                  paginated.limit)
         best_seller_data = await self.__uow.products.get_paginated_record_with_best_seller_tag(offset, paginated.limit)
         response = SuccessfulResponseSchema(message="Successfully retrieved data.", )
-        # retrieved total records from db
-        total_records = await self.__uow.products.get_total_records()
-        # get the paginated if there's a record.
-        paginated_data = Utility.get_paginated_data(offset=offset, skip=paginated.skip,
-                                                    limit=paginated.limit,
-                                                    total_records=total_records)
-        
         data = {"best_sellers": best_seller_data, "new_products": new_products_data}
         
         data = ProductsInformationFilterWithTags(**data)
@@ -147,8 +190,6 @@ class ProductsServices(SharedServices):
         if not new_products_data and not best_seller_data:
             response.message = "No records to retrieve."
             return response
-        # set the paginated data
-        response.paginated = paginated_data
         response.data = data
         
         # return response
