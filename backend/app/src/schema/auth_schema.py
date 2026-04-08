@@ -40,13 +40,13 @@ class SignUpRequest(BaseModel):
     email: Optional[str] = None
     password: str = Body(...)
     firstname: str = Body(...)
-    middle_name: Optional[str] = Body(...)
+    middle_name: Optional[str] = Body(None)
     lastname: str = Body(...)
     
     @staticmethod
     def sign_up_request_depends(password=Body(...),
                                 firstname=Body(...),
-                                middle_name: Optional[str] = Body(...),
+                                middle_name: Optional[str] = Body(None),
                                 lastname=Body(...)):
         return SignUpRequest(password=password, firstname=firstname, middle_name=middle_name, lastname=lastname)
 

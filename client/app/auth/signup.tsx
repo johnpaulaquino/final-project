@@ -121,12 +121,12 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
       // Mapping frontend camelCase to standard backend snake_case
       // Modify these keys if your FastAPI SignUpRequest model uses different names
       const payload = {
-        first_name: details.firstName,
-        last_name: details.lastName,
+        firstname: details.firstName,
+        lastname: details.lastName,
         password: details.password,
       };
 
-      const data = await apiClient.publicPost(
+      const data = await apiClient.post(
         "/api/v1/biskota/auth/complete-signup",
         payload,
       );

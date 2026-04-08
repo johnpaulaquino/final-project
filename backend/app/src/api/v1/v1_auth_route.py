@@ -135,6 +135,32 @@ async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sig
         # finally initialize the successful response with the successful response schema, and return the response.
         response = SuccessfulResponse(success_response_schema)
         
+        # if no errors, then return the response with the access token if there is one.
+        success_response_schema.access_token = services_response.access_token
+        success_response_schema.refresh_token = services_response.refresh_token
+        success_response_schema.csrf_token = services_response.csrf_token
+        
+        response = SuccessfulResponse(success_response_schema)
+        
+        access_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
+                                             value=success_response_schema.access_token)
+        access_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        response.set_cookie(**access_cookie.model_dump())
+        
+        # refresh cookie
+        refresh_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
+                                              value=success_response_schema.refresh_token)
+        refresh_cookie.max_age = int(
+                timedelta(days=ConstantsData.JWT_EXPIRATION).total_seconds())  # 7 days, same as the refresh token
+        response.set_cookie(**refresh_cookie.model_dump())
+        
+        # csrf cookie
+        csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
+                                           value=success_response_schema.csrf_token)
+        csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        csrf_cookie.httponly = False
+        response.set_cookie(**csrf_cookie.model_dump())
+        
         # remove the cookie from the response
         response.delete_cookie(key=ConstantsKeyData.COOKIE_VERIFICATION_KEY)
         return response

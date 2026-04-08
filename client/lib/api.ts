@@ -60,6 +60,7 @@ async function apiFetch(
   // Clone options and set default headers
   const config: RequestInit = {
     ...options,
+    credentials: "include", // Send the secure cookie!
     headers: {
       "Content-Type": "application/json",
       ...options.headers,

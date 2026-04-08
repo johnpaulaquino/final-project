@@ -158,7 +158,8 @@ class AuthServices:
             # prepare the response
             response = SignUpModelDTO(message="Successfully created account.",
                                       access_token=access_refresh_token.access_token,
-                                      refresh_token=access_refresh_token.refresh_token)
+                                      refresh_token=access_refresh_token.refresh_token,
+                                      csrf_token=self.generate_csrf_token())
             return response
         
         except Exception as e:
@@ -196,11 +197,10 @@ class AuthServices:
             
             # insert the token into db
             access_refresh_token = await self.__insert_session_token(curr_users.id, curr_users.role)
-            csrf_token = secrets.token_urlsafe(32)
             # prepare the response
             response = SignUpModelDTO(message="Successfully logged in.",
                                       access_token=access_refresh_token.access_token,
-                                      csrf_token=csrf_token,
+                                      csrf_token=self.generate_csrf_token(),
                                       refresh_token=access_refresh_token.refresh_token)
             return response
         
@@ -310,3 +310,6 @@ class AuthServices:
         await self.__uow.token_session.insert_record(new_session_data)
         # return TokenDTO
         return access_refresh_token
+    
+    def generate_csrf_token(self):
+        return secrets.token_urlsafe(32)
