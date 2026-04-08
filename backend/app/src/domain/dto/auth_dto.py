@@ -1,21 +1,27 @@
 from datetime import datetime
 from typing import List
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
 
 
 class UserDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str | None = None
-    email: str | EmailStr = None
-    is_active: bool = None
-    is_deleted: bool = None
-    signin_type: List[str] = None
-    login_at: datetime = None
-    created_at: datetime = None
-    role: str = None
-    updated_at: datetime = None
-    deleted_at: datetime = None
-    sign_up_steps: int = None
+    email: str | None = None
+    is_active: bool | None = None
+    is_deleted: bool | None = None
+    signin_type: List[str] | None = None
+    login_at: datetime | None = None
+    created_at: datetime | None = None
+    role: str | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    sign_up_steps: int | None = None
+
+
+class UserWithPasswordDTO(UserDTO):
+    model_config = ConfigDict(from_attributes=True)
+    password: str = None
 
 
 class TokenDTO(BaseModel):
@@ -34,6 +40,8 @@ class SignUpModelDTO(BaseModel):
     verification_token: str = None
     access_token: str = None
     refresh_token: str = None
+    sign_up_steps: int = None
+    csrf_token: str = None
 
 
 class SessionTokenDTO(BaseModel):

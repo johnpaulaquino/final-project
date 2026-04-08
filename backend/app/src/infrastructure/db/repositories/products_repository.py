@@ -1,10 +1,10 @@
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from app.src.domain.dto.products_dto import ProductInformationDTO, ProductsDataDTO
+from app.src.domain.dto.products_dto import ProductDetailsDTO, ProductInformationDTO, ProductsDataDTO
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import Inventory, ProductDetails, Products
-from app.src.schema.products_schema import ProductsFullInformationRequestSchema
+from app.src.infrastructure.db.entity import Inventory, ProductDetails, ProductRatings, Products
+from app.src.schema.products_schema import ProductsFullInformationRequestSchema, ProductsTags
 
 
 class ProductsRepository(UserInterface):
@@ -24,15 +24,13 @@ class ProductsRepository(UserInterface):
         self._db.add(products)
         await self._db.flush()
         
-        product_id = products.id
-        
         # insert into product details
-        products_details = ProductDetails(product_id=product_id, images=request.images, description=request.description)
-        # insert into _db, but not commited for the meantime
+        products_details = ProductDetails(**request.model_dump())
+        products_details.product_id = products.id
         
         # insert into inventory
-        inventory = Inventory(product_id=product_id, quantity=request.quantity,
-                              low_stock_threshold=request.low_stock_threshold)
+        inventory = Inventory(**request.model_dump())
+        inventory.product_id = products.id
         # insert into _db, but not commited for the meantime
         self._db.add_all([inventory, products_details])
         
@@ -45,8 +43,12 @@ class ProductsRepository(UserInterface):
         :param record_id: Unique from products.
         :return: Product record or None
         """
-        stmt = select(Products, Inventory.quantity, Inventory.low_stock_threshold,
-                      Inventory.reserved_stock, Inventory.cancelled_stock, Inventory.sold_stock,
+        
+        stmt = select(Products, Inventory.quantity,
+                      Inventory.low_stock_threshold,
+                      Inventory.reserved_stock,
+                      Inventory.cancelled_stock,
+                      Inventory.sold_stock,
                       ProductDetails.images, ProductDetails.description
                       ).select_from(Products).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
                                                         ).outerjoin(Inventory, Products.id == Inventory.product_id
@@ -64,13 +66,87 @@ class ProductsRepository(UserInterface):
         :param limit: How many data will retrieve.
         :return: Paginated data or None.
         """
-        stmt = select(Products,
-                      Inventory.quantity, Inventory.low_stock_threshold,
-                      ProductDetails.description, ProductDetails.images
-                      ).select_from(Products).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
-                                                        ).outerjoin(Inventory, Products.id == Inventory.product_id
-                                                                    ).offset(offset).limit(limit)
+        ratings_subq = (
+                select(
+                        ProductRatings.product_id,
+                        func.avg(ProductRatings.rates).label("avg_rating"),
+                        )
+                .group_by(ProductRatings.product_id)
+                .subquery()
+        )
+        stmt = (select(Products,
+                       Inventory.quantity,
+                       ratings_subq.c.avg_rating,
+                       ProductDetails.description,
+                       ProductDetails.images)
+                .outerjoin(ProductDetails, Products.id == ProductDetails.product_id)
+                .outerjoin(Inventory, Products.id == Inventory.product_id)
+                .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
+                .offset(offset).limit(limit))
         
+        result = await self._db.execute(stmt)
+        data = result.mappings().fetchall()
+        return data or None
+    
+    async def get_paginated_record_with_best_seller_tag(self, offset: int, limit: int):
+        """
+        To get the paginated data.
+            :param offset: Where the data retrieval start.
+            :param tag: to filter data based on tags.
+            :param limit: How many data will retrieve.
+            :return: Paginated data or None.
+            """
+        ratings_subq = (
+                select(
+                        ProductRatings.product_id,
+                        func.avg(ProductRatings.rates).label("avg_rating"),
+                        )
+                .group_by(ProductRatings.product_id)
+                .subquery()
+        )
+        stmt = (select(Products,
+                       Inventory.quantity,
+                       ProductDetails.description,
+                       ratings_subq.c.avg_rating,
+                       ProductDetails.images
+                       ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id)
+                .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
+                .outerjoin(Inventory, Products.id == Inventory.product_id)
+                .where(Products.tags.any(ProductsTags.BEST_SELLER))
+                .offset(offset)
+                .limit(limit))
+        result = await self._db.execute(stmt)
+        data = result.mappings().fetchall()
+        
+        return data or None
+    
+    async def get_paginated_record_with_new_products_tag(self, offset: int, limit: int):
+        """
+           To get the paginated data.
+               :param offset: Where the data retrieval start.
+               :param tag: to filter data based on tags.
+               :param limit: How many data will retrieve.
+               :return: Paginated data or None.
+               """
+        ratings_subq = (
+                select(
+                        ProductRatings.product_id,
+                        func.avg(ProductRatings.rates).label("avg_rating"),
+                        )
+                .group_by(ProductRatings.product_id)
+                .subquery()
+        )
+        stmt = (select(Products,
+                       Inventory.quantity,
+                       ProductDetails.description,
+                       ratings_subq.c.avg_rating,
+                       ProductDetails.images
+                       ).outerjoin(ProductDetails, Products.id == ProductDetails.product_id)
+                .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
+                .outerjoin(Inventory, Products.id == Inventory.product_id)
+                .where(Products.tags.any(ProductsTags.NEW_PRODUCT))
+                .offset(offset)
+                .limit(limit))
         result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
         return data or None
@@ -96,6 +172,17 @@ class ProductsRepository(UserInterface):
         
         return data
     
+    async def get_product_details_only(self, product_id: str) -> ProductDetailsDTO | None:
+        try:
+            stmt = select(ProductDetails).where(ProductDetails.product_id == product_id)
+            result = await self._db.execute(stmt)
+            data = result.scalar_one_or_none()
+            
+            return ProductDetailsDTO.model_validate(data)
+        
+        except Exception as e:
+            raise e
+    
     # product, product details and inventory update
     async def update_record(self, record_id: str, data: dict | None = None):
         """
@@ -111,7 +198,6 @@ class ProductsRepository(UserInterface):
     async def update_product_details(self, product_id: str, data: dict):
         stmt = update(ProductDetails).where(ProductDetails.product_id == product_id).values(**data)
         await self._db.execute(stmt)
-        print("hey")
     
     async def update_product_inventory(self, product_id: str, data: dict):
         try:

@@ -84,12 +84,7 @@ class AppSecurity:
             raise DomainJWTExpiredError("Your token is expired. Please back to login.")
         except Exception as e:
             raise e
-    
-    @staticmethod
-    def generate_otp_code():
-        otp = str(secrets.randbelow(900000) + 100000)  # 6-digit
-        
-        return otp
+   
     
     @staticmethod
     def hash_token(token: str):

@@ -1,8 +1,10 @@
 from sqlmodel import SQLModel
 
+from app.src.infrastructure.db.entity.products.carts_entity import Carts
 from app.src.infrastructure.db.entity.products.inventory_entity import Inventory
 from app.src.infrastructure.db.entity.products.orders_entity import Orders
 from app.src.infrastructure.db.entity.products.product_details_entity import ProductDetails
+from app.src.infrastructure.db.entity.products.product_ratings import ProductRatings
 from app.src.infrastructure.db.entity.products.products_entity import Products
 from app.src.infrastructure.db.entity.products.transactions_entity import Transactions
 from app.src.infrastructure.db.entity.users.address_entity import Address
@@ -15,6 +17,7 @@ BaseEntityModel = SQLModel()
 
 __all__ = ["Users",
            "Address",
+           "Carts",
            "PersonalInfo",
            "TempUsers",
            "Products",
@@ -22,4 +25,5 @@ __all__ = ["Users",
            "Inventory",
            "Transactions",
            "Orders",
-           "SessionToken"]
+           "SessionToken",
+           "ProductRatings"]

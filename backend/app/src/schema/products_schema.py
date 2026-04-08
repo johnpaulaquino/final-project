@@ -1,9 +1,10 @@
-from typing import Dict, List, Optional
+from enum import Enum
+from typing import List, Optional
 
 from fastapi import Body
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.src.exceptions.domain_exceptions import DomainInvalidFormatError
+from app.src.exceptions.domain_exceptions import DomainUnprocessableEntityError
 
 
 class Images(BaseModel):
@@ -16,22 +17,25 @@ class ProductsFullInformationRequestSchema(BaseModel):
     product_name: Optional[str] = None
     price: Optional[float] = None
     category: Optional[str] = None
+    tags: Optional[list[str]] = None
     quantity: Optional[int] = Field(default=0)
     low_stock_threshold: Optional[int] = Field(default=20)
     description: Optional[str] = Field(default=None)
-    images: Optional[List[dict | None]] = Field(default=None)
+    images: Optional[List[Images | None]] = Field(default=None)
     
     # use to create/ insert product for full information, including inventory and details.
     @staticmethod
     def depends_schema(product_name: str = Body(None),
                        price: float = Body(None),
                        category: str = Body(None),
+                       tags: Optional[list[str]] = Body(None),
                        quantity: int = Body(default=0),
                        low_stock_threshold: int = Body(default=0),
                        description: str = Body(None)):
         
         return ProductsFullInformationRequestSchema(product_name=product_name,
                                                     price=price,
+                                                    tags=tags,
                                                     category=category,
                                                     quantity=quantity,
                                                     low_stock_threshold=low_stock_threshold,
@@ -50,7 +54,7 @@ class ProductsFullInformationRequestSchema(BaseModel):
     @field_validator("product_name")
     def validate_product_name_field(cls, value):
         if not value:
-            raise DomainInvalidFormatError("Product name should not be empty.")
+            raise DomainUnprocessableEntityError("Product name should not be empty.")
         
         return value
     
@@ -59,15 +63,15 @@ class ProductsFullInformationRequestSchema(BaseModel):
         # convert first into string, to check whether is empty or not.
         
         # then back to float
-        if value < 0:
-            raise DomainInvalidFormatError("Price should not be negative.")
+        if value <= 0:
+            raise DomainUnprocessableEntityError("Price should not be less than 0.")
         
         return value
     
     @field_validator("category")
     def validate_category_field(cls, value):
         if not value:
-            raise DomainInvalidFormatError("Category should not be empty.")
+            raise DomainUnprocessableEntityError("Category should not be empty.")
         
         return value
     
@@ -75,7 +79,31 @@ class ProductsFullInformationRequestSchema(BaseModel):
     def validate_quantity_field(cls, value):
         if value < 0:
             return 0
+        return value
+    
+    @field_validator("category")
+    def validate_category(cls, value):
+        if not value:
+            return value
         
+        categories_check = [ProductCategories.DRINKS.value.lower(), ProductCategories.PASTRY.value.lower()]
+        categories = [ProductCategories.DRINKS.value, ProductCategories.PASTRY.value]
+        if value not in categories:
+            raise DomainUnprocessableEntityError(
+                    f"Category must be in {categories_check}.")
+        return value
+    
+    @field_validator("tags")
+    def validate_tags(cls, value):
+        if value is None:
+            return []
+        tags_check = [tag.value.lower() for tag in ProductsTags]
+        tags = [tag.value for tag in ProductsTags]
+        
+        for val in value:
+            if val.lower() not in tags_check:
+                raise DomainUnprocessableEntityError(
+                        f"Tags must be in {tags}.")
         return value
 
 
@@ -88,14 +116,60 @@ class UpdateProductsInformationRequestSchema(BaseModel):
     low_stock_threshold: Optional[int] = Field(default=20)
     description: Optional[str] = Field(default=None)
     images: Optional[List[Images | None]] = Field(default=None)
+    tags: Optional[list[str]] = None
     
     public_ids: Optional[List[str]] = Body(None)
+    
+    @field_validator("price")
+    def validate_price_field(cls, value):
+        # convert first into string, to check whether is empty or not.
+        if not value:
+            return 0
+        # then back to float
+        if value <= 0:
+            raise DomainUnprocessableEntityError("Price should not be less than 0.")
+        
+        return value
+    
+    @field_validator("quantity")
+    def validate_quantity_field(cls, value):
+        if not value:
+            return 0
+        if value < 0:
+            return 0
+        return value
+    
+    @field_validator("category")
+    def validate_category(cls, value):
+        if not value:
+            return value
+        
+        categories_check = [ProductCategories.DRINKS.value.lower(), ProductCategories.PASTRY.value.lower()]
+        categories = [ProductCategories.DRINKS.value, ProductCategories.PASTRY.value]
+        if value not in categories_check:
+            raise DomainUnprocessableEntityError(
+                    f"Category must be in {categories}.")
+        return value
+    
+    @field_validator("tags")
+    def validate_tags(cls, value):
+        if value is None:
+            return []
+        tags_check = [tag.value.lower() for tag in ProductsTags]
+        tags = [tag.value for tag in ProductsTags]
+        
+        for val in value:
+            if val.lower() not in tags_check:
+                raise DomainUnprocessableEntityError(
+                        f"Tags must be in {tags}.")
+        return value
     
     @staticmethod
     def update_depends_schema(product_name: Optional[str] = Body(None),
                               price: Optional[float] = Body(None),
                               category: Optional[str] = Body(None),
                               quantity: Optional[int] = Body(None),
+                              tags: Optional[list[str]] = Body(None),
                               low_stock_threshold: Optional[int] = Body(None),
                               description: Optional[str] = Body(None),
                               public_ids: Optional[List[str]] = Body(None),
@@ -103,10 +177,27 @@ class UpdateProductsInformationRequestSchema(BaseModel):
         return UpdateProductsInformationRequestSchema(product_name=product_name,
                                                       price=price,
                                                       category=category,
+                                                      tags=tags,
                                                       quantity=quantity,
                                                       low_stock_threshold=low_stock_threshold,
                                                       description=description,
                                                       public_ids=public_ids)
+    
+    @staticmethod
+    def update_depends_schema_no_public_id(product_name: Optional[str] = Body(None),
+                                           price: Optional[float] = Body(None),
+                                           category: Optional[str] = Body(None),
+                                           quantity: Optional[int] = Body(None),
+                                           low_stock_threshold: Optional[int] = Body(None),
+                                           description: Optional[str] = Body(None),
+                                           ):
+        return UpdateProductsInformationRequestSchema(product_name=product_name,
+                                                      price=price,
+                                                      category=category,
+                                                      quantity=quantity,
+                                                      low_stock_threshold=low_stock_threshold,
+                                                      description=description,
+                                                      )
 
 
 class ProductRequestSchema(BaseModel):
@@ -114,6 +205,7 @@ class ProductRequestSchema(BaseModel):
     price: float = None
     category: str = None
     status: str = None
+    tags: List[str] = None
 
 
 class ProductDetailsRequestSchema(BaseModel):
@@ -146,6 +238,17 @@ class ProductStatus(BaseModel):
     AVAILABLE: str = "Available"
     OUT_OF_STOCK: str = "Out of stock"
     LOW_OF_STOCK: str = "Low of stock"
+
+
+class ProductsTags(str, Enum):
+    BEST_SELLER = "Best Seller"
+    NEW_PRODUCT = "New Product"
+
+
+class ProductCategories(str, Enum):
+    ALL = 'All'
+    DRINKS = 'Drinks'
+    PASTRY = 'Pastry'
 
 
 ProductStatusSchema = ProductStatus()

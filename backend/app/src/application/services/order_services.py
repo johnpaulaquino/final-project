@@ -66,7 +66,7 @@ class OrderServices:
                                                                  transaction_reference=reference_number)
             # insert into transaction
             transaction = await self.uof.transactions.insert_record(transaction_to_insert_data)
-            # TODO insert into logs table
+            # TODO Project insert into logs table
             
             # response
             return SuccessfulResponseSchema(message="Successfully placed order.", status_message="ok")

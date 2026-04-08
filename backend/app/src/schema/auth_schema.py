@@ -1,10 +1,13 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from fastapi import Body
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.src.core.constants import ConstantsData
 from app.src.exceptions.domain_exceptions import DomainInvalidCredentialsError, DomainUnprocessableEntityError
+from app.src.schema import EnvironmentStatus
 from app.src.utils.utility import Utility
 
 
@@ -37,13 +40,13 @@ class SignUpRequest(BaseModel):
     email: Optional[str] = None
     password: str = Body(...)
     firstname: str = Body(...)
-    middle_name: Optional[str] = Body(...)
+    middle_name: Optional[str] = Body(None)
     lastname: str = Body(...)
     
     @staticmethod
     def sign_up_request_depends(password=Body(...),
                                 firstname=Body(...),
-                                middle_name: Optional[str] = Body(...),
+                                middle_name: Optional[str] = Body(None),
                                 lastname=Body(...)):
         return SignUpRequest(password=password, firstname=firstname, middle_name=middle_name, lastname=lastname)
 
@@ -93,19 +96,26 @@ class TempUserRequest(BaseModel):
     email: EmailStr | str = Field(...)
 
 
-class SameSiteEnum(str):
-    LAX = "Lax"
-    STRICT = "Strict"
-    NONE = "None"
+IS_PRODUCTION = ConstantsData.ENVIRONMENT == EnvironmentStatus.Production
+
+
+# Properly inherit from both str and Enum for Pydantic validation
+# Use lowercase values as expected by FastAPI/Starlette
+class SameSiteEnum(str, Enum):
+    LAX = "lax"
+    STRICT = "strict"
+    NONE = "none"
 
 
 class CookieResponseSchema(BaseModel):
     key: str
     value: str
     httponly: bool = True
-    secure: bool = True
-    max_age: int = 24 * 60 * 6  # default is 24 hours
-    samesite: str = SameSiteEnum.LAX
+    # Automatically False locally, True in production
+    secure: bool = IS_PRODUCTION
+    max_age: int = 24 * 60 * 60
+    samesite: SameSiteEnum = SameSiteEnum.NONE if IS_PRODUCTION else SameSiteEnum.LAX
+    path: str = "/"
 
 
 class OTPCodeSchema(BaseModel):

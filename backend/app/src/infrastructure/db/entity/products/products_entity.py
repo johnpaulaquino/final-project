@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import ARRAY, Column, DateTime, String, func
 from sqlmodel import Field, SQLModel
 
 
@@ -9,6 +9,7 @@ class BaseProduct(SQLModel):
     product_name: str = Field(nullable=False)
     price: float = Field(nullable=False)
     category: str = Field(nullable=False)
+    tags: list[str] = Field(default_factory=lambda: [], sa_column=Column(ARRAY(String), nullable=True))
 
 
 class Products(BaseProduct, table=True):

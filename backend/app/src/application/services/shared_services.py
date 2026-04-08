@@ -24,7 +24,7 @@ class SharedServices:
         To upload image(s) in the cloudinary.
         :param filenames: a list of filenames of the images.
         :param img_bytes: a list of bytes of the images.
-        :param images: a list of images.
+        :param images: a list of old images in database.
         :param public_ids: a list of old public ids
         :return:new_data_images that is uploaded on the server, old_images is the old images from database, and is_images_uploaded that os tpo check if the user
         """
@@ -40,11 +40,9 @@ class SharedServices:
                     # then check if the old public key in
                     old_public_id = value.public_key
                     if old_public_id in public_ids:
-                        # remove the    old images from dictionary
+                        # remove the old images from dictionary
                         old_images.pop(index)
                         # then remove from cloudinary
-                        await self.__cloudinary_infrastructure.destroy_images(old_public_id)
-            
             # then get the list of new img_url and public_key
             new_data_images = await self.upload_images_and_get(filenames, img_bytes)
             # then set to true the is images uploaded, so that if error
@@ -69,7 +67,7 @@ class SharedServices:
         images = []
         # check if there's an image uploaded
         if img_bytes:
-            for i in range(5):
+            for i in range(len(filenames)):
                 filename = filenames[i]
                 img_byte = img_bytes[i]
                 # validate the image file extension and if no error, do nothing

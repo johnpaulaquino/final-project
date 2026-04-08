@@ -1,11 +1,17 @@
 fastapi[standard]
 sqlmodel
+alembic
 asyncpg
 pydantic-settings
 python-dotenv
 passlib[argon2]
 python-jose[cryptography]
 requests
+msgpack
+phonenumbers
+redis
+cloudinary
+fastapi-mail
+cryptography # Fernet is part of this package
 tenacity
 python-json-logger
-cloudinary

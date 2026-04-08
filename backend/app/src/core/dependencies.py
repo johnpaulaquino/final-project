@@ -4,10 +4,11 @@ from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 
 from app.src.application.services.auth_services import AuthServices
+from app.src.application.services.carts_services import CartsServices
 from app.src.application.services.order_services import OrderServices
 from app.src.application.services.products_services import ProductsServices
 from app.src.application.services.user_services import UserServices
-from app.src.core.constants import ConstantsData
+from app.src.core.constants import ConstantsData, ConstantsKey
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
@@ -56,13 +57,19 @@ async def get_redis_services(request: Request) -> RedisInfrastructure:
 
 # to get the token
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)):
     try:
-        encoded_data = AppSecurity.decode_jwt_token(token)
+        # check first the token in headers, if there is.
+        if token:
+            encoded_data = AppSecurity.decode_jwt_token(token)
+            # return the decoded token
+            return DecodedTokenDTO(**encoded_data)
         
+        # otherwise go to the cookie and check if there's a cookie.
+        cookie_access_token = request.cookies.get(ConstantsKey.COOKIE_ACCESS_TOKEN)
+        encoded_data = AppSecurity.decode_jwt_token(cookie_access_token)
         # return the decoded token
         return DecodedTokenDTO(**encoded_data)
-    
     except Exception as e:
         raise e
 
@@ -93,3 +100,9 @@ def get_products_service(
         ) -> ProductsServices:
     return ProductsServices(uow,
                             cloudinary_infrastructure=cloudinary_infrastructure)
+
+
+def get_cart_service(
+        uow: SQLUnitOfWork = Depends(get_uow),
+        ) -> CartsServices:
+    return CartsServices(uow)

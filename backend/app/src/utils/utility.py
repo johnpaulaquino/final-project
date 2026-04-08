@@ -1,9 +1,12 @@
-import socket
+import secrets
+from datetime import date
 
 from starlette import status
 
 from app.src.core.constants import ConstantsData
-from app.src.exceptions.domain_exceptions import DomainInvalidFormatError, DomainOTPExpiredError, DomainOTPInvalidError
+from app.src.exceptions.domain_exceptions import (DomainOTPExpiredError,
+                                                  DomainOTPInvalidError,
+                                                  DomainUnprocessableEntityError, )
 from app.src.schema import EnvironmentStatus, PaginatedOutput, SuccessfulResponseSchema
 from app.src.schema.products_schema import ProductStatusSchema
 
@@ -91,7 +94,7 @@ class Utility:
     def validate_image_file_extension(file_name):
         allowed_extensions = ("jpeg", "jpg", "png", "webp")
         if not file_name.lower().endswith(allowed_extensions):
-            raise DomainInvalidFormatError(message=f'File extension should be in {allowed_extensions}.')
+            raise DomainUnprocessableEntityError(message=f'File extension should be in {allowed_extensions}.')
     
     @classmethod
     def is_file_uploaded(cls, img_file):
@@ -123,16 +126,14 @@ class Utility:
         if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
             # This is for CORS Middleware
             origins = [
-                    'http://localhost:5173',
-                    'http://127.0.0.1:5173',
-                    'http://127.0.0.1:3000',
-                    'http://127.0.0.1:4040', ]
+                    "http://localhost:3000",
+                    "http://127.0.0.1:3000",
+                    ]
         else:
             # for production
             origins = [
                     'https://my-personal-portfolio-one-steel.vercel.app',
                     ]
-        
         return origins
     
     @staticmethod
@@ -148,3 +149,58 @@ class Utility:
                                          has_next=has_next)
         
         return paginated_data if paginated_data.total_records else None
+    
+    @classmethod
+    def validate_birthdate(cls, birthdate: date):
+        """
+        To validate birthdate, it ,must be at least 18 years old.
+        """
+        # date today must not be greater than to today's year
+        if not birthdate:
+            return 0
+        user_age = cls.calculate_age(birthdate)
+        if user_age < 18:
+            DomainUnprocessableEntityError("Age must be at least 18 years old.")
+        
+        return user_age
+    
+    @staticmethod
+    def calculate_age(birthday: date):
+        """
+        A function to calculate user age by specifying the user birthday.
+        :param birthday: That is given by the user.
+        :return: Age of the user.
+        """
+        # get today's date
+        today_date = date.today()
+        # and day,month and year to variables
+        t_day, t_month, t_year = today_date.day, today_date.month, today_date.year
+        
+        # assign day, month and year of user to variable
+        user_b_day, user_b_month, user_b_year = birthday.day, birthday.month, birthday.year
+        
+        # calculate age
+        age = t_year - user_b_year
+        
+        # check if today's month is less than to its birth month
+        if t_month < user_b_month:
+            age -= 1
+        
+        # otherwise check today's month if equal to user's birthmonth
+        elif t_month == user_b_month:
+            # then check if today's day is less than to its birthday
+            if t_day < user_b_day:
+                # then subtract 1 to its age
+                age -= 1
+        
+        # handle zero and negative value
+        if age <= 0:
+            age = 1
+        # then return age
+        return age
+    
+    @staticmethod
+    def generate_otp_code():
+        otp = str(secrets.randbelow(900000) + 100000)  # 6-digit
+        
+        return otp
