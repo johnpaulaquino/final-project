@@ -201,7 +201,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
                 timedelta(days=ConstantsData.JWT_EXPIRATION).total_seconds())  # 7 days, same as the refresh token
         response.set_cookie(**refresh_cookie.model_dump())
         
-        # xsrf cookie
+        # csrf cookie
         csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
                                            value=response_schema.csrf_token)
         csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
