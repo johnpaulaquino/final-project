@@ -67,6 +67,8 @@ class ConstantsKey(BaseModel):
     # Key for cookie to retrieve.
     COOKIE_VERIFICATION_KEY: str = "verification_token"
     COOKIE_REFRESH_TOKEN: str = "refresh_token"
+    COOKIE_ACCESS_TOKEN: str = "access_token"
+    COOKIE_CSRF_TOKEN: str = "csrf_token"
     
     # Key for data on signed token
     TOKEN_DATA_KEY_USER_EMAIL: str = 'user_email'

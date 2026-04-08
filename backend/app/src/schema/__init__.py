@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -45,6 +45,7 @@ class SuccessfulResponseSchema(BaseModel):
     data: Any = None
     access_token: str = None
     refresh_token: str = None
+    csrf_token: str | None = None
     action: str = None
     paginated: PaginatedOutput | None = None
     otp_code: str | None = None

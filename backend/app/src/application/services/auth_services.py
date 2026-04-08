@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -36,9 +37,15 @@ class AuthServices:
             data = await self.__uow.users.find_record(email)
             
             # then check if the user exists or active.
+            # generate a verification token with 24 hours expiration time.
+            expiration = 24 * 3600  # 24 hours in seconds
+            verification_token = AppSecurity.generate_access_token(jti=str(uuid4()),
+                                                                   data={"user_email": email},
+                                                                   exp=expiration)
+            csrf_token = secrets.token_urlsafe(32)
             if data:
-                curr_users = data["Users"]
-                if curr_users.is_deleted:
+                
+                if data.Users.is_deleted:
                     raise DomainDeactivatedError("This email is deactivated.")
                 
                 raise DomainAlreadyExistsError(message="This email is already exist. Please login instead.")
@@ -46,7 +53,7 @@ class AuthServices:
             # check first if there's otp code in that email on redis before proceeding.
             
             if old_otp_code:
-                raise DomainOTPNotExpireError(message="Your code is not expired yet.", )
+                raise DomainOTPNotExpireError(message="Your code is not expired yet.")
             
             # query from temp database
             temp_user_data = await self.__uow.temp_users.find_record(email)
@@ -58,11 +65,17 @@ class AuthServices:
                 if temp_user_data.sign_up_steps == 1:
                     # generate an otp
                     # return the successful response
-                    return SignUpModelDTO(message="Verification code sent to your email.", otp_code=otp_code)
+                    return SignUpModelDTO(message="Verification code sent to your email.", otp_code=otp_code,
+                                          verification_token=verification_token,
+                                          csrf_token=csrf_token,
+                                          sign_up_steps=2)
                 
                 elif temp_user_data.sign_up_steps == 2:
                     # return the successful response
-                    return SignUpModelDTO(message="Your email is verified, please proceed to next step.")
+                    return SignUpModelDTO(message="Your email is verified, please proceed to next step.",
+                                          verification_token=verification_token,
+                                          csrf_token=csrf_token,
+                                          sign_up_steps=3)
                 else:
                     # otherwise raise an exception
                     raise DomainError
@@ -71,7 +84,11 @@ class AuthServices:
             await self.__uow.temp_users.insert_record(TempUserRequest(email=email.strip()))
             
             # return the successful response
-            return SignUpModelDTO(message="Verification code sent to your email.", otp_code=otp_code)
+            return SignUpModelDTO(message="Verification code sent to your email.",
+                                  otp_code=otp_code,
+                                  verification_token=verification_token,
+                                  csrf_token=csrf_token,
+                                  sign_up_steps=2)
         except Exception as e:
             raise e
     
@@ -179,10 +196,11 @@ class AuthServices:
             
             # insert the token into db
             access_refresh_token = await self.__insert_session_token(curr_users.id, curr_users.role)
-            
+            csrf_token = secrets.token_urlsafe(32)
             # prepare the response
             response = SignUpModelDTO(message="Successfully logged in.",
                                       access_token=access_refresh_token.access_token,
+                                      csrf_token=csrf_token,
                                       refresh_token=access_refresh_token.refresh_token)
             return response
         

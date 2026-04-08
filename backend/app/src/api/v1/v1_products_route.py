@@ -1,15 +1,14 @@
 from typing import List, Optional
 
 from alembic.util import status
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 from starlette import status
 
 from app.src.api.v1 import get_filenames_and_image_bytes
 from app.src.application.services.products_services import ProductsServices
 from app.src.core.constants import ConstantsData, EndpointTags
-from app.src.core.dependencies import get_current_user, get_order_service, get_products_service, get_uow
+from app.src.core.dependencies import get_current_user, get_products_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema
 from app.src.schema.products_schema import ProductsFullInformationRequestSchema, UpdateProductsInformationRequestSchema
 from app.src.utils.successful_response import SuccessfulResponse
@@ -45,17 +44,19 @@ async def insert_product(
         raise e
 
 
-@v1_products_router.get("/{product_id}", tags=[EndpointTags.CUSTOMER])
-async def get_product_information(product_id: str,
-                                  product_services: ProductsServices = Depends(get_products_service)):
+@v1_products_router.get("/with", tags=[EndpointTags.CUSTOMER])
+async def get_product_information_paginated_with_tags(paginated: PaginatedSchema = Depends(),
+                                                      product_services: ProductsServices = Depends(
+                                                              get_products_service)):
     try:
         
-        response_dto = await product_services.get_product_information(product_id)
+        response_dto = await product_services.get_product_information_paginated_with_tags(paginated)
+        
         response_dto.status_code = status.HTTP_200_OK
         
         response = SuccessfulResponse(response_dto)
-        
         return response
+    
     except Exception as e:
         raise e
 
@@ -77,7 +78,7 @@ async def get_product_information_paginated(paginated: PaginatedSchema = Query()
 
 
 # will insert safe route here.
-@v1_products_router.patch("/{product_id}", tags=[EndpointTags.ADMIN])
+@v1_products_router.patch("/full/{product_id}", tags=[EndpointTags.ADMIN])
 async def update_product_information(product_id: str,
                                      new_data: UpdateProductsInformationRequestSchema = Depends(
                                              UpdateProductsInformationRequestSchema.update_depends_schema),
@@ -97,6 +98,71 @@ async def update_product_information(product_id: str,
         
         response_schema.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(response_schema)
+        
+        return response
+    except Exception as e:
+        raise e
+
+
+# will insert safe route here.
+@v1_products_router.patch("/information/{product_id}", tags=[EndpointTags.ADMIN])
+async def update_product_information(product_id: str,
+                                     new_data: UpdateProductsInformationRequestSchema = Depends(
+                                             UpdateProductsInformationRequestSchema.update_depends_schema_no_public_id),
+                                     current_user: DecodedTokenDTO = Depends(get_current_user),
+                                     product_services: ProductsServices = Depends(get_products_service),
+                                     ):
+    
+    try:
+        
+        response_schema = await product_services.update_product_information_no_images(product_id,
+                                                                                      new_data,
+                                                                                      current_user, )
+        
+        response_schema.status_code = status.HTTP_200_OK
+        response = SuccessfulResponse(response_schema)
+        
+        return response
+    except Exception as e:
+        raise e
+
+
+# will insert safe route here.
+@v1_products_router.patch("/images/{product_id}", tags=[EndpointTags.ADMIN])
+async def update_product_images_only(product_id: str,
+                                     public_ids: Optional[list[str]] = Body(None),
+                                     images: List[UploadFile] = File(None),
+                                     current_user: DecodedTokenDTO = Depends(get_current_user),
+                                     product_services: ProductsServices = Depends(get_products_service),
+                                     ):
+    
+    try:
+        """
+        """
+        filenames, images_bytes = await get_filenames_and_image_bytes(images)
+        response_schema = await product_services.update_product_images(product_id,
+                                                                       public_ids,
+                                                                       filenames,
+                                                                       current_user,
+                                                                       images_bytes)
+        
+        response_schema.status_code = status.HTTP_200_OK
+        response = SuccessfulResponse(response_schema)
+        
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.get("/{product_id}", tags=[EndpointTags.CUSTOMER])
+async def get_product_information(product_id: str,
+                                  product_services: ProductsServices = Depends(get_products_service)):
+    try:
+        
+        response_dto = await product_services.get_product_information(product_id)
+        response_dto.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(response_dto)
         
         return response
     except Exception as e:

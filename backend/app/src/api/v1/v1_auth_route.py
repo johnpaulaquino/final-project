@@ -1,4 +1,4 @@
-from uuid import uuid4
+from datetime import timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Body, Cookie, Depends
 from fastapi.security import OAuth2PasswordRequestForm
@@ -36,12 +36,6 @@ async def create_account(background_task: BackgroundTasks,
         # auth services response.
         services_response = await auth_services.manual_signup_initiate(email, old_otp_code=otp_code_from_redis)
         
-        # generate a verification token with 24 hours expiration time.
-        expiration = 24 * 3600  # 24 hours in seconds
-        verification_token = AppSecurity.generate_access_token(jti=str(uuid4()),
-                                                               data={"user_email": email},
-                                                               exp=expiration)
-        
         # check if the services response contains an otp code, if it does, send the email and set the cookie,
         # otherwise just set the cookie and return the response.
         success_response_schema = SuccessfulResponseSchema(message=services_response.message,
@@ -58,8 +52,20 @@ async def create_account(background_task: BackgroundTasks,
                                      verification_code=services_response.otp_code)
         
         response = SuccessfulResponse(success_response_schema)
-        # set the cookie with the verification token.
-        response.set_cookie(**CookieResponseSchema(key="verification_token", value=verification_token).model_dump())
+        
+        verification_cookie_data = CookieResponseSchema(
+                key=ConstantsKeyData.COOKIE_VERIFICATION_KEY,
+                value=services_response.verification_token
+                )
+        
+        csrf_cookie_data = CookieResponseSchema(
+                key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
+                value=services_response.csrf_token)
+        
+        csrf_cookie_data.httponly = False
+        # model_dump() (or dict() in older Pydantic) securely maps your schema to Starlette's kwargs
+        response.set_cookie(**verification_cookie_data.model_dump())
+        response.set_cookie(**csrf_cookie_data.model_dump())
         
         return response
     
@@ -69,7 +75,7 @@ async def create_account(background_task: BackgroundTasks,
 
 @v1_auth_router.post("/verify-otp", tags=[EndpointTags.CUSTOMER])
 async def verify_signup_otp(otp_code: str = Body(),
-                            verification_token: str = Cookie(None),
+                            verification_token: str = Cookie(None, alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY),
                             auth_services: AuthServices = Depends(get_auth_service),
                             redis_services: RedisInfrastructure = Depends(get_redis_services)):
     try:
@@ -82,7 +88,6 @@ async def verify_signup_otp(otp_code: str = Body(),
             user_email = user_email.strip()
         except Exception as e:
             raise DataBadRequestException(message="Signup verification failed. Please re-enter your email.", )
-        
         # otp from redis.
         otp_code_from_redis = await redis_services.get_otp(user_email)
         
@@ -153,9 +158,29 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         
         # if no errors, then return the response with the access token if there is one.
         response_schema.access_token = auth_response.access_token
+        response_schema.refresh_token = auth_response.refresh_token
+        response_schema.csrf_token = auth_response.csrf_token
         
         response = SuccessfulResponse(response_schema)
-        response.set_cookie(ConstantsKeyData.COOKIE_REFRESH_TOKEN, auth_response.refresh_token)
+        
+        access_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
+                                             value=response_schema.access_token)
+        access_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        response.set_cookie(**access_cookie.model_dump())
+        
+        # refresh cookie
+        refresh_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
+                                              value=response_schema.refresh_token)
+        refresh_cookie.max_age = int(
+                timedelta(days=ConstantsData.JWT_EXPIRATION).total_seconds())  # 7 days, same as the refresh token
+        response.set_cookie(**refresh_cookie.model_dump())
+        
+        # xsrf cookie
+        csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
+                                           value=response_schema.csrf_token)
+        csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        csrf_cookie.httponly = False
+        response.set_cookie(**csrf_cookie.model_dump())
         
         return response
     
@@ -177,7 +202,11 @@ async def refresh_token(refresh_token: str = Cookie(None),
                                                    access_token=new_access_token.access_token,
                                                    refresh_token=new_access_token.refresh_token)
         response = SuccessfulResponse(response_schema)
-        response.set_cookie(ConstantsKeyData.COOKIE_REFRESH_TOKEN, new_access_token.refresh_token)
+        response.set_cookie(**CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
+                                                   value=response_schema.access_token).model_dump())
+        
+        response.set_cookie(**CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
+                                                   value=response_schema.refresh_token).model_dump())
         return response
     
     except Exception as e:

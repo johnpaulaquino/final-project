@@ -40,6 +40,8 @@ class SignUpModelDTO(BaseModel):
     verification_token: str = None
     access_token: str = None
     refresh_token: str = None
+    sign_up_steps: int = None
+    csrf_token: str = None
 
 
 class SessionTokenDTO(BaseModel):

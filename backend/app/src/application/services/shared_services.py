@@ -24,7 +24,7 @@ class SharedServices:
         To upload image(s) in the cloudinary.
         :param filenames: a list of filenames of the images.
         :param img_bytes: a list of bytes of the images.
-        :param images: a list of images.
+        :param images: a list of old images in database.
         :param public_ids: a list of old public ids
         :return:new_data_images that is uploaded on the server, old_images is the old images from database, and is_images_uploaded that os tpo check if the user
         """

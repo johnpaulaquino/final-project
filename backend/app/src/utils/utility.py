@@ -1,5 +1,4 @@
 import secrets
-import socket
 from datetime import date
 
 from starlette import status
@@ -127,16 +126,14 @@ class Utility:
         if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
             # This is for CORS Middleware
             origins = [
-                    'http://localhost:5173',
-                    'http://127.0.0.1:5173',
-                    'http://127.0.0.1:3000',
-                    'http://127.0.0.1:4040', ]
+                    "http://localhost:3000",
+                    "http://127.0.0.1:3000",
+                    ]
         else:
             # for production
             origins = [
                     'https://my-personal-portfolio-one-steel.vercel.app',
                     ]
-        
         return origins
     
     @staticmethod
