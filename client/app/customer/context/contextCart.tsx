@@ -1,24 +1,25 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import { apiClient } from "@/lib/api";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 export interface Product {
   Products: {
+    avg_rating: number | null;
     id: number | string;
     product_name: string;
     price: string;
     category: string;
     description?: string;
   };
+  review_count: number;
   quantity: number;
   avg_rating: number | null;
   images: { image_url: string }[];
 }
 
 // Since numericPrice is now in Product, CartItem just needs quantity!
-export type CartItem = Product & {
-  quantity: number;
-};
+export type CartItem = Product;
 
 interface CartContextType {
   cart: CartItem[];
@@ -27,12 +28,32 @@ interface CartContextType {
   updateQuantity: (id: number | string, newQuantity: number) => void;
   totalItems: number;
   totalPrice: number;
+  fetchCarts: (skip?: number, limit?: number) => Promise<void>;
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  // Call the CArt API here
+  // Function to fetch products from your API
+  const fetchCarts = useCallback(async (skip = 0, limit = 10) => {
+    setIsLoading(true);
+    try {
+      const endpoint = `/cart?skip=${skip}&limit=${limit}`;
+      const response = await apiClient.get(endpoint);
+
+      const fetchedProducts = response.data || [];
+      setCart(fetchedProducts);
+    } catch (error) {
+      console.error("Failed to fetch carts:", error);
+      setCart([]); // Clear products on error, or handle gracefully
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const addToCart = (product: Product) => {
     // PROTECT CART: Prevent adding if out of stock!
@@ -41,9 +62,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const parsedPrice = parseFloat(
-      product.Products.price.replace(/[^0-9.-]+/g, ""),
-    );
+    const parsedPrice = Number(product.Products.price);
 
     setCart((prevCart) => {
       const existingItem = prevCart.find(
@@ -102,6 +121,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         totalItems,
         totalPrice,
+        isLoading,
+        fetchCarts,
       }}
     >
       {children}

@@ -68,7 +68,6 @@ async def get_products_by_categories(category: str = Query(), paginated: Paginat
         product_response = await product_services.get_products_by_categories(category, paginated)
         product_response.status_code = 200
         response = SuccessfulResponse(product_response)
-        print(product_response.data)
         
         return response
     except Exception as e:

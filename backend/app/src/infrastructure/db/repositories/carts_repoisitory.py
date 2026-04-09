@@ -56,7 +56,6 @@ class CartsRepository(UserInterface):
                            Products.id,
                            Products.category,
                            Products.price, )
-                    .select_from(Carts)
                     .join(Carts, Products.id == Carts.product_id)
                     .where(and_(Carts.id == cart_id, Carts.user_id == user_id)))
             result = await self.__db.execute(stmt)
@@ -68,7 +67,6 @@ class CartsRepository(UserInterface):
     async def get_paginated_carts_products(self, offset, limit, user_id: str):
         try:
             stmt = (select(Carts, Products)
-                    .select_from(Carts)
                     .join(Carts, Products.id == Carts.product_id)
                     .where(Carts.user_id == user_id)
                     .offset(offset)

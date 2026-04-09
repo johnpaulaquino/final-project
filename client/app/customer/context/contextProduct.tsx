@@ -1,8 +1,23 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { Product } from "./contextCart";
 import { apiClient } from "@/lib/api"; // Assuming you have this from your previous setup
+
+export interface Product {
+  stock: number;
+  Products: {
+    image: string | Blob | undefined;
+    avg_rating: number | null;
+    id: number | string;
+    product_name: string;
+    price: string;
+    category: string;
+    description?: string;
+  };
+  quantity: number;
+  avg_rating: number | null;
+  images: { image_url: string }[];
+}
 
 interface ProductContextType {
   products: Product[];
@@ -28,7 +43,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     async (category: string, skip = 0, limit = 10) => {
       setIsLoading(true);
       try {
-        const endpoint = `/products/with?${category}skip=${skip}&limit=${limit}`;
+        const endpoint = `/products/with?category=${category}&skip=${skip}&limit=${limit}`;
 
         const response = await apiClient.publicGet(endpoint);
 
@@ -51,12 +66,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteProduct = (id: number | string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id));
+    setProducts((prev) => prev.filter((product) => product.Products.id !== id));
   };
 
   const updateProduct = (updatedProduct: Product) => {
     setProducts((prev) =>
-      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p)),
+      prev.map((p) =>
+        p.Products.id === updatedProduct.Products.id ? updatedProduct : p,
+      ),
     );
   };
 

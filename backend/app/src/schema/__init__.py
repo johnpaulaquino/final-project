@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 """
 This schema is for global access and has a single purpose.
@@ -29,6 +29,12 @@ class SignInTypeSchema:
 class PaginatedSchema(BaseModel):
     skip: int = Field(ge=1, default=1)
     limit: int = Field(ge=10, default=10)
+    
+    @field_validator("skip")
+    def validate_skip(cls, value):
+        if value <= 0:
+            return 1
+        return value
 
 
 class EnvironmentStatus(str):

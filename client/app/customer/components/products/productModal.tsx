@@ -108,7 +108,7 @@ export default function ProductModal({
             </div>
 
             <p className="text-gray-600 text-sm leading-relaxed">
-              {product.description ||
+              {product.Products.description ||
                 "Indulge in our freshly prepared beverage, crafted with premium ingredients to satisfy your cravings."}
             </p>
 

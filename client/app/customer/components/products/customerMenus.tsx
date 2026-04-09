@@ -20,7 +20,7 @@ export default function CustomerMenus() {
   // Fetch from the API whenever the activeFilter changes
   useEffect(() => {
     // You can adjust skip and limit here if you implement pagination later
-    fetchProducts(activeFilter, 0, 10);
+    fetchProducts(activeFilter, 1, 10);
   }, [activeFilter, fetchProducts]);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function CustomerMenus() {
           {products.length > 0 ? (
             products.map((product) => (
               <div
-                key={`menu-item-${product.id}`}
+                key={`menu-item-${product.Products.id}`} // Use the correct ID field
                 onClick={() => setSelectedProduct(product)}
                 className="cursor-pointer transition-transform hover:scale-[1.02]"
               >

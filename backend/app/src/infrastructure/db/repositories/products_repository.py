@@ -80,6 +80,7 @@ class ProductsRepository(UserInterface):
                 select(
                         ProductRatings.product_id,
                         func.avg(ProductRatings.rates).label("avg_rating"),
+                        func.count(ProductRatings.rates).label("review_count")
                         )
                 .group_by(ProductRatings.product_id)
                 .subquery()
@@ -110,6 +111,7 @@ class ProductsRepository(UserInterface):
                 select(
                         ProductRatings.product_id,
                         func.avg(ProductRatings.rates).label("avg_rating"),
+                        func.count(ProductRatings.rates).label("review_count")
                         )
                 .group_by(ProductRatings.product_id)
                 .subquery()
@@ -117,6 +119,7 @@ class ProductsRepository(UserInterface):
         stmt = (select(Products,
                        Inventory.quantity,
                        ratings_subq.c.avg_rating,
+                       ratings_subq.c.review_count,
                        ProductDetails.description,
                        ProductDetails.images)
                 .outerjoin(ProductDetails, Products.id == ProductDetails.product_id)
@@ -129,7 +132,7 @@ class ProductsRepository(UserInterface):
         
         result = await self._db.execute(stmt)
         data = result.mappings().fetchall()
-        return data or None
+        return data
     
     async def get_paginated_record_with_category_total_records(self, category):
         try:
@@ -158,6 +161,7 @@ class ProductsRepository(UserInterface):
                 .group_by(ProductRatings.product_id)
                 .subquery()
         )
+        
         stmt = (select(Products,
                        Inventory.quantity,
                        ProductDetails.description,
