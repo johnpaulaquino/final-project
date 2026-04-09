@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_
 
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import Products
+from app.src.infrastructure.db.entity import Inventory, Products
 from app.src.infrastructure.db.entity.products.carts_entity import Carts, CreateCart
 
 
@@ -66,8 +66,9 @@ class CartsRepository(UserInterface):
     
     async def get_paginated_carts_products(self, offset, limit, user_id: str):
         try:
-            stmt = (select(Carts, Products)
+            stmt = (select(Carts, Products, Inventory.quantity)
                     .join(Carts, Products.id == Carts.product_id)
+                    .outerjoin(Inventory, Products.id == Inventory.product_id)
                     .where(Carts.user_id == user_id)
                     .offset(offset)
                     .limit(limit))

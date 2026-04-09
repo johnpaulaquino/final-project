@@ -13,13 +13,31 @@ export interface Product {
     description?: string;
   };
   review_count: number;
-  quantity: number;
+  quantity: number; // Backend stock
   avg_rating: number | null;
   images: { image_url: string }[];
 }
 
-// Since numericPrice is now in Product, CartItem just needs quantity!
-export type CartItem = Product;
+export interface CartProduct {
+  Carts: {
+    quantity: number; // User's cart amount
+    product_id: number | string;
+  };
+  Products: {
+    avg_rating: number | null;
+    id: number | string;
+    product_name: string;
+    price: string;
+    category: string;
+    description?: string;
+  };
+  review_count: number;
+  quantity: number; // Backend stock
+  avg_rating: number | null;
+  images: { image_url: string }[];
+}
+
+export type CartItem = CartProduct;
 
 interface CartContextType {
   cart: CartItem[];
@@ -37,8 +55,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Call the CArt API here
-  // Function to fetch products from your API
+
   const fetchCarts = useCallback(async (skip = 0, limit = 10) => {
     setIsLoading(true);
     try {
@@ -49,66 +66,109 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCart(fetchedProducts);
     } catch (error) {
       console.error("Failed to fetch carts:", error);
-      setCart([]); // Clear products on error, or handle gracefully
+      setCart([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const addToCart = (product: Product) => {
-    // PROTECT CART: Prevent adding if out of stock!
+  const addToCart = async (product: Product) => {
+    // 1. PROTECT CART: Prevent adding if out of stock!
     if (product.quantity <= 0) {
       alert("Sorry, this item is out of stock!");
       return;
     }
 
-    const parsedPrice = Number(product.Products.price);
+    // 2. PROTECT CART: Check current local state to prevent exceeding stock
+    const existingItem = cart.find(
+      (item) => item.Carts.product_id === product.Products.id,
+    );
 
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (item) => item.Products.id === product.Products.id,
-      );
+    // FIX: Block the addition if they already have the max stock in their cart
+    if (existingItem && existingItem.Carts.quantity >= product.quantity) {
+      alert(`You cannot add more! Only ${product.quantity} left in stock.`);
+      return;
+    }
 
-      if (existingItem) {
-        // PROTECT CART: Prevent adding more than what's in stock
-        if (existingItem.quantity >= product.quantity) {
-          alert(`You cannot add more! Only ${product.quantity} left in stock.`);
-          return prevCart;
-        }
-        return prevCart.map((item) =>
-          item.Products.id === product.Products.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+    // 3. Prepare the data for your FastAPI backend
+    const cartPostRequestBody = {
+      product_id: product.Products.id,
+      quantity: 1,
+    };
+
+    // 4. Send to Database FIRST
+    try {
+      await apiClient.post("/cart", cartPostRequestBody);
+
+      // 5. ONLY if the database succeeds, update the React UI State
+      setCart((prevCart) => {
+        const itemToUpdate = prevCart.find(
+          (item) => item.Carts.product_id === product.Products.id,
         );
-      }
 
-      return [
-        ...prevCart,
-        { ...product, quantity: 1, numericPrice: parsedPrice },
-      ];
-    });
+        if (itemToUpdate) {
+          // FIX: Deeply update the nested Carts.quantity
+          return prevCart.map((item) =>
+            item.Carts.product_id === product.Products.id
+              ? {
+                  ...item,
+                  Carts: {
+                    ...item.Carts,
+                    quantity: item.Carts.quantity + 1,
+                  },
+                }
+              : item,
+          );
+        }
+
+        // FIX: Construct a proper CartItem with the nested Carts object
+        const newItem: CartItem = {
+          ...product,
+          Carts: {
+            product_id: product.Products.id,
+            quantity: 1,
+          },
+        };
+
+        return [...prevCart, newItem];
+      });
+    } catch (error) {
+      console.error("Failed to insert cart into DB:", error);
+      alert("Network error: Could not add item to cart. Please try again.");
+    }
   };
 
-  // FIXED: id is now (number | string)
   const removeFromCart = (id: number | string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.Products.id !== id));
-  };
-
-  // FIXED: id is now (number | string)
-  const updateQuantity = (id: number | string, newQuantity: number) => {
-    if (newQuantity < 1) return;
-
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.Products.id === id ? { ...item, quantity: newQuantity } : item,
-      ),
+      prevCart.filter((item) => item.Carts.product_id !== id),
     );
   };
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const updateQuantity = (id: number | string, newQuantity: number) => {
+    // FIX: If the user tries to go below 1, remove the item entirely
+    if (newQuantity < 1) {
+      removeFromCart(id); // Use your existing remove function!
+      return;
+    }
+
+    setCart((prevCart) =>
+      prevCart.map((item) => {
+        if (item.Products.id === id) {
+          // Extra safety: prevent updating beyond stock limits
+          const validatedQty = Math.max(
+            1,
+            Math.min(newQuantity, item.quantity),
+          );
+          return { ...item, Carts: { ...item.Carts, quantity: validatedQty } };
+        }
+        return item;
+      }),
+    );
+  };
+  const totalItems = new Set(cart.map((item) => item.Carts.product_id)).size;
 
   const totalPrice = cart.reduce(
-    (sum, item) => sum + parseFloat(item.Products.price) * item.quantity,
+    (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
     0,
   );
 

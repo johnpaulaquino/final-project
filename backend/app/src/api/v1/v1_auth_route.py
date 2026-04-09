@@ -1,16 +1,16 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Body, Cookie, Depends
+from fastapi import APIRouter, BackgroundTasks, Body, Cookie, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from starlette import status
 
 from app.src.application.services.auth_services import AuthServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
-from app.src.core.dependencies import get_auth_service, get_email_infrastructure, get_redis_services, get_uow
+from app.src.core.dependencies import (get_auth_service, get_email_infrastructure, get_redis_services,
+                                       )
 from app.src.core.security import AppSecurity
 from app.src.exceptions.http_exceptions import DataBadRequestException
-from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.infrastructure.email_infrastructure import EmailInfrastructure
 from app.src.infrastructure.redis_infrastructure import RedisInfrastructure
 from app.src.schema import SuccessfulResponseSchema
@@ -216,24 +216,43 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
 
 
 @v1_auth_router.post('/refresh-token', tags=[EndpointTags.CUSTOMER])
-async def refresh_token(refresh_token: str = Cookie(None),
-                        uow: SQLUnitOfWork = Depends(get_uow)):
+async def refresh_token(server_response: Response, refresh_token: str = Cookie(None),
+                        auth_services: AuthServices = Depends(get_auth_service), ):
     try:
-        auth_services = AuthServices(uow)
-        new_access_token = await auth_services.refresh_token(refresh_token=refresh_token)
+        auth_services_response = await auth_services.refresh_token(refresh_token=refresh_token)
         
-        response_schema = SuccessfulResponseSchema(message=new_access_token.message,
-                                                   status_code=status.HTTP_200_OK,
-                                                   status_message="ok",
-                                                   access_token=new_access_token.access_token,
-                                                   refresh_token=new_access_token.refresh_token)
-        response = SuccessfulResponse(response_schema)
+        auth_services_response.status_code = status.HTTP_200_OK
+        response = SuccessfulResponse(auth_services_response)
         response.set_cookie(**CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
-                                                   value=response_schema.access_token).model_dump())
+                                                   value=auth_services_response.access_token).model_dump())
         
         response.set_cookie(**CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
-                                                   value=response_schema.refresh_token).model_dump())
+                                                   value=auth_services_response.refresh_token).model_dump())
+        # csrf cookie
+        csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
+                                           value=auth_services_response.csrf_token)
+        csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        csrf_cookie.httponly = False
+        response.set_cookie(**csrf_cookie.model_dump())
         return response
     
+    except Exception as e:
+        raise e
+
+
+@v1_auth_router.post("/logout")
+async def log_out_user(refresh_access_token: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_ACCESS_TOKEN),
+                       auth_services: AuthServices = Depends(get_auth_service)):
+    try:
+        auth_services_response = await auth_services.log_out_user(refresh_token=refresh_access_token)
+        auth_services_response.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(auth_services_response)
+        
+        response.delete_cookie(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN)
+        response.delete_cookie(key=ConstantsKeyData.COOKIE_CSRF_TOKEN)
+        response.delete_cookie(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN)
+        
+        return response
     except Exception as e:
         raise e

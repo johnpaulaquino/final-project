@@ -10,7 +10,7 @@ from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, Doma
 from app.src.exceptions.http_exceptions import (DataBadRequestException, DataBaseDataNotFoundException,
                                                 DataConflictError, DataForbiddenException,
                                                 DataUnProcessableContent, JWTExpiredException, JWTInvalidException,
-                                                UnAuthorizeAccessException, )
+                                                )
 
 EXCEPTION_MAPPER = {
         DomainNotFoundError           : lambda e: DataBaseDataNotFoundException('Entity not found', message=str(e)),
@@ -33,9 +33,10 @@ EXCEPTION_MAPPER = {
                                                                           message=str(e)),
         DomainUnprocessableEntityError: lambda e: DataUnProcessableContent(message_status='Unprocessable Entity',
                                                                            message=str(e)),
+        DomainJWTInvalidError         : lambda e: JWTInvalidException(message_status='Invalid Token', message=str(e)),
+        DomainJWTExpiredError         : lambda e: JWTExpiredException(message_status='Expired Token', message=str(e)),
         DomainError                   : lambda e: DataBadRequestException(message_status='Domain error',
                                                                           status_code=500,
                                                                           message=str(e)),
-        DomainJWTInvalidError         : lambda e: JWTInvalidException(message_status='Invalid Token', message=str(e)),
-        DomainJWTExpiredError         : lambda e: JWTExpiredException(message_status='Expired Token', message=str(e)),
+            
         }

@@ -28,9 +28,14 @@ class CartsServices:
             data = await self.__uof.carts.get_cart(
                     product_id=cart_data.product_id,
                     user_id=current_user.user_id)
+            
             if data:
                 # then if there's a data then update the cart quantity only
-                self.__uof.carts.update_cart(**data.model_dump())
+                
+                new_data = data.model_copy()
+                new_data.quantity += cart_data.quantity
+                await self.__uof.carts.update_cart(data=new_data.model_dump(), user_id=current_user.user_id,
+                                                   cart_id=data.id)
                 return SuccessfulResponseSchema(message="Successfully update quantity.")
             # set the user_id
             cart_data.user_id = current_user.user_id

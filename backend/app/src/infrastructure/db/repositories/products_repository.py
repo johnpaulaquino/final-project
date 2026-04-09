@@ -114,8 +114,7 @@ class ProductsRepository(UserInterface):
                         func.count(ProductRatings.rates).label("review_count")
                         )
                 .group_by(ProductRatings.product_id)
-                .subquery()
-        )
+                .subquery())
         stmt = (select(Products,
                        Inventory.quantity,
                        ratings_subq.c.avg_rating,

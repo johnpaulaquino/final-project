@@ -45,6 +45,7 @@ class SignUpModelDTO(BaseModel):
 
 
 class SessionTokenDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     """
     Will use to return the object into services layer. For session Token only.
     """

@@ -16,7 +16,7 @@ from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, Doma
                                                   DomainNotFoundError,
                                                   DomainOTPNotExpireError, )
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import RoleSchema
+from app.src.schema import RoleSchema, SuccessfulResponseSchema
 from app.src.schema.auth_schema import LoginRequest, SessionTokenRequest, SignUpRequest, TempUserRequest
 from app.src.utils.utility import Utility
 
@@ -207,18 +207,20 @@ class AuthServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def refresh_token(self, *, refresh_token: str):
         try:
             # decode the token
-            payload = AppSecurity.decode_jwt_token(refresh_token, verify_exp=False)
+            payload = AppSecurity.decode_jwt_token(refresh_token)
             
             user_id: str = payload.get("user_id")
             
             access_refresh_token = await self.__update_refresh_token(refresh_token, user_id)
             
-            response = SignUpModelDTO(message="Successfully refreshed token.",
-                                      access_token=access_refresh_token.access_token,
-                                      refresh_token=access_refresh_token.refresh_token)
+            response = SuccessfulResponseSchema(message="Successfully refreshed token.",
+                                                access_token=access_refresh_token.access_token,
+                                                refresh_token=access_refresh_token.refresh_token,
+                                                csrf_token=self.generate_csrf_token())
             return response
         
         except ExpiredSignatureError as e:
@@ -257,19 +259,40 @@ class AuthServices:
                         refresh_token=new_refresh_token,
                         refresh_token_expiration=refresh_expires_datetime)
     
+    @retry_on_transient
+    async def log_out_user(self, *, refresh_token: str):
+        try:
+            refresh_token_db = await self.__check_session_token(refresh_token)
+            
+            # revoke the refresh token in db
+            await self.__uow.token_session.revoke_token(refresh_token_db.id)
+            
+            response = SuccessfulResponseSchema(message="Successfully logout.")
+            
+            return response
+        
+        except Exception as e:
+            raise e
+    
     async def __check_session_token(self, token: str) -> SessionTokenDTO:
         
-        # hashed token in database
-        hashed_token = AppSecurity.hash_token(token)
-        refresh_token_db = await self.__uow.token_session.find_record(hashed_token)
-        
-        if not refresh_token_db:
-            raise DomainJWTInvalidError(message="Refresh token does not exist. Please login again.", )
-        
-        if refresh_token_db.is_revoke:
-            raise DomainJWTInvalidError(message="Refresh token has been revoked. Please login again.", )
-        
-        return refresh_token_db
+        try:
+            
+            # hashed token in database
+            if not token:
+                raise DomainJWTInvalidError(message="Refresh token is missing. Please login again.", )
+            hashed_token = AppSecurity.hash_token(token)
+            refresh_token_db = await self.__uow.token_session.find_record(hashed_token)
+            
+            if not refresh_token_db:
+                raise DomainJWTInvalidError(message="Refresh token does not exist. Please login again.", )
+            
+            if refresh_token_db.is_revoke:
+                raise DomainJWTInvalidError(message="Refresh token has been revoked. Please login again.", )
+            
+            return refresh_token_db
+        except Exception as e:
+            raise e
     
     async def __update_refresh_token(self, token, user_id) -> TokenDTO:
         # check and get the refresh token session
@@ -286,7 +309,7 @@ class AuthServices:
                                                expires_at=refresh_access_token.refresh_token_expiration)
         
         # update the token in db
-        await self.__uow.token_session.update_record(record_id=refresh_token_db.token,
+        await self.__uow.token_session.update_record(refresh_token=refresh_token_db.token,
                                                      data=new_session_data.model_dump())
         
         return refresh_access_token

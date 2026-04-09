@@ -20,6 +20,7 @@ export default function CartDropDown({
 
   useEffect(() => {
     fetchCarts(1, 10);
+    console.log(cart);
   }, []);
 
   const handleCheckout = () => {
@@ -99,12 +100,12 @@ export default function CartDropDown({
                     <button
                       onClick={
                         () =>
-                          item.quantity > 1
+                          item.Carts.quantity > 1
                             ? updateQuantity(
-                                item.Products.id,
-                                item.quantity - 1,
+                                item.Carts.product_id,
+                                item.Carts.quantity - 1,
                               )
-                            : removeFromCart(item.Products.id) // Remove item if quantity goes below 1
+                            : removeFromCart(item.Carts.product_id) // Remove item if quantity goes below 1
                       }
                       className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 hover:text-gray-900 rounded-l-lg transition-colors cursor-pointer"
                     >
@@ -128,11 +129,13 @@ export default function CartDropDown({
                       {item.quantity}
                     </span>
 
-                    {/* PLUS BUTTON (NOW PROTECTED BY STOCK!) */}
                     <button
                       onClick={() => {
-                        if (item.quantity < item.quantity) {
-                          updateQuantity(item.Products.id, item.quantity + 1);
+                        if (item.Carts.quantity < item.quantity) {
+                          updateQuantity(
+                            item.Products.id,
+                            item.Carts.quantity + 1,
+                          );
                         } else {
                           alert(
                             `Sorry, you've reached the maximum stock available (${item.quantity}).`,
@@ -141,12 +144,12 @@ export default function CartDropDown({
                       }}
                       // Visually disable the button if they max out the stock
                       className={`w-7 h-7 flex items-center justify-center rounded-r-lg transition-colors ${
-                        item.quantity >= item.quantity
+                        item.Carts.quantity >= item.quantity
                           ? "text-gray-300 bg-gray-50 cursor-not-allowed"
                           : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 cursor-pointer"
                       }`}
                       title={
-                        item.quantity >= item.quantity
+                        item.Carts.quantity >= item.quantity
                           ? "Max stock reached"
                           : "Increase quantity"
                       }

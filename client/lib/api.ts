@@ -1,26 +1,36 @@
 // src/lib/apiClient.ts
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:9898";
-
 export interface ApiError {
   message: string;
   status: number;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 let currentAccessToken: string | null = null;
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
 
 export const setAccessToken = (token: string | null) => {
   currentAccessToken = token;
 };
 
-const getCookie = (name: string): string | null => {
-  if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
-  return null;
-};
 export const getAccessToken = () => currentAccessToken;
+
+// Helper to process the queue of waiting requests
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token as string);
+    }
+  });
+  failedQueue = [];
+};
 
 async function fetchWithTimeout(
   url: string,
@@ -31,17 +41,11 @@ async function fetchWithTimeout(
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
+    const res = await fetch(url, { ...options, signal: controller.signal });
     return res;
   } catch (err: any) {
     if (err.name === "AbortError") {
-      throw {
-        message: "Request timed out. Please try again.",
-        status: 408,
-      } as ApiError;
+      throw { message: "Request timed out.", status: 408 } as ApiError;
     }
     throw { message: "Cannot connect to server.", status: 0 } as ApiError;
   } finally {
@@ -49,86 +53,105 @@ async function fetchWithTimeout(
   }
 }
 
-async function apiFetch(
+export async function apiFetch(
   endpoint: string,
   options: RequestInit = {},
   isPrivate = true,
 ): Promise<any> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  const csrfToken = getCookie("csrf_token"); // Ensure this string matches
-  // Clone options and set default headers
   const config: RequestInit = {
     ...options,
-    credentials: "include", // Send the secure cookie!
+    credentials: "include", // Always include cookies (like HttpOnly refresh token)
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
     },
   };
 
-  // AUTOMATIC CSRF PROTECTION: Attach token to mutating requests
-  const method = options.method?.toUpperCase() || "GET";
-  if (["POST", "PUT", "DELETE", "PATCH"].includes(method) && csrfToken) {
+  // If it's a private route and we have a token in memory, attach it
+  if (isPrivate && currentAccessToken) {
     config.headers = {
       ...config.headers,
-      "X-CSRF-Token": csrfToken,
+      Authorization: `Bearer ${currentAccessToken}`,
     };
   }
 
-  if (isPrivate) {
-    config.credentials = "include"; // Tells browser to send the HttpOnly refresh cookie
-
-    if (currentAccessToken) {
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${currentAccessToken}`,
-      };
-    }
-  }
-
+  // 1. Make the initial request
   let res = await fetchWithTimeout(url, config);
 
+  // 2. Intercept 401 Unauthorized
   if (
     isPrivate &&
     res.status === 401 &&
-    endpoint !== "/api/v1/auth/login" &&
-    endpoint !== "/api/v1/auth/refresh"
+    endpoint !== "/auth/login" &&
+    endpoint !== "/auth/refresh-token"
   ) {
-    try {
-      const refreshRes = await fetchWithTimeout(
-        `${API_BASE_URL}/api/v1/auth/refresh`,
-        {
-          method: "POST",
-          credentials: "include", // Send the secure cookie!
-        },
-      );
+    // If another request is already refreshing the token, join the queue
+    if (isRefreshing) {
+      try {
+        const newToken = await new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        });
 
-      if (!refreshRes.ok) throw new Error("Refresh failed");
-
-      const refreshData = await refreshRes.json();
-
-      setAccessToken(refreshData.access_token);
-
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${currentAccessToken}`,
-      };
-
-      res = await fetchWithTimeout(url, config);
-    } catch (refreshError) {
-      setAccessToken(null);
-
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        // Once the queue resolves, retry the original request with the new token
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${newToken}`,
+        };
+        res = await fetchWithTimeout(url, config);
+      } catch (err) {
+        throw err;
       }
-      throw {
-        message: "Session expired. Please log in again.",
-        status: 401,
-      } as ApiError;
+    } else {
+      // We are the first request to hit a 401! Lock the refresh state.
+      isRefreshing = true;
+
+      try {
+        const refreshRes = await fetchWithTimeout(
+          `${API_BASE_URL}/auth/refresh-token`,
+          {
+            method: "POST",
+            credentials: "include",
+          },
+        );
+
+        if (!refreshRes.ok) throw new Error("Refresh failed");
+
+        const refreshData = await refreshRes.json();
+
+        // Assuming your FastAPI returns { access_token: "..." }
+        setAccessToken(refreshData.access_token);
+
+        // Process all queued requests with the new token
+        processQueue(null, refreshData.access_token);
+
+        // Retry the original request
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${refreshData.access_token}`,
+        };
+        res = await fetchWithTimeout(url, config);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        setAccessToken(null);
+
+        // Optional: Redirect to login or clear auth state
+        if (typeof window !== "undefined" && window.location.pathname !== "/") {
+          window.location.href = "/";
+        }
+
+        throw {
+          message: "Session expired. Please log in again.",
+          status: 401,
+        } as ApiError;
+      } finally {
+        isRefreshing = false;
+      }
     }
   }
 
+  // 3. Handle the final response (successful or failed for other reasons)
   let data;
   try {
     if (res.status !== 204) {
@@ -143,7 +166,7 @@ async function apiFetch(
 
   if (!res.ok) {
     throw {
-      message: data?.message || "An error occurred.",
+      message: data?.detail || data?.message || "An error occurred.",
       status: res.status,
     } as ApiError;
   }
