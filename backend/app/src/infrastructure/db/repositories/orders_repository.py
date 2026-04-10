@@ -22,6 +22,14 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
+    async def batch_insert_orders(self, orders: list[CreateOrderSchema]):
+        try:
+            list_of_orders = [Orders(**order.model_dump()) for order in orders]
+            self._db.add_all(list_of_orders)
+            await self._db.flush()
+        except Exception as e:
+            raise e
+    
     async def find_order_only(self, order_id, user_id) -> OrderDTO:
         try:
             

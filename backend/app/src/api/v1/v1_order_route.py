@@ -5,7 +5,8 @@ from app.src.core.constants import ConstantsData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_order_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.schema import PaginatedSchema
-from app.src.schema.orders_schema import (ConfirmOrderSchema, CreateOrderSchema, OrderStatusSchema, )
+from app.src.schema.orders_schema import (BatchCreateOrderSchema, ConfirmOrderSchema, CreateOrderSchema,
+                                          OrderStatusSchema, )
 from app.src.utils.successful_response import SuccessfulResponse
 
 # prefix endpoint
@@ -28,6 +29,38 @@ async def insert_order_item(item_order: CreateOrderSchema = Depends(CreateOrderS
         orders_response.status_code = status.HTTP_201_CREATED
         
         return SuccessfulResponse(orders_response)
+    except Exception as e:
+        raise e
+
+
+@v1_order_router.post(
+        "/batch",
+        tags=[EndpointTags.CUSTOMER])
+async def insert_order_item(item_orders: BatchCreateOrderSchema,
+                            current_user: DecodedTokenDTO = Depends(get_current_user),
+                            order_services: OrderServices = Depends(get_order_service), ):
+    try:
+        
+        orders_response = await order_services.batch_insert_order(new_orders=item_orders, current_user=current_user)
+        # set the status response
+        orders_response.status_code = status.HTTP_201_CREATED
+        
+        return SuccessfulResponse(orders_response)
+    except Exception as e:
+        raise e
+
+
+@v1_order_router.get("/", tags=[EndpointTags.CUSTOMER])
+async def get_paginated_orders(paginated: PaginatedSchema = Depends(),
+                               order_status=Query(default=OrderStatusSchema.Pending),
+                               current_user: DecodedTokenDTO = Depends(get_current_user),
+                               order_services: OrderServices = Depends(get_order_service),
+                               ):
+    try:
+        order_response = await order_services.get_paginated_orders(paginated, order_status, current_user)
+        order_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(order_response)
     except Exception as e:
         raise e
 
@@ -72,21 +105,6 @@ async def cancel_order(order_id: str,
                        order_services: OrderServices = Depends(get_order_service)):
     try:
         order_response = await order_services.cancel_order(order_id, current_user)
-        order_response.status_code = status.HTTP_200_OK
-        
-        return SuccessfulResponse(order_response)
-    except Exception as e:
-        raise e
-
-
-@v1_order_router.get("/", tags=[EndpointTags.CUSTOMER])
-async def get_paginated_orders(paginated: PaginatedSchema = Depends(),
-                               order_status=Query(default=OrderStatusSchema.Pending),
-                               current_user: DecodedTokenDTO = Depends(get_current_user),
-                               order_services: OrderServices = Depends(get_order_service),
-                               ):
-    try:
-        order_response = await order_services.get_paginated_orders(paginated, order_status, current_user)
         order_response.status_code = status.HTTP_200_OK
         
         return SuccessfulResponse(order_response)

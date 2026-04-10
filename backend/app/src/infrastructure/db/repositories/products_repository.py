@@ -1,7 +1,8 @@
 from sqlalchemy import delete, distinct, func, select, update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from app.src.domain.dto.products_dto import ProductDetailsDTO, ProductInformationDTO, ProductsDataDTO
+from app.src.domain.dto.products_dto import (ListOfProductInformationDTO, ProductDetailsDTO, ProductInformationDTO,
+                                             ProductsDataDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.infrastructure.db.entity import Inventory, ProductDetails, ProductRatings, Products
 from app.src.schema.products_schema import ProductCategories, ProductsFullInformationRequestSchema, ProductsTags
@@ -68,6 +69,26 @@ class ProductsRepository(UserInterface):
         data = result.mappings().fetchall()
         
         return ProductInformationDTO.model_validate(data[0], from_attributes=True) if data else None
+    
+    async def find_products_with_product_ids(self, product_ids: list):
+        try:
+            stmt = select(
+                    Products,
+                    Inventory.id.label("inventory_label"),
+                    Inventory.quantity,
+                    Inventory.low_stock_threshold,
+                    Inventory.reserved_stock,
+                    Inventory.cancelled_stock,
+                    Inventory.sold_stock,
+                    ).select_from(Products).outerjoin(Inventory, Products.id == Inventory.product_id
+                                                      ).where(Products.id.in_(product_ids))
+            
+            result = await self._db.execute(stmt)
+            data = result.mappings().fetchall()
+            data = {"products": data}
+            return ListOfProductInformationDTO(**data) if data else data
+        except Exception as e:
+            raise e
     
     async def get_paginated_record(self, offset: int, limit: int):
         """
@@ -285,6 +306,13 @@ class ProductsRepository(UserInterface):
             stmt = update(Inventory).where(Inventory.product_id == product_id).values(**data)
             await self._db.execute(stmt)
         
+        except Exception as e:
+            raise e
+    
+    async def batch_update_product_inventory(self, data: list):
+        try:
+            stmt = update(Inventory)
+            await self._db.execute(stmt, data)
         except Exception as e:
             raise e
     

@@ -1,5 +1,6 @@
 import secrets
-from datetime import date
+from datetime import date, datetime
+from uuid import uuid4
 
 from starlette import status
 
@@ -119,6 +120,15 @@ class Utility:
                     raise e
         
         return is_file_upload
+    
+    @staticmethod
+    def format_order_number(order_id: str) -> str:
+        """
+        This function is to format the order id.
+        :return: the formatted order id that can user will see.
+        """
+        year_today = datetime.today().year
+        return f'BKT-{uuid4().hex[:4]}{year_today}-{order_id:08d}'
     
     @staticmethod
     def get_cors():

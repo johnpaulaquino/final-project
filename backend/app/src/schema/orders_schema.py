@@ -1,9 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, Self
+from typing import List, Optional
+from uuid import uuid4
 
 from fastapi import Body
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel
 
 
 class OrderPaymentMethodSchema(str, Enum):
@@ -31,6 +32,7 @@ class OrderPaymentStatusSchema(str, Enum):
 
 
 class CreateOrderSchema(BaseModel):
+    order_id: Optional[str] = Body(default_factory=lambda: str(uuid4()))
     user_id: str = Body(default=None)
     product_id: str = Body(...)
     quantity: int = Body(default=1)
@@ -46,6 +48,16 @@ class CreateOrderSchema(BaseModel):
         return CreateOrderSchema(quantity=quantity,
                                  payment_method=payment_method,
                                  product_id=product_id)
+
+
+class CreateOrdersSchema(BaseModel):
+    quantity: int = Body(default=1, ge=1),
+    product_id: str = Body(...),
+    payment_method: OrderPaymentMethodSchema
+
+
+class BatchCreateOrderSchema(BaseModel):
+    orders: List[CreateOrdersSchema]
 
 
 class ConfirmOrderSchema(BaseModel):

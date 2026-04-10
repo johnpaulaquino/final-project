@@ -28,6 +28,12 @@ class ProductInformationDTO(BaseModel):
     sold_stock: int | None = None
     description: str | None = None
     images: List[dict] | None = None
+    inventory_id: int | None = None
+
+
+class ListOfProductInformationDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    products: List[ProductInformationDTO] | None = []
 
 
 class ProductDetailsDTO(BaseModel):

@@ -4,7 +4,8 @@ from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError
                                                   DomainNotFoundError, )
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
-from app.src.schema.orders_schema import (ConfirmOrderSchema, CreateOrderSchema, OrderStatusSchema, UpdateOrdersSchema,
+from app.src.schema.orders_schema import (BatchCreateOrderSchema, ConfirmOrderSchema, CreateOrderSchema,
+                                          OrderStatusSchema, UpdateOrdersSchema,
                                           )
 from app.src.schema.products_schema import UpdateProductsInventorySchema
 from app.src.schema.transaction_schema import CreateTransactionSchema
@@ -68,6 +69,64 @@ class OrderServices:
             transaction = await self.uof.transactions.insert_record(transaction_to_insert_data)
             # TODO Project insert into logs table
             
+            # response
+            return SuccessfulResponseSchema(message="Successfully placed order.", status_message="ok")
+        except Exception as e:
+            raise e
+    
+    async def batch_insert_order(self, new_orders: BatchCreateOrderSchema, current_user: DecodedTokenDTO):
+        try:
+            
+            # validate the role
+            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            
+            # get user in db.
+            user = await self.uof.users.find_record_by_id(current_user.user_id)
+            
+            # check if user not exists
+            if not user:
+                raise DomainJWTInvalidError("No user not found. Please back to login.")
+            
+            # get the products ids
+            product_ids = [order.product_id for order in new_orders.orders]
+            # find products
+            product_data = await self.uof.products.find_products_with_product_ids(product_ids)
+            # check if product not exists.
+            if not product_data:
+                raise DomainNotFoundError("You cannot place an orders that the product is not exist.")
+            
+            if not new_orders.orders:
+                raise DomainEntityStatusInvalidError(message="Product is empty, cannot checkout this.")
+            for order in new_orders.orders:
+                # map the product id, quantity, and payment method for each product.
+                create_order = CreateOrderSchema(**order.model_dump(exclude_none=True, exclude_unset=True))
+                # then explicit update the user id
+                create_order.user_id = current_user.user_id
+                
+                current_product = list(filter(lambda x: x.Products.id == order.product_id, product_data.products))[0]
+                # total reserved stock
+                reserved_stock = current_product.reserved_stock + order.quantity if current_product.reserved_stock else order.quantity
+                to_update = {"reserved_stock": reserved_stock}
+                create_order.price = current_product.Products.price
+                
+                # insert new order in db.
+                order_data = await self.uof.orders.insert_record(create_order)
+                
+                # update reserve quantity that will map on inventory column.
+                await self.uof.products.update_product_inventory(order.product_id, to_update)
+                
+                reference_number = order_data.format_order_number
+                total_amount = current_product.Products.price * order.quantity
+                
+                # Insert transaction into database.
+                transaction_to_insert_data = CreateTransactionSchema(order_id=order_data.id,
+                                                                     total_amount=total_amount,
+                                                                     payment_method=order.payment_method,
+                                                                     transaction_reference=reference_number)
+                # insert into transaction
+                await self.uof.transactions.insert_record(transaction_to_insert_data)
+            # TODO Project insert into logs table
             # response
             return SuccessfulResponseSchema(message="Successfully placed order.", status_message="ok")
         except Exception as e:
