@@ -23,7 +23,7 @@ class Orders(SQLModel, table=True):
     price: float = Field(default=0, nullable=True)
     order_status: str = Field(
             sa_column=(Column(SQLEnum(OrderStatusSchema, name="order_status_enum", create_type=True), nullable=False)))
-    
+    address_id: str = Field(foreign_key="address.id", nullable=True)
     created_at: datetime = Field(
             sa_column=Column(DateTime(timezone=True), default=func.now(), server_default=func.now()))
     updated_at: datetime = Field(

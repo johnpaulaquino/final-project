@@ -8,6 +8,7 @@ from app.src.domain.dto.users_dto import UserAddressDTO, UserFullInformationDTO,
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
 from app.src.infrastructure.db.entity import Address, PersonalInfo, Users
+from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
 from app.src.schema import EnvironmentStatus
 from app.src.schema.auth_schema import SignUpRequest
 
@@ -36,16 +37,17 @@ class UserRepository(UserInterface):
                                      firstname=signup_user.firstname,
                                      middle_name=signup_user.middle_name)
         # insert the address
-        address = Address(user_id=user_id)
-        self.__db.add_all([personal_info, address])
+        self.__db.add(personal_info)
+    
+    async def insert_address(self, user_id, address: CreateAddress):
+        address_info = Address(**address.model_dump())
+        # insert the address
+        self.__db.add(address_info)
     
     async def find_record(self, email: str) -> UserFullInformationDTO:
         stmt = (select(Users,
-                       PersonalInfo,
-                       Address, )
-                .select_from(Users)
+                       PersonalInfo)
                 .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
-                .outerjoin(Address, Users.id == Address.user_id)
                 .where(Users.email == email))
         
         result = await self.__db.execute(stmt)
@@ -55,11 +57,9 @@ class UserRepository(UserInterface):
     
     async def find_record_by_id(self, user_id: str) -> UserFullInformationDTO:
         stmt = (select(Users,
-                       PersonalInfo,
-                       Address, )
+                       PersonalInfo)
                 .select_from(Users)
                 .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
-                .outerjoin(Address, Users.id == Address.user_id)
                 .where(Users.id == user_id))
         
         result = await self.__db.execute(stmt)
@@ -165,10 +165,18 @@ class UserRepository(UserInterface):
                 return DomainError(str(e))
             raise DomainError
     
-    async def delete_user_address(self, user_id, address_id):
+    async def update_is_selected_address(self, address_id: str, user_id: str):
         try:
-            stmt = delete(Address).where(and_(Address.user_id == user_id,
-                                              Address.id == address_id))
-            await self.__db.execute(stmt)
+            stmt = update(Address).where(and_(Address.id == address_id,
+                                              Address.user_id == user_id)).values(is_selected=True)
         except Exception as e:
             raise e
+        
+        async def delete_user_address(self, user_id, address_id):
+            try:
+                stmt = delete(Address).where(and_(Address.user_id == user_id,
+                                                  Address.id == address_id))
+                
+                await self.__db.execute(stmt)
+            except Exception as e:
+                raise e

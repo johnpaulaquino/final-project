@@ -2,7 +2,7 @@ from typing import List
 from uuid import uuid4
 
 from app.src.core.constants import ConstantsData
-from app.src.exceptions.domain_exceptions import DomainLargeFileError
+from app.src.exceptions.domain_exceptions import DomainLargeFileError, DomainNotFoundError
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema.products_schema import Images
@@ -83,3 +83,12 @@ class SharedServices:
                 # then append the dict images
                 images.append(product_img)
         return images
+    
+    async def check_if_user_exists(self, user_id: str):
+        try:
+            data = await self.__uow.users.get_user_info_only(user_id)
+            if not data:
+                raise DomainNotFoundError("No user found.")
+            return data
+        except Exception as e:
+            raise e

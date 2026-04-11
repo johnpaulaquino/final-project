@@ -1,5 +1,5 @@
-from typing import List
 import phonenumbers
+from phonenumbers import geocoder
 
 from app.src.application.services.shared_services import SharedServices
 from app.src.core.security import AppSecurity
@@ -10,11 +10,10 @@ from app.src.exceptions.domain_exceptions import (DomainInvalidCredentialsError,
                                                   DomainUnprocessableEntityError, )
 from app.src.exceptions.http_exceptions import JWTInvalidException
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
+from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import SignInTypeSchema, SuccessfulResponseSchema
 from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserAddressSchema, UpdateUserSchema
-from phonenumbers import geocoder
-
 from app.src.utils.utility import Utility
 
 
@@ -70,6 +69,47 @@ class UserServices(SharedServices):
                 
                 await self.__cloudinary_infrastructure.destroy_images(to_update_personal_data.profile_image.public_key)
             
+            raise e
+    
+    async def insert_address(self, address: CreateAddress, current_user: DecodedTokenDTO):
+        try:
+            # always check in the protected route if user exists.
+            await self.check_if_user_exists(current_user.user_id)
+            # check if there's an address
+            data = await self.__uof.users.get_address_only(current_user.user_id)
+            if not data:
+                # then set the is_selected to true
+                address.is_default = True
+            
+            # set user id
+            address.user_id = current_user.user_id
+            # sanitize fields by formating the First letter into capital letter
+            address.barangay = Utility.capitalize_first_letters(address.barangay)
+            address.fullname = Utility.capitalize_first_letters(address.fullname)
+            address.city = Utility.capitalize_first_letters(address.city)
+            address.postal_code = Utility.capitalize_first_letters(address.postal_code)
+            address.province = Utility.capitalize_first_letters(address.province)
+            address.region = Utility.capitalize_first_letters(address.region)
+            address.st_bd_hno.street = Utility.capitalize_first_letters(address.st_bd_hno.street)
+            address.st_bd_hno.building_name = Utility.capitalize_first_letters(address.st_bd_hno.building_name)
+            address.st_bd_hno.house_no = Utility.capitalize_first_letters(address.st_bd_hno.house_no)
+            
+            # then insert into database
+            await self.__uof.users.insert_address(current_user.user_id, address)
+            response = SuccessfulResponseSchema(message="Successfully inserted address.")
+            return response
+        
+        except Exception as e:
+            raise e
+    
+    async def get_user_addresses(self, current_user: DecodedTokenDTO):
+        try:
+            data = await self.__uof.users.get_address_only(current_user.user_id)
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully but no records to retrieve.")
+            
+            return SuccessfulResponseSchema(message='Successfully retrieved data.', data=data)
+        except Exception as e:
             raise e
     
     async def get_information(self, current_user: DecodedTokenDTO):
@@ -212,7 +252,7 @@ class UserServices(SharedServices):
             if not new_email:
                 raise DomainUnprocessableEntityError("New email should not be empty.")
         
-            
+        
         
         except Exception as e:
             raise e

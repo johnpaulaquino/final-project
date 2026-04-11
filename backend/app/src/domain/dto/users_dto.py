@@ -1,8 +1,9 @@
 from datetime import date, datetime
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from app.src.infrastructure.db.entity.users.address_entity import OtherInfo
 from app.src.schema.products_schema import Images
 
 
@@ -37,13 +38,15 @@ class UserPersonalInfoDTO(BaseModel):
 
 class UserAddressDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int | None = None
+    id: str | None = None
     region: str | None = None
     province: str | None = None
     city: str | None = None
     barangay: str | None = None
     postal_code: str | None = None
-    st_bd_hno: Optional[Dict[str, Any]] | None = None
+    st_bd_hno: OtherInfo | None = None
+    fullname: str | None = None
+    is_default: bool | None = None
 
 
 class UserFullInformationDTO(BaseModel):

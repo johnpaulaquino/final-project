@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Body, Cookie, Depends, Response
+from fastapi import APIRouter, BackgroundTasks, Body, Cookie, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from starlette import status
@@ -191,7 +191,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         
         access_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
                                              value=response_schema.access_token)
-        access_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        access_cookie.max_age = 15 * 60  # 15 minutes, same as the access token
         response.set_cookie(**access_cookie.model_dump())
         
         # refresh cookie
@@ -204,7 +204,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         # csrf cookie
         csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
                                            value=response_schema.csrf_token)
-        csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
+        csrf_cookie.max_age = 15 * 60  # 15 minutes, same as the access token
         csrf_cookie.httponly = False
         response.set_cookie(**csrf_cookie.model_dump())
         
@@ -216,7 +216,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
 
 
 @v1_auth_router.post('/refresh-token', tags=[EndpointTags.CUSTOMER])
-async def refresh_token(server_response: Response, refresh_token: str = Cookie(None),
+async def refresh_token(refresh_token: str = Cookie(None),
                         auth_services: AuthServices = Depends(get_auth_service), ):
     try:
         auth_services_response = await auth_services.refresh_token(refresh_token=refresh_token)

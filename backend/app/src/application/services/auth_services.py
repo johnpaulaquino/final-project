@@ -244,7 +244,6 @@ class AuthServices:
         """
         # convert time into seconds
         expires = int(timedelta(minutes=token_expiration).total_seconds())
-        refresh_expires_datetime = datetime.now(timezone.utc) + timedelta(days=ConstantsData.JWT_EXPIRATION)
         
         # generate new tokens
         access_token = AppSecurity.generate_access_token(jti=str(uuid4()), data=access_token_data, exp=expires)
@@ -254,6 +253,7 @@ class AuthServices:
         
         new_refresh_token = AppSecurity.generate_access_token(jti=str(uuid4()), data=refresh_token_data,
                                                               exp=refresh_expires_seconds)
+        refresh_expires_datetime = datetime.now(timezone.utc) + timedelta(days=ConstantsData.JWT_EXPIRATION)
         
         return TokenDTO(access_token=access_token,
                         refresh_token=new_refresh_token,
