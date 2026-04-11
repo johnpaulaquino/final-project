@@ -20,7 +20,6 @@ export default function CartDropDown({
 
   useEffect(() => {
     fetchCarts(1, 10);
-    console.log(cart);
   }, []);
 
   const handleCheckout = () => {

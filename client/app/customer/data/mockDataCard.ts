@@ -4,8 +4,7 @@ export const biskotaMenuData: Product[] = [
   {
     id: 1,
     name: "Tiramisu Cinnamon Rolls",
-    description:
-      "Delicious pastry swirled with espresso and cocoa, topped with mascarpone frosting.",
+    description: "Delicious pastry swirled with espresso and cocoa, topped with mascarpone frosting.",
     price: "95.00",
     numericPrice: 95,
     stock: 10,
@@ -23,12 +22,12 @@ export const biskotaMenuData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 2,
     name: "Dubai Cinnamon Rolls",
-    description:
-      "Warm, gooey cinnamon roll with signature cream cheese frosting.",
+    description: "Warm, gooey cinnamon roll with signature cream cheese frosting.",
     price: "100.00",
     numericPrice: 100,
     stock: 10,
@@ -46,12 +45,12 @@ export const biskotaMenuData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 3,
     name: "Korean Garlic Bun",
-    description:
-      "Soft, buttery bun filled with savory garlic and cheese. A perfect balance of sweet and savory flavors.",
+    description: "Soft, buttery bun filled with savory garlic and cheese. A perfect balance of sweet and savory flavors.",
     price: "95.00",
     numericPrice: 95,
     stock: 10,
@@ -69,12 +68,12 @@ export const biskotaMenuData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 4,
     name: "Red Velvet Cake in a Cup",
-    description:
-      "A cake lover’s dream in a convenient cup! Moist red velvet cake layered with cream cheese frosting, perfect for a quick indulgence.",
+    description: "A cake lover’s dream in a convenient cup! Moist red velvet cake layered with cream cheese frosting, perfect for a quick indulgence.",
     price: "100.00",
     numericPrice: 100,
     stock: 10,
@@ -92,12 +91,12 @@ export const biskotaMenuData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 5,
     name: "Burnt Basque Cheese Cala",
-    description:
-      "Burnt Basque cheesecake with a perfectly caramelized top and creamy interior, served in a convenient cala size.",
+    description: "Burnt Basque cheesecake with a perfectly caramelized top and creamy interior, served in a convenient cala size.",
     price: "300.00",
     numericPrice: 300,
     stock: 10,
@@ -115,12 +114,12 @@ export const biskotaMenuData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 6,
     name: "Cookies and Cream Cinnamon Rolls",
-    description:
-      "Classic cinnamon rolls topped with crushed cookies and a drizzle of cookies and cream frosting. A nostalgic treat for cookie lovers!",
+    description: "Classic cinnamon rolls topped with crushed cookies and a drizzle of cookies and cream frosting. A nostalgic treat for cookie lovers!",
     price: "95.00",
     numericPrice: 95,
     stock: 10,
@@ -138,6 +137,7 @@ export const biskotaMenuData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
 ];
 
@@ -145,8 +145,7 @@ export const recommendedProductsData: Product[] = [
   {
     id: 3,
     name: "Korean Garlic Bun",
-    description:
-      "Soft, buttery bun filled with savory garlic and cheese. A perfect balance of sweet and savory flavors.",
+    description: "Soft, buttery bun filled with savory garlic and cheese. A perfect balance of sweet and savory flavors.",
     price: "95.00",
     numericPrice: 95,
     stock: 10,
@@ -164,12 +163,12 @@ export const recommendedProductsData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 4,
     name: "Red Velvet Cake in a Cup",
-    description:
-      "A cake lover’s dream in a convenient cup! Moist red velvet cake layered with cream cheese frosting, perfect for a quick indulgence.",
+    description: "A cake lover’s dream in a convenient cup! Moist red velvet cake layered with cream cheese frosting, perfect for a quick indulgence.",
     price: "100.00",
     numericPrice: 100,
     stock: 10,
@@ -187,12 +186,12 @@ export const recommendedProductsData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 5,
     name: "Burnt Basque Cheese Cala",
-    description:
-      "Burnt Basque cheesecake with a perfectly caramelized top and creamy interior, served in a convenient cala size.",
+    description: "Burnt Basque cheesecake with a perfectly caramelized top and creamy interior, served in a convenient cala size.",
     price: "300.00",
     numericPrice: 300,
     stock: 10,
@@ -210,12 +209,12 @@ export const recommendedProductsData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
   {
     id: 6,
     name: "Cookies and Cream Cinnamon Rolls",
-    description:
-      "Classic cinnamon rolls topped with crushed cookies and a drizzle of cookies and cream frosting. A nostalgic treat for cookie lovers!",
+    description: "Classic cinnamon rolls topped with crushed cookies and a drizzle of cookies and cream frosting. A nostalgic treat for cookie lovers!",
     price: "95.00",
     numericPrice: 95,
     stock: 10,
@@ -233,5 +232,6 @@ export const recommendedProductsData: Product[] = [
     quantity: 0,
     images: [],
     avg_rating: null,
+    review_count: 0
   },
 ];

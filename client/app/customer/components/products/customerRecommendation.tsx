@@ -75,7 +75,7 @@ export default function customerRecommendation() {
           {products && products.length > 0 ? (
             products.map((product) => (
               <div
-                key={`recommended-${product.Products.id}`} // Use the correct ID field
+                key={`${product.Products.id}`} // Use the correct ID field
                 onClick={() => setSelectedProduct(product)}
                 className="cursor-pointer transition-transform hover:scale-[1.02] h-full"
               >

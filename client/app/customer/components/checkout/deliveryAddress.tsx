@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Address } from "../../context/contextAccount";
+import { apiClient } from "@/lib/api";
 
 // 1. ADD THE EXTRA PARAMETERS HERE
 interface DeliveryAddressProps {
@@ -16,11 +17,25 @@ export default function DeliveryAddress({
   savedAddresses,
   onSetDefault,
   onOpenModal,
-  isExpanded, // <-- Receive it here
-  setIsExpanded, // <-- Receive it here
+  isExpanded,
+  setIsExpanded,
 }: DeliveryAddressProps) {
-  const activeAddress =
-    savedAddresses.find((addr) => addr.isDefault) || savedAddresses[0];
+  const activeAddress = savedAddresses.find((addr) => addr.is_default) || savedAddresses[0];
+
+  const formatAddress = () => {
+    // 1. Combine House/Lot Number and Street Name
+    const streetAddress = `${activeAddress.st_bd_hno.house_no} ${activeAddress.st_bd_hno.street}`;
+
+    // 2. Handle the optional Building Name gracefully
+    const building = activeAddress.st_bd_hno.building_name
+      ? `${activeAddress.st_bd_hno.building_name}, `
+      : "";
+
+    // 3. Compile the final formatted string
+    const compiledAddress = `${streetAddress}, ${building}${activeAddress.barangay}, ${activeAddress.city}, ${activeAddress.province}, ${activeAddress.postal_code}`;
+
+    return compiledAddress;
+  };
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
@@ -75,7 +90,7 @@ export default function DeliveryAddress({
       ) : isExpanded ? (
         <div className="space-y-3 animate-in fade-in duration-200">
           {savedAddresses.map((address) => {
-            const isSelected = address.isDefault;
+            const isSelected = address.id === activeAddress?.id;
 
             return (
               <div
@@ -100,7 +115,7 @@ export default function DeliveryAddress({
                     <span
                       className={`font-bold ${isSelected ? "text-gray-900" : "text-gray-700"}`}
                     >
-                      {address.name}
+                      {address.fullname}
                     </span>
                     <span className="text-gray-500 text-sm">
                       {address.phone}
@@ -112,7 +127,7 @@ export default function DeliveryAddress({
                     )}
                   </div>
                   <p className="text-gray-500 text-sm leading-relaxed mt-1">
-                    {address.fullAddress}
+                    {formatAddress()}
                   </p>
                 </div>
               </div>
@@ -141,14 +156,14 @@ export default function DeliveryAddress({
             <>
               <div className="flex items-center gap-3 mb-1">
                 <span className="font-bold text-gray-900">
-                  {activeAddress.name}
+                  {activeAddress.fullname}
                 </span>
                 <span className="text-gray-500 text-sm">
                   {activeAddress.phone}
                 </span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed mt-2">
-                {activeAddress.fullAddress}
+                {formatAddress()}
               </p>
             </>
           )}

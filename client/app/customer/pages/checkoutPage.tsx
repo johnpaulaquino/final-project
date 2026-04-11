@@ -10,7 +10,7 @@ import { useCart } from "../context/contextCart"; // 1. Import useCart
 import { apiClient } from "@/lib/api"; // 2. Import your apiClient
 
 export default function CheckoutPage() {
-  const { addresses, addAddress, setDefaultAddress } = useAccount();
+  const { addresses, addAddress, setSelectedAddress } = useAccount();
   const { cart } = useCart(); // 3. Grab the cart data here!
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,18 +25,27 @@ export default function CheckoutPage() {
       formData.buildingName ? formData.buildingName + ", " : ""
     }${formData.barangay}, ${formData.city}, ${formData.province || "NCR"}, ${formData.postalCode}`;
 
-    const newAddress = {
-      id: Date.now().toString(),
-      label: "Home",
-      name: formData.fullName || "User",
-      phone: formData.phone || "No phone provided",
-      fullAddress: compiledAddress,
-      isDefault: false,
-    };
+    //     const newAddress = {
+    //        id: string;
+    //   fullname: string;
+    //   region: string;
+    //   province: string;
+    //   city: string;
+    //   barangay: string;
+    //   postal_code: boolean;
+    //   st_bd_hno: {
+    //     street: string;
+    //     house_no: string;
+    //     building_name: string;
+    //   };
+    //   is_default: boolean;
+    //   phone: string;
+    // }
+    // };
 
-    addAddress(newAddress);
-    setDefaultAddress(newAddress.id);
-    setIsModalOpen(false);
+    // addAddress(newAddress);
+    // setSelectedAddress(newAddress.id);
+    // setIsModalOpen(false);
   };
 
   const getFormattedPaymentMethod = (method: string) => {
@@ -95,8 +104,11 @@ export default function CheckoutPage() {
     }
   };
 
+  console.log("my length", addresses);
+
   const isAddressReady = addresses.length > 0 && !isAddressExpanded;
 
+  console.log();
   return (
     <main className="max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
       <div className="flex-grow flex flex-col gap-6 md:gap-8">
@@ -123,7 +135,7 @@ export default function CheckoutPage() {
 
           <DeliveryAddress
             savedAddresses={addresses}
-            onSetDefault={setDefaultAddress}
+            onSetDefault={setSelectedAddress}
             onOpenModal={() => setIsModalOpen(true)}
             isExpanded={isAddressExpanded}
             setIsExpanded={setIsAddressExpanded}

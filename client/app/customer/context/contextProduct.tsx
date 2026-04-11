@@ -2,22 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { apiClient } from "@/lib/api"; // Assuming you have this from your previous setup
-
-export interface Product {
-  stock: number;
-  Products: {
-    image: string | Blob | undefined;
-    avg_rating: number | null;
-    id: number | string;
-    product_name: string;
-    price: string;
-    category: string;
-    description?: string;
-  };
-  quantity: number;
-  avg_rating: number | null;
-  images: { image_url: string }[];
-}
+import { Product } from "./contextCart";
 
 interface ProductContextType {
   products: Product[];
