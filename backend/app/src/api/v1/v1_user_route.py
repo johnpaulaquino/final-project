@@ -8,9 +8,9 @@ from app.src.application.services.user_services import UserServices
 from app.src.core.constants import ConstantsData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_redis_services, get_user_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
+from app.src.infrastructure.db.entity.users.address_entity import CreateAddress, UpdateAddress
 from app.src.infrastructure.redis_infrastructure import RedisInfrastructure
-from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserAddressSchema, UpdateUserSchema
+from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserSchema
 from app.src.utils.successful_response import SuccessfulResponse
 
 __base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/me"
@@ -76,13 +76,14 @@ async def verify_otp_code(otp_code: str,
         raise e
 
 
-@v1_user_router.patch("/address")
-async def update_address(address: UpdateUserAddressSchema,
+@v1_user_router.patch("/address/{address_id}")
+async def update_address(address_id: str,
+                         address: UpdateAddress = Depends(UpdateAddress.update_depends),
                          current_user: DecodedTokenDTO = Depends(get_current_user),
                          user_service: UserServices = Depends(get_user_service),
                          ):
     try:
-        user_service_response = await user_service.update_address(address, current_user)
+        user_service_response = await user_service.update_address(address, address_id, current_user)
         
         user_service_response.status_code = status.HTTP_200_OK
         return SuccessfulResponse(user_service_response)
@@ -90,7 +91,7 @@ async def update_address(address: UpdateUserAddressSchema,
         raise e
 
 
-@v1_user_router.get("/address")
+@v1_user_router.get("/addresses")
 async def get_addresses(current_user: DecodedTokenDTO = Depends(get_current_user),
                         user_service: UserServices = Depends(get_user_service), ):
     try:
@@ -129,6 +130,20 @@ async def change_password(change_password: ChangePasswordSchema,
         
         user_response.status_code = status.HTTP_200_OK
         return SuccessfulResponse(user_response)
+    except Exception as e:
+        raise e
+
+
+@v1_user_router.delete("/address/{address_id}")
+async def delete_user_address(address_id: str,
+                              current_user: DecodedTokenDTO = Depends(get_current_user),
+                              user_service: UserServices = Depends(get_user_service)):
+    try:
+        user_response = await user_service.delete_user_address(address_id, current_user)
+        user_response.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(user_response)
+        return response
     except Exception as e:
         raise e
 

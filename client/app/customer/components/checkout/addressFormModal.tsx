@@ -1,24 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { psgcService, GeoNode } from "../../services/serviceAddress";
 
 interface AddressFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (addressData: any) => void;
+  onSave: (addressData: any) => Promise<void> | void;
+  initialData?: any; // Allows passing in address data for Editing
 }
 
-export default function addressFormModal({
+export default function AddressFormModal({
   isOpen,
   onClose,
   onSave,
+  initialData,
 }: AddressFormModalProps) {
   const [regions, setRegions] = useState<GeoNode[]>([]);
   const [provinces, setProvinces] = useState<GeoNode[]>([]);
   const [cities, setCities] = useState<GeoNode[]>([]);
   const [barangays, setBarangays] = useState<GeoNode[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const [selectedCodes, setSelectedCodes] = useState({
     region: "",
@@ -34,24 +41,128 @@ export default function addressFormModal({
     city: "",
     barangay: "",
     street: "",
-    houseNumber: "",
-    buildingName: "",
+    houseNumber: "", // OPTIONAL
+    buildingName: "", // REQUIRED
     postalCode: "",
   });
 
-  // api calls to load regions, provinces, cities, barangays based on selection
-  useEffect(() => {
-    if (isOpen) psgcService.getRegions().then(setRegions).catch(console.error);
-  }, [isOpen]);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
+  // Hydration Flag: True while we are loading edit data, False otherwise.
+  const isHydrating = useRef(false);
+
+  // --- 1. Hydration Logic (Runs ONCE when modal opens) ---
   useEffect(() => {
-    if (!selectedCodes.region) return;
+    if (!isOpen) return;
+
+    setStatusMessage(null);
+    setSubmitAttempted(false);
+    setTouched({});
+    setErrors({});
+
+    const initializeModal = async () => {
+      isHydrating.current = true; // LOCK cascading effects
+
+      try {
+        const fetchedRegions = (await psgcService.getRegions()) || [];
+        setRegions(fetchedRegions);
+
+        if (initialData) {
+          const rCode =
+            fetchedRegions.find((r) => r.name === initialData.region)?.code ||
+            "";
+
+          let pCode = "";
+          let fetchedProvinces: GeoNode[] = [];
+          if (rCode) {
+            fetchedProvinces =
+              (await psgcService.getProvincesByRegion(rCode)) || [];
+            setProvinces(fetchedProvinces);
+            pCode =
+              fetchedProvinces.find((p) => p.name === initialData.province)
+                ?.code || "";
+          }
+
+          let cCode = "";
+          let fetchedCities: GeoNode[] = [];
+          if (pCode) {
+            fetchedCities =
+              (await psgcService.getCitiesByProvince(pCode)) || [];
+          } else if (rCode && fetchedProvinces.length === 0) {
+            fetchedCities = (await psgcService.getCitiesByRegion(rCode)) || []; // NCR Edge Case
+          }
+          setCities(fetchedCities);
+          cCode =
+            fetchedCities.find((c) => c.name === initialData.city)?.code || "";
+
+          let fetchedBarangays: GeoNode[] = [];
+          if (cCode) {
+            fetchedBarangays =
+              (await psgcService.getBarangaysByCity(cCode)) || [];
+            setBarangays(fetchedBarangays);
+          }
+
+          // Set all codes at once
+          setSelectedCodes({ region: rCode, province: pCode, city: cCode });
+
+          // Set text data
+          setFormData({
+            fullName: initialData.fullname || "",
+            phone: initialData.phone || "",
+            region: initialData.region || "",
+            province: initialData.province || "",
+            city: initialData.city || "",
+            barangay: initialData.barangay || "",
+            street: initialData.st_bd_hno?.street || "",
+            houseNumber: initialData.st_bd_hno?.house_no || "",
+            buildingName: initialData.st_bd_hno?.building_name || "",
+            postalCode: initialData.postal_code || "",
+          });
+        } else {
+          // --- ADD NEW MODE ---
+          setProvinces([]);
+          setCities([]);
+          setBarangays([]);
+          setSelectedCodes({ region: "", province: "", city: "" });
+          setFormData({
+            fullName: "",
+            phone: "",
+            region: "",
+            province: "",
+            city: "",
+            barangay: "",
+            street: "",
+            houseNumber: "",
+            buildingName: "",
+            postalCode: "",
+          });
+        }
+      } catch (err) {
+        console.error("Hydration error:", err);
+      } finally {
+        // UNLOCK cascading effects, but give React a tiny gap to finish rendering
+        setTimeout(() => {
+          isHydrating.current = false;
+        }, 50);
+      }
+    };
+
+    initializeModal();
+  }, [isOpen, initialData]);
+
+  // --- 2. Safe Cascading Effects (Only run on USER interaction) ---
+  useEffect(() => {
+    if (isHydrating.current || !selectedCodes.region) return;
+
     psgcService
       .getProvincesByRegion(selectedCodes.region)
       .then((data) => {
         if (data && data.length > 0) {
           setProvinces(data);
           setCities([]);
+          setBarangays([]);
         } else {
           setProvinces([]);
           psgcService.getCitiesByRegion(selectedCodes.region).then(setCities);
@@ -61,20 +172,39 @@ export default function addressFormModal({
   }, [selectedCodes.region]);
 
   useEffect(() => {
-    if (!selectedCodes.province) return;
+    if (isHydrating.current || !selectedCodes.province) return;
     psgcService
       .getCitiesByProvince(selectedCodes.province)
-      .then(setCities)
+      .then((data) => {
+        setCities(data);
+        setBarangays([]);
+      })
       .catch(console.error);
   }, [selectedCodes.province]);
 
   useEffect(() => {
-    if (!selectedCodes.city) return;
+    if (isHydrating.current || !selectedCodes.city) return;
     psgcService
       .getBarangaysByCity(selectedCodes.city)
       .then(setBarangays)
       .catch(console.error);
   }, [selectedCodes.city]);
+
+  // Validation Engine
+  useEffect(() => {
+    const newErrors: Record<string, boolean> = {};
+    if (!formData.fullName.trim()) newErrors.fullName = true;
+    if (!formData.phone.trim()) newErrors.phone = true;
+    if (!selectedCodes.region) newErrors.region = true;
+    if (provinces.length > 0 && !selectedCodes.province)
+      newErrors.province = true;
+    if (!selectedCodes.city) newErrors.city = true;
+    if (!formData.barangay) newErrors.barangay = true;
+    if (!formData.street.trim()) newErrors.street = true;
+    if (!formData.buildingName.trim()) newErrors.buildingName = true;
+    if (!formData.postalCode.trim()) newErrors.postalCode = true;
+    setErrors(newErrors);
+  }, [formData, selectedCodes, provinces]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -97,7 +227,6 @@ export default function addressFormModal({
         city: "",
         barangay: "",
       }));
-      setBarangays([]);
     } else if (level === "province") {
       setSelectedCodes((prev) => ({ ...prev, province: code, city: "" }));
       setFormData((prev) => ({
@@ -114,31 +243,63 @@ export default function addressFormModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInteraction = (
+    e:
+      | React.FocusEvent<HTMLInputElement | HTMLSelectElement>
+      | React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+  };
 
-    console.log("Form submitted! Data is:", formData);
+  const getInputClass = (fieldName: string) => {
+    const isInvalid =
+      errors[fieldName] && (touched[fieldName] || submitAttempted);
+    const baseClass =
+      "border rounded-lg p-3 text-sm focus:outline-none focus:ring-1 transition-colors w-full disabled:bg-gray-50 disabled:text-gray-400";
+    if (isInvalid) {
+      return `${baseClass} border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50/30 text-red-900`;
+    }
+    return `${baseClass} border-gray-200 focus:border-[#800000] focus:ring-[#800000] bg-white text-gray-800`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitAttempted(true);
+
+    if (Object.keys(errors).length > 0) {
+      setStatusMessage({
+        type: "error",
+        text: "Please fill out all required fields marked in red.",
+      });
+      return;
+    }
 
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setStatusMessage(null);
 
-    onSave(formData); // Send data back to parent
+    try {
+      await onSave(formData);
+      setStatusMessage({
+        type: "success",
+        text: "Address saved successfully!",
+      });
 
-    // Reset form
-    setFormData({
-      fullName: "",
-      phone: "",
-      region: "",
-      province: "",
-      city: "",
-      barangay: "",
-      street: "",
-      houseNumber: "",
-      buildingName: "",
-      postalCode: "",
-    });
-    setSelectedCodes({ region: "", province: "", city: "" });
-    setTimeout(() => setIsSubmitting(false), 500);
+      setTouched({});
+      setSubmitAttempted(false);
+
+      setTimeout(() => {
+        setIsSubmitting(false);
+        onClose();
+      }, 1500);
+    } catch (error: any) {
+      console.error("Save error:", error);
+      setStatusMessage({
+        type: "error",
+        text: error?.message || "Failed to save address. Please try again.",
+      });
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -146,12 +307,11 @@ export default function addressFormModal({
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-[#0B1527]/60 backdrop-blur-md transition-opacity">
       <div className="bg-white rounded-[20px] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
         <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-[#0B1527]">
-              New Delivery Address
-            </h2>
-          </div>
+          <h2 className="text-xl font-bold text-[#0B1527]">
+            {initialData ? "Edit Delivery Address" : "New Delivery Address"}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -173,10 +333,55 @@ export default function addressFormModal({
           </button>
         </div>
 
+        {/* STATUS MESSAGE BANNER */}
+        {statusMessage && (
+          <div className="px-5 sm:px-6 pt-4 pb-0 flex-shrink-0 animate-in slide-in-from-top-2 duration-200">
+            <div
+              className={`p-4 rounded-xl text-sm font-bold flex items-center gap-2 ${
+                statusMessage.type === "success"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
+              }`}
+            >
+              {statusMessage.type === "success" ? (
+                <svg
+                  className="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              )}
+              {statusMessage.text}
+            </div>
+          </div>
+        )}
+
         {/* Form Body */}
         <form
           id="addressForm"
           onSubmit={handleSubmit}
+          noValidate
           className="p-5 sm:p-6 overflow-y-auto flex-grow flex flex-col gap-5 custom-scrollbar"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -185,13 +390,14 @@ export default function addressFormModal({
                 Full Name
               </label>
               <input
-                required
                 type="text"
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleTextChange}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
                 placeholder="Full Name"
-                className="border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+                className={getInputClass("fullName")}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -199,13 +405,14 @@ export default function addressFormModal({
                 Phone Number
               </label>
               <input
-                required
                 type="text"
                 name="phone"
                 value={formData.phone}
                 onChange={handleTextChange}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
                 placeholder="+63 123 456 7890"
-                className="border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+                className={getInputClass("phone")}
               />
             </div>
           </div>
@@ -216,10 +423,15 @@ export default function addressFormModal({
                 Region
               </label>
               <select
-                required
+                name="region"
                 value={selectedCodes.region}
-                onChange={(e) => handleSelectChange(e, "region")}
-                className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600 bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000]"
+                onChange={(e) => {
+                  handleSelectChange(e, "region");
+                  handleInteraction(e);
+                }}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
+                className={getInputClass("region")}
               >
                 <option value="" disabled>
                   Select Region
@@ -236,14 +448,19 @@ export default function addressFormModal({
                 Province
               </label>
               <select
-                required={provinces.length > 0}
+                name="province"
                 disabled={
                   !selectedCodes.region ||
                   (provinces.length === 0 && cities.length > 0)
                 }
                 value={selectedCodes.province}
-                onChange={(e) => handleSelectChange(e, "province")}
-                className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600 bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] disabled:bg-gray-50 disabled:text-gray-400"
+                onChange={(e) => {
+                  handleSelectChange(e, "province");
+                  handleInteraction(e);
+                }}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
+                className={getInputClass("province")}
               >
                 <option value="" disabled>
                   {provinces.length === 0 && cities.length > 0
@@ -265,11 +482,16 @@ export default function addressFormModal({
                 City / Municipality
               </label>
               <select
-                required
+                name="city"
                 disabled={!selectedCodes.province && !selectedCodes.region}
                 value={selectedCodes.city}
-                onChange={(e) => handleSelectChange(e, "city")}
-                className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600 bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] disabled:bg-gray-50 disabled:text-gray-400"
+                onChange={(e) => {
+                  handleSelectChange(e, "city");
+                  handleInteraction(e);
+                }}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
+                className={getInputClass("city")}
               >
                 <option value="" disabled>
                   Select City
@@ -286,17 +508,22 @@ export default function addressFormModal({
                 Barangay
               </label>
               <select
-                required
+                name="barangay"
                 disabled={!selectedCodes.city}
-                value={formData.barangay ? "selected" : ""}
-                onChange={(e) => handleSelectChange(e, "barangay")}
-                className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600 bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] disabled:bg-gray-50 disabled:text-gray-400"
+                value={formData.barangay || ""}
+                onChange={(e) => {
+                  handleSelectChange(e, "barangay");
+                  handleInteraction(e);
+                }}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
+                className={getInputClass("barangay")}
               >
                 <option value="" disabled>
                   Select Barangay
                 </option>
                 {barangays.map((b) => (
-                  <option key={b.code} value={b.code}>
+                  <option key={b.code} value={b.name}>
                     {b.name}
                   </option>
                 ))}
@@ -311,23 +538,26 @@ export default function addressFormModal({
               Street Name
             </label>
             <input
-              required
               type="text"
               name="street"
               value={formData.street}
               onChange={handleTextChange}
+              onFocus={handleInteraction}
+              onBlur={handleInteraction}
               placeholder="e.g. Purok 1"
-              className="border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+              className={getInputClass("street")}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                House / Lot Number
+                House / Lot Number{" "}
+                <span className="font-normal text-gray-400 text-[9px]">
+                  (OPTIONAL)
+                </span>
               </label>
               <input
-                required
                 type="text"
                 name="houseNumber"
                 value={formData.houseNumber}
@@ -338,18 +568,17 @@ export default function addressFormModal({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                Building Name{" "}
-                <span className="font-normal text-gray-400 text-[9px]">
-                  (OPTIONAL)
-                </span>
+                Building Name
               </label>
               <input
                 type="text"
                 name="buildingName"
                 value={formData.buildingName}
                 onChange={handleTextChange}
+                onFocus={handleInteraction}
+                onBlur={handleInteraction}
                 placeholder="e.g. Biskota Tower"
-                className="border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+                className={getInputClass("buildingName")}
               />
             </div>
           </div>
@@ -359,13 +588,14 @@ export default function addressFormModal({
               Postal Code
             </label>
             <input
-              required
               type="text"
               name="postalCode"
               value={formData.postalCode}
               onChange={handleTextChange}
+              onFocus={handleInteraction}
+              onBlur={handleInteraction}
               placeholder="e.g. 1000"
-              className="border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors"
+              className={getInputClass("postalCode")}
             />
           </div>
         </form>

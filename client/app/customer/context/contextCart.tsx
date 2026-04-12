@@ -79,35 +79,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 2. PROTECT CART: Check current local state to prevent exceeding stock
     const existingItem = cart.find(
       (item) => item.Carts.product_id === product.Products.id,
     );
 
-    // FIX: Block the addition if they already have the max stock in their cart
     if (existingItem && existingItem.Carts.quantity >= product.quantity) {
       alert(`You cannot add more! Only ${product.quantity} left in stock.`);
       return;
     }
 
-    // 3. Prepare the data for your FastAPI backend
     const cartPostRequestBody = {
       product_id: product.Products.id,
       quantity: 1,
     };
 
-    // 4. Send to Database FIRST
     try {
       await apiClient.post("/cart", cartPostRequestBody);
 
-      // 5. ONLY if the database succeeds, update the React UI State
+      //ONLY if the database succeeds, update the React UI State
       setCart((prevCart) => {
         const itemToUpdate = prevCart.find(
           (item) => item.Carts.product_id === product.Products.id,
         );
 
         if (itemToUpdate) {
-          // FIX: Deeply update the nested Carts.quantity
+          // eeply update the nested Carts.quantity
           return prevCart.map((item) =>
             item.Carts.product_id === product.Products.id
               ? {
@@ -121,7 +117,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           );
         }
 
-        // FIX: Construct a proper CartItem with the nested Carts object
+        // Construct a proper CartItem with the nested Carts object
         const newItem: CartItem = {
           ...product,
           Carts: {
@@ -145,7 +141,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = (id: number | string, newQuantity: number) => {
-    // FIX: If the user tries to go below 1, remove the item entirely
+    // If the user tries to go below 1, remove the item entirely
     if (newQuantity < 1) {
       removeFromCart(id); // Use your existing remove function!
       return;

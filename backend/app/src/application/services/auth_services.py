@@ -169,7 +169,7 @@ class AuthServices:
     async def manual_login(self, *, credentials: LoginRequest):
         try:
             # get the data from db.
-            data = await self.__uow.users.find_record(credentials.email)
+            data = await self.__uow.users.find_record_with_password(credentials.email)
             
             if not data:
                 raise DomainNotFoundError(message="Email does not exist.")

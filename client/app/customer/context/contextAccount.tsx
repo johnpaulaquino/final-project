@@ -27,21 +27,25 @@ interface AccountContextType {
   addAddress: (address: Address) => void;
   removeAddress: (id: string) => void;
   setSelectedAddress: (id: string) => void;
+
+  // NEW: Add setAddresses to the interface so components can update the full list
+  setAddresses: React.Dispatch<React.SetStateAction<Address[]>>;
 }
 
 const AccountContext = createContext<AccountContextType | undefined>(undefined);
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
   const [addresses, setAddresses] = useState<Address[]>([]);
+
   useEffect(() => {
     // 1. Define the async function
     const getCurrentAddress = async () => {
       try {
         // 2. Make the API call
-        const response = await apiClient.get("/me/address");
+        const response = await apiClient.get("/me/addresses");
         console.log("API response for address:", response);
         // Handle the data array
-        const data = response.data;
+        const data = response.data.addresses;
 
         const dbAddresses = Array.isArray(data) ? data : data ? [data] : [];
 
@@ -51,15 +55,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // 5. Call the function WITHOUT the 'await' keyword
     getCurrentAddress();
-  }, []); // Use an empty dependency array [] so it only fetches once when the component loads
+  }, []);
 
   console.log("Current addresses in context:", addresses);
+
   const addAddress = (newAddress: Address) => {
     setAddresses((prev) => {
       const isFirst = prev.length === 0;
-      return [...prev, { ...newAddress, isDefault: isFirst }];
+      return [...prev, { ...newAddress, is_default: isFirst }];
     });
   };
 
@@ -79,7 +83,14 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AccountContext.Provider
-      value={{ addresses, addAddress, removeAddress, setSelectedAddress }}
+      // NEW: Export setAddresses in the value provider
+      value={{
+        addresses,
+        addAddress,
+        removeAddress,
+        setSelectedAddress,
+        setAddresses,
+      }}
     >
       {children}
     </AccountContext.Provider>

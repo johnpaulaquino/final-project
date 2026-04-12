@@ -60,11 +60,15 @@ export async function apiFetch(
 ): Promise<any> {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // 1. CRITICAL FIX: Check if the body we are sending is FormData
+  const isFormData = options.body instanceof FormData;
+
   const config: RequestInit = {
     ...options,
     credentials: "include", // Always include cookies (like HttpOnly refresh token)
     headers: {
-      "Content-Type": "application/json",
+      // ONLY apply application/json if we are NOT sending files
+      ...(!isFormData && { "Content-Type": "application/json" }),
       ...options.headers,
     },
   };
@@ -177,11 +181,35 @@ export async function apiFetch(
 export const apiClient = {
   get: (endpoint: string) => apiFetch(endpoint, { method: "GET" }, true),
 
-  post: (endpoint: string, body: any) =>
-    apiFetch(endpoint, { method: "POST", body: JSON.stringify(body) }, true),
+  // Applied the fix to POST and PUT as well, to future-proof your app!
+  post: (endpoint: string, body: any) => {
+    const isFormData = body instanceof FormData;
+    return apiFetch(
+      endpoint,
+      { method: "POST", body: isFormData ? body : JSON.stringify(body) },
+      true,
+    );
+  },
 
-  put: (endpoint: string, body: any) =>
-    apiFetch(endpoint, { method: "PUT", body: JSON.stringify(body) }, true),
+  put: (endpoint: string, body: any) => {
+    const isFormData = body instanceof FormData;
+    return apiFetch(
+      endpoint,
+      { method: "PUT", body: isFormData ? body : JSON.stringify(body) },
+      true,
+    );
+  },
+
+  patch: (endpoint: string, body: any) => {
+    // 2. CRITICAL FIX: Don't stringify FormData!
+    const isFormData = body instanceof FormData;
+
+    return apiFetch(
+      endpoint,
+      { method: "PATCH", body: isFormData ? body : JSON.stringify(body) },
+      true,
+    );
+  },
 
   delete: (endpoint: string) => apiFetch(endpoint, { method: "DELETE" }, true),
 

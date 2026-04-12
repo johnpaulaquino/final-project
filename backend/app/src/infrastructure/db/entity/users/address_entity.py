@@ -49,3 +49,29 @@ class CreateAddress(BaseAddress):
                              barangay=barangay,
                              postal_code=postal_code,
                              st_bd_hno=st_bd_hno)
+
+
+class UpdateAddress(BaseModel):
+    fullname: Optional[str] = Body(default=None)
+    region: Optional[str] = Body(default=None)
+    province: Optional[str] = Body(default=None)
+    city: Optional[str] = Body(default=None)
+    barangay: Optional[str] = Body(default=None)
+    postal_code: Optional[str] = Body(default=None)
+    st_bd_hno: OtherInfo = Body(...)
+    
+    @staticmethod
+    def update_depends(fullname: Optional[str] = Body(default=None),
+                       region: Optional[str] = Body(default=None),
+                       province: Optional[str] = Body(default=None),
+                       city: Optional[str] = Body(default=None),
+                       barangay: Optional[str] = Body(default=None),
+                       postal_code: Optional[str] = Body(default=None),
+                       st_bd_hno: OtherInfo = Body(...)):
+        return UpdateAddress(fullname=fullname,
+                             region=region,
+                             province=province,
+                             city=city,
+                             barangay=barangay,
+                             postal_code=postal_code,
+                             st_bd_hno=st_bd_hno)

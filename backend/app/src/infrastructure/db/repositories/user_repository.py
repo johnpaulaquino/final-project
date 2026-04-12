@@ -4,7 +4,8 @@ from sqlmodel import and_, select
 
 from app.src.core.constants import ConstantsData
 from app.src.domain.dto.auth_dto import UserDTO, UserWithPasswordDTO
-from app.src.domain.dto.users_dto import UserAddressDTO, UserFullInformationDTO, UserPersonalInfoDTO
+from app.src.domain.dto.users_dto import (UserAddressDTO, UserAddressesDTO, UserFullInformationDTO,
+                                          UserFullInformationWithoutPasswordDTO, UserPersonalInfoDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
 from app.src.infrastructure.db.entity import Address, PersonalInfo, Users
@@ -39,10 +40,13 @@ class UserRepository(UserInterface):
         # insert the address
         self.__db.add(personal_info)
     
-    async def insert_address(self, user_id, address: CreateAddress):
+    async def insert_address(self, address: CreateAddress):
         address_info = Address(**address.model_dump())
+        
         # insert the address
         self.__db.add(address_info)
+        
+        return UserAddressDTO.model_validate(address_info)
     
     async def find_record(self, email: str) -> UserFullInformationDTO:
         stmt = (select(Users,
@@ -55,7 +59,30 @@ class UserRepository(UserInterface):
         
         return UserFullInformationDTO(**data[0]) if data else data
     
-    async def find_record_by_id(self, user_id: str) -> UserFullInformationDTO:
+    async def find_record_with_password(self, email: str) -> UserFullInformationDTO:
+        stmt = (select(Users,
+                       PersonalInfo)
+                .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
+                .where(Users.email == email))
+        
+        result = await self.__db.execute(stmt)
+        data = result.mappings().fetchall()
+        
+        return UserFullInformationDTO(**data[0]) if data else data
+    
+    async def find_record_by_id(self, user_id: str) -> UserFullInformationWithoutPasswordDTO:
+        stmt = (select(Users,
+                       PersonalInfo)
+                .select_from(Users)
+                .outerjoin(PersonalInfo, Users.id == PersonalInfo.user_id)
+                .where(Users.id == user_id))
+        
+        result = await self.__db.execute(stmt)
+        data = result.mappings().fetchall()
+        
+        return UserFullInformationWithoutPasswordDTO(**data[0]) if data else data
+    
+    async def find_record_by_id_with_password(self, user_id: str) -> UserFullInformationDTO:
         stmt = (select(Users,
                        PersonalInfo)
                 .select_from(Users)
@@ -108,18 +135,33 @@ class UserRepository(UserInterface):
         
         return UserPersonalInfoDTO.model_validate(data) if data else data
     
-    async def get_address_only(self, user_id: str) -> UserAddressDTO:
+    async def get_address_only(self, address_id: str, user_id: str) -> UserAddressDTO:
         """
         To get the address only.
         :param user_id: Unique from users.
         """
         try:
             stmt = (select(Address)
-                    .where(Address.user_id == user_id))
+                    .where(and_(Address.id == address_id, Address.user_id == user_id)))
             result = await self.__db.execute(stmt)
             data = result.scalars().first()
             
             return UserAddressDTO.model_validate(data) if data else data
+        except Exception as e:
+            raise e
+    
+    async def get_addresses_only(self, user_id: str) -> UserAddressesDTO:
+        """
+        To get the address only.
+        :param user_id: Unique from users.
+        """
+        try:
+            stmt = (select(Address)
+                    .where(Address.user_id == user_id)).limit(5)
+            result = await self.__db.execute(stmt)
+            data = result.scalars().fetchall()
+            data = {"addresses": data}
+            return UserAddressesDTO(**data) if data else data
         except Exception as e:
             raise e
     
@@ -165,18 +207,29 @@ class UserRepository(UserInterface):
                 return DomainError(str(e))
             raise DomainError
     
-    async def update_is_selected_address(self, address_id: str, user_id: str):
+    async def update_default_address(self, address_id: str, user_id: str):
         try:
-            stmt = update(Address).where(and_(Address.id == address_id,
-                                              Address.user_id == user_id)).values(is_selected=True)
+            # first update all default to false
+            stmt = update(Address).where(
+                    Address.user_id == user_id).values(is_selected=False)
+            # then update the specific address
+            
+            stmt1 = update(Address).where(and_(Address.id == address_id,
+                                               Address.user_id == user_id)).values(is_selected=True)
+            
+            # execute stmt1  first
+            await self.__db.execute(stmt)
+            # execute specific address
+            await self.__db.execute(stmt1)
+        
         except Exception as e:
             raise e
-        
-        async def delete_user_address(self, user_id, address_id):
-            try:
-                stmt = delete(Address).where(and_(Address.user_id == user_id,
-                                                  Address.id == address_id))
-                
-                await self.__db.execute(stmt)
-            except Exception as e:
-                raise e
+    
+    async def delete_user_address(self, user_id, address_id):
+        try:
+            stmt = delete(Address).where(and_(Address.user_id == user_id,
+                                              Address.id == address_id))
+            
+            await self.__db.execute(stmt)
+        except Exception as e:
+            raise e

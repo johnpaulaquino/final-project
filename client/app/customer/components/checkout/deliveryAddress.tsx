@@ -1,40 +1,39 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Address } from "../../context/contextAccount";
-import { apiClient } from "@/lib/api";
 
-// 1. ADD THE EXTRA PARAMETERS HERE
+// 1. UPDATE THE INTERFACE
 interface DeliveryAddressProps {
   savedAddresses: Address[];
-  onSetDefault: (id: string) => void;
+  selectedAddressId: string | null; // <-- NEW
+  onSelectAddress: (id: string) => void; // <-- NEW
   onOpenModal: () => void;
-  isExpanded: boolean; // <-- Added this
-  setIsExpanded: (val: boolean) => void; // <-- Added this
+  isExpanded: boolean;
+  setIsExpanded: (val: boolean) => void;
 }
 
 export default function DeliveryAddress({
   savedAddresses,
-  onSetDefault,
+  selectedAddressId,
+  onSelectAddress,
   onOpenModal,
   isExpanded,
   setIsExpanded,
 }: DeliveryAddressProps) {
-  const activeAddress = savedAddresses.find((addr) => addr.is_default) || savedAddresses[0];
+  // 2. FIND ACTIVE ADDRESS BASED ON THE LOCAL STATE
+  const activeAddress =
+    savedAddresses.find((addr) => addr.id === selectedAddressId) ||
+    savedAddresses[0];
 
-  const formatAddress = () => {
-    // 1. Combine House/Lot Number and Street Name
-    const streetAddress = `${activeAddress.st_bd_hno.house_no} ${activeAddress.st_bd_hno.street}`;
+  const formatAddress = (addrToFormat: Address | undefined) => {
+    if (!addrToFormat) return "";
 
-    // 2. Handle the optional Building Name gracefully
-    const building = activeAddress.st_bd_hno.building_name
-      ? `${activeAddress.st_bd_hno.building_name}, `
+    const streetAddress = `${addrToFormat.st_bd_hno?.house_no} ${addrToFormat.st_bd_hno?.street}`;
+    const building = addrToFormat.st_bd_hno?.building_name
+      ? `${addrToFormat.st_bd_hno.building_name}, `
       : "";
-
-    // 3. Compile the final formatted string
-    const compiledAddress = `${streetAddress}, ${building}${activeAddress.barangay}, ${activeAddress.city}, ${activeAddress.province}, ${activeAddress.postal_code}`;
-
-    return compiledAddress;
+    return `${streetAddress}, ${building}${addrToFormat.barangay}, ${addrToFormat.city}, ${addrToFormat.province}, ${addrToFormat.postal_code}`;
   };
 
   return (
@@ -90,12 +89,13 @@ export default function DeliveryAddress({
       ) : isExpanded ? (
         <div className="space-y-3 animate-in fade-in duration-200">
           {savedAddresses.map((address) => {
-            const isSelected = address.id === activeAddress?.id;
+            // 3. HIGHLIGHT THE CORRECT ADDRESS BASED ON STATE
+            const isSelected = address.id === selectedAddressId;
 
             return (
               <div
                 key={address.id}
-                onClick={() => onSetDefault(address.id)}
+                onClick={() => onSelectAddress(address.id)} // Updates checkout state, NOT db!
                 className={`cursor-pointer border bg-[#fcfcfc] rounded-xl p-4 flex items-start gap-3 transition-colors ${
                   isSelected
                     ? "border-[#800000] bg-red-50/20"
@@ -120,14 +120,16 @@ export default function DeliveryAddress({
                     <span className="text-gray-500 text-sm">
                       {address.phone}
                     </span>
-                    {isSelected && (
+
+                    {/* Show DEFAULT badge ONLY if it's actually their database default */}
+                    {address.is_default && (
                       <span className="bg-[#E2E8F0] text-slate-600 text-[9px] font-bold px-2 py-0.5 rounded tracking-wider">
                         DEFAULT
                       </span>
                     )}
                   </div>
                   <p className="text-gray-500 text-sm leading-relaxed mt-1">
-                    {formatAddress()}
+                    {formatAddress(address)}
                   </p>
                 </div>
               </div>
@@ -136,7 +138,7 @@ export default function DeliveryAddress({
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
-              onClick={() => setIsExpanded(false)} // Call the parent function!
+              onClick={() => setIsExpanded(false)}
               className="flex-1 bg-[#F4F4F5] text-[#0B1527] font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
             >
               Done
@@ -163,7 +165,7 @@ export default function DeliveryAddress({
                 </span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed mt-2">
-                {formatAddress()}
+                {formatAddress(activeAddress)}
               </p>
             </>
           )}

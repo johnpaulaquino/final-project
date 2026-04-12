@@ -99,6 +99,7 @@ class OrderServices:
             if not new_orders.orders:
                 raise DomainEntityStatusInvalidError(message="Product is empty, cannot checkout this.")
             for order in new_orders.orders:
+                print
                 # map the product id, quantity, and payment method for each product.
                 create_order = CreateOrderSchema(**order.model_dump(exclude_none=True, exclude_unset=True))
                 # then explicit update the user id

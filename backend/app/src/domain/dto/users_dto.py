@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -49,8 +49,34 @@ class UserAddressDTO(BaseModel):
     is_default: bool | None = None
 
 
+class UserAddressesDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    addresses: List[UserAddressDTO] | None = None
+
+
 class UserFullInformationDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     Users: UsersDTO | None = None
+    PersonalInfo: UserPersonalInfoDTO | None = None
+
+
+class UsersWithoutPasswordDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str | None = None
+    email: str | None = None
+    is_active: bool | None = None
+    is_deleted: bool | None = None
+    signin_type: list | None = None
+    login_at: datetime | None = None
+    created_at: datetime | None = None
+    role: str | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    sign_up_steps: int | None = None
+
+
+class UserFullInformationWithoutPasswordDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    Users: UsersWithoutPasswordDTO | None = None
     PersonalInfo: UserPersonalInfoDTO | None = None
     Address: UserAddressDTO | None = None

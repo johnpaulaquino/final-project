@@ -1,16 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AddressFormModal from "../components/checkout/addressFormModal";
 import DeliveryAddress from "../components/checkout/deliveryAddress";
 import PaymentMethod from "../components/checkout/paymentMethod";
 import OrderSummary from "../components/checkout/orderSummary";
-import { useAccount } from "../context/contextAccount";
+import { Address, useAccount } from "../context/contextAccount";
 import { useCart } from "../context/contextCart"; // 1. Import useCart
 import { apiClient } from "@/lib/api"; // 2. Import your apiClient
 
+export interface FormDataRequest {
+  barangay: string;
+  buildingName: string | null;
+  city: string;
+  fullName: string;
+  houseNumber: string;
+  phone: string;
+  postalCode: string;
+  province: string;
+  region: string;
+  street: string;
+}
+
 export default function CheckoutPage() {
-  const { addresses, addAddress, setSelectedAddress } = useAccount();
+  const { addresses, addAddress } = useAccount();
   const { cart } = useCart(); // 3. Grab the cart data here!
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,33 +32,62 @@ export default function CheckoutPage() {
 
   // Optional: Add a loading state to disable buttons while the API is calling
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    // If addresses are loaded, AND we haven't selected one yet...
+    if (addresses.length > 0 && selectedAddressId === null) {
+      const defaultAddr =
+        addresses.find((addr) => addr.is_default) || addresses[0];
+      setSelectedAddressId(defaultAddr.id);
+      setIsAddressExpanded(false); // Auto-collapse because they are ready!
+    }
+  }, [addresses, selectedAddressId]);
 
-  const handleSaveAddress = (formData: any) => {
-    const compiledAddress = `${formData.houseNumber} ${formData.street}, ${
-      formData.buildingName ? formData.buildingName + ", " : ""
-    }${formData.barangay}, ${formData.city}, ${formData.province || "NCR"}, ${formData.postalCode}`;
+  const handleSaveAddress = async (formData: FormDataRequest) => {
+    try {
+      const payload = {
+        fullname: formData.fullName,
+        region: formData.region,
+        province: formData.province,
+        city: formData.city,
+        barangay: formData.barangay,
+        postal_code: formData.postalCode,
+        st_bd_hno: {
+          street: formData.street,
+          house_no: formData.houseNumber,
+          building_name: formData.buildingName,
+        },
+      };
+      const response = await apiClient.post("/me/address", payload);
 
-    //     const newAddress = {
-    //        id: string;
-    //   fullname: string;
-    //   region: string;
-    //   province: string;
-    //   city: string;
-    //   barangay: string;
-    //   postal_code: boolean;
-    //   st_bd_hno: {
-    //     street: string;
-    //     house_no: string;
-    //     building_name: string;
-    //   };
-    //   is_default: boolean;
-    //   phone: string;
-    // }
-    // };
+      const data: Address = response.data.data || response.data; // Ensure you grab the object
 
-    // addAddress(newAddress);
-    // setSelectedAddress(newAddress.id);
-    // setIsModalOpen(false);
+      const newAddress = {
+        id: data.id,
+        fullname: data.fullname,
+        region: data.region,
+        province: data.province,
+        city: data.city,
+        barangay: data.barangay,
+        postal_code: data.postal_code,
+        st_bd_hno: {
+          street: data.st_bd_hno.street,
+          house_no: data.st_bd_hno.house_no,
+          building_name: data.st_bd_hno.building_name,
+        },
+        is_default: data.is_default,
+        phone: "",
+      };
+
+      addAddress(newAddress);
+      setSelectedAddressId(newAddress.id);
+      setIsModalOpen(false);
+      setIsAddressExpanded(true); // Leave expanded so they can click 'Done'
+    } catch (error) {
+      console.error("Failed to save address:", error);
+    }
   };
 
   const getFormattedPaymentMethod = (method: string) => {
@@ -78,24 +120,19 @@ export default function CheckoutPage() {
     try {
       const formattedPayment = getFormattedPaymentMethod(activePayment);
 
-      // Build the exact payload schema your FastAPI backend requires
       const payload = {
         orders: cart.map((item) => ({
           quantity: item.Carts.quantity,
           product_id: item.Carts.product_id,
           payment_method: formattedPayment,
+          address_id: selectedAddressId,
         })),
       };
-
-      console.log("Sending Payload:", payload); // Great for debugging!
 
       // Call your backend
       await apiClient.post("/order/batch", payload);
 
-      // Success!
       alert("Order Placed Successfully!");
-      // TODO: Call clearCart() here if you have that function
-      // window.location.href = "/success"; // Redirect user to a success page
     } catch (error) {
       console.error("Failed to checkout:", error);
       alert("Checkout failed. Please try again.");
@@ -104,11 +141,8 @@ export default function CheckoutPage() {
     }
   };
 
-  console.log("my length", addresses);
-
   const isAddressReady = addresses.length > 0 && !isAddressExpanded;
 
-  console.log();
   return (
     <main className="max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
       <div className="flex-grow flex flex-col gap-6 md:gap-8">
@@ -135,7 +169,8 @@ export default function CheckoutPage() {
 
           <DeliveryAddress
             savedAddresses={addresses}
-            onSetDefault={setSelectedAddress}
+            selectedAddressId={selectedAddressId}
+            onSelectAddress={setSelectedAddressId}
             onOpenModal={() => setIsModalOpen(true)}
             isExpanded={isAddressExpanded}
             setIsExpanded={setIsAddressExpanded}

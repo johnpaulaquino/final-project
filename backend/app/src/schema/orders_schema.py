@@ -39,14 +39,17 @@ class CreateOrderSchema(BaseModel):
     price: float = Body(default=0)
     payment_method: OrderPaymentMethodSchema = Body(default=OrderPaymentMethodSchema.COD)
     order_status: OrderStatusSchema = Body(default=OrderStatusSchema.Pending)
+    address_id: str = Body(...)
     
     @staticmethod
     def depends(
             quantity: int = Body(default=1, ge=1),
             product_id: str = Body(...),
+            address_id: str = Body(...),
             payment_method: OrderPaymentMethodSchema = Body(...)):
         return CreateOrderSchema(quantity=quantity,
                                  payment_method=payment_method,
+                                 address_id=address_id,
                                  product_id=product_id)
 
 
@@ -54,6 +57,7 @@ class CreateOrdersSchema(BaseModel):
     quantity: int = Body(default=1, ge=1),
     product_id: str = Body(...),
     payment_method: OrderPaymentMethodSchema
+    address_id: str
 
 
 class BatchCreateOrderSchema(BaseModel):

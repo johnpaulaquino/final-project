@@ -5,15 +5,15 @@ from app.src.application.services.shared_services import SharedServices
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.domain_exceptions import (DomainInvalidCredentialsError, DomainJWTInvalidError,
-                                                  DomainNotFoundError,
+                                                  DomainMaximumDataExceed, DomainNotFoundError,
                                                   DomainOTPInvalidError, DomainOTPNotExpireError,
                                                   DomainUnprocessableEntityError, )
 from app.src.exceptions.http_exceptions import JWTInvalidException
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
-from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
+from app.src.infrastructure.db.entity.users.address_entity import CreateAddress, UpdateAddress
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import SignInTypeSchema, SuccessfulResponseSchema
-from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserAddressSchema, UpdateUserSchema
+from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserSchema
 from app.src.utils.utility import Utility
 
 
@@ -41,23 +41,25 @@ class UserServices(SharedServices):
             # validate and set the age
             to_update_personal_data.age = Utility.validate_birthdate(to_update_personal_data.birth_date)
             
-            # store old image in db
+            # store old image
             old_image = old_personal_data.profile_image
             
             # then process the image.
             new_image = await self.upload_images_and_get(filenames=filename, img_bytes=img_byte)
             
-            # if there's an images uploaded, then remove from cloudinary
+            # if there's an images uploaded, then get the first image uploaded
             if new_image:
                 # then update the image in schema to update the image in db.
                 to_update_personal_data.profile_image = new_image[0]
                 is_uploaded = True
                 # check if there's an old image, then remove it.
+            
             if old_personal_data == to_update_personal_data:
                 return SuccessfulResponseSchema(message="No changes made.")
             # update the records from database.
             await self.__uof.users.update_user_personal_info(current_user.user_id,
-                                                             to_update_personal_data)
+                                                             to_update_personal_data.model_dump(exclude_unset=True,
+                                                                                                exclude_none=True))
             # check if the old image, then destroy it in the cloudinary
             if old_image:
                 # then destroy the old images in cloudinary and add a new one.
@@ -76,27 +78,28 @@ class UserServices(SharedServices):
             # always check in the protected route if user exists.
             await self.check_if_user_exists(current_user.user_id)
             # check if there's an address
-            data = await self.__uof.users.get_address_only(current_user.user_id)
+            data = await self.__uof.users.get_addresses_only(current_user.user_id)
             if not data:
                 # then set the is_selected to true
                 address.is_default = True
-            
+            # then cehck if the leeght of the address is greater than 5 then raise an error.
+            # it must be maximum of 5 address only
+            if len(data.addresses) >= 5:
+                
+                raise DomainMaximumDataExceed("Maximum address can be insert is 5 only.")
             # set user id
             address.user_id = current_user.user_id
             # sanitize fields by formating the First letter into capital letter
-            address.barangay = Utility.capitalize_first_letters(address.barangay)
+            
             address.fullname = Utility.capitalize_first_letters(address.fullname)
-            address.city = Utility.capitalize_first_letters(address.city)
             address.postal_code = Utility.capitalize_first_letters(address.postal_code)
-            address.province = Utility.capitalize_first_letters(address.province)
-            address.region = Utility.capitalize_first_letters(address.region)
             address.st_bd_hno.street = Utility.capitalize_first_letters(address.st_bd_hno.street)
             address.st_bd_hno.building_name = Utility.capitalize_first_letters(address.st_bd_hno.building_name)
             address.st_bd_hno.house_no = Utility.capitalize_first_letters(address.st_bd_hno.house_no)
             
             # then insert into database
-            await self.__uof.users.insert_address(current_user.user_id, address)
-            response = SuccessfulResponseSchema(message="Successfully inserted address.")
+            new_data = await self.__uof.users.insert_address(address)
+            response = SuccessfulResponseSchema(message="Successfully inserted address.", data=new_data)
             return response
         
         except Exception as e:
@@ -104,7 +107,7 @@ class UserServices(SharedServices):
     
     async def get_user_addresses(self, current_user: DecodedTokenDTO):
         try:
-            data = await self.__uof.users.get_address_only(current_user.user_id)
+            data = await self.__uof.users.get_addresses_only(current_user.user_id)
             if not data:
                 return SuccessfulResponseSchema(message="Successfully but no records to retrieve.")
             
@@ -176,23 +179,33 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
-    async def update_address(self, address: UpdateUserAddressSchema, current_user: DecodedTokenDTO):
+    async def update_address(self, address: UpdateAddress, address_id: str, current_user: DecodedTokenDTO):
         try:
-            data = await self.__uof.users.get_address_only(current_user.user_id)
+            data = await self.__uof.users.get_user_info_only(current_user.user_id)
             # check if user exists
             if not data:
                 raise DomainJWTInvalidError("Invalid user. Please back to login.")
             
-            # copy original data and update the new address and exclude None
-            to_update = data.model_copy(update=address.model_dump(exclude_none=True, exclude_unset=True))
+            # check if the address want to update exists.
+            address_data = await self.__uof.users.get_address_only(address_id=address_id,
+                                                                   user_id=current_user.user_id)
             
+            if not address_data:
+                raise DomainNotFoundError("Can't update address that is not exists.")
+            
+            # copy original data and update the new address and exclude None
+            to_update = address_data.model_copy(update=address.model_dump(exclude_none=True, exclude_unset=True))
+            print(address)
+            print(to_update)
             # check if no changes in the schema
             if data == to_update:
                 return SuccessfulResponseSchema(message="No changes made.")
+            
             # then update the address
-            await self.__uof.users.update_user_address(current_user.user_id,
-                                                       to_update.model_dump(exclude_none=True,
-                                                                            exclude_unset=True))
+            await self.__uof.users.update_user_address(user_id=current_user.user_id,
+                                                       address_id=address_id,
+                                                       data=to_update.model_dump(exclude_none=True,
+                                                                                 exclude_unset=True))
             
             return SuccessfulResponseSchema(message="Successfully updated address.")
         except Exception as e:
@@ -251,8 +264,18 @@ class UserServices(SharedServices):
             # check if the new email is not specified
             if not new_email:
                 raise DomainUnprocessableEntityError("New email should not be empty.")
-        
-        
-        
+        except Exception as e:
+            raise e
+    
+    async def delete_user_address(self, address_id: str, current_user: DecodedTokenDTO):
+        try:
+            data = await self.__uof.users.get_address_only(user_id=current_user.user_id, address_id=address_id)
+            if not data:
+                raise DomainNotFoundError("Cannot delete address that is not exists.")
+            
+            await self.__uof.users.delete_user_address(user_id=current_user.user_id, address_id=address_id)
+            
+            response = SuccessfulResponseSchema(message="Successfully deleted address.")
+            return response
         except Exception as e:
             raise e

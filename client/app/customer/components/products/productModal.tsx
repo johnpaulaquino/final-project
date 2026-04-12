@@ -21,6 +21,7 @@ export default function ProductModal({
 
   const handleAddToCart = () => {
     addToCart(product);
+    console.log("Product added to cart:", product);
     onClose();
   };
 
