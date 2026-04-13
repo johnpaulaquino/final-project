@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from starlette import status
 
+from app.src.api.api_utility import set_auth_cookie
 from app.src.application.services.auth_services import AuthServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import (get_auth_service, get_email_infrastructure, get_redis_services,
@@ -189,24 +190,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
         
         response = SuccessfulResponse(response_schema)
         
-        access_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
-                                             value=response_schema.access_token)
-        access_cookie.max_age = 15 * 60  # 15 minutes, same as the access token
-        response.set_cookie(**access_cookie.model_dump())
-        
-        # refresh cookie
-        refresh_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
-                                              value=response_schema.refresh_token)
-        refresh_cookie.max_age = int(
-                timedelta(days=ConstantsData.JWT_EXPIRATION).total_seconds())  # 7 days, same as the refresh token
-        response.set_cookie(**refresh_cookie.model_dump())
-        
-        # csrf cookie
-        csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
-                                           value=response_schema.csrf_token)
-        csrf_cookie.max_age = 15 * 60  # 15 minutes, same as the access token
-        csrf_cookie.httponly = False
-        response.set_cookie(**csrf_cookie.model_dump())
+        # set cookie
+        set_auth_cookie(response, auth_response)
         
         return response
     
@@ -223,17 +208,8 @@ async def refresh_token(refresh_token: str = Cookie(None),
         
         auth_services_response.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(auth_services_response)
-        response.set_cookie(**CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
-                                                   value=auth_services_response.access_token).model_dump())
-        
-        response.set_cookie(**CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
-                                                   value=auth_services_response.refresh_token).model_dump())
-        # csrf cookie
-        csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
-                                           value=auth_services_response.csrf_token)
-        csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
-        csrf_cookie.httponly = False
-        response.set_cookie(**csrf_cookie.model_dump())
+        # set cookie
+        set_auth_cookie(response, auth_services_response)
         return response
     
     except Exception as e:

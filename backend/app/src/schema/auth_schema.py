@@ -118,6 +118,15 @@ class CookieResponseSchema(BaseModel):
     path: str = "/"
 
 
+class CookieResponseOnDelete(BaseModel):
+    key: str
+    httponly: bool = True
+    # Automatically False locally, True in production
+    secure: bool = IS_PRODUCTION
+    samesite: SameSiteEnum = SameSiteEnum.NONE if IS_PRODUCTION else SameSiteEnum.LAX
+    path: str = "/"
+
+
 class OTPCodeSchema(BaseModel):
     token: str
     otp_code: str

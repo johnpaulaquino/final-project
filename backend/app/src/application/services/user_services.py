@@ -217,39 +217,49 @@ class UserServices(SharedServices):
             data = await self.__uof.users.get_user_info_only_with_password(current_user.user_id)
             if not data:
                 raise DomainJWTInvalidError("Invalid user. Please back to login.")
-            # validate password
-            hashed_new_password = None
-            to_update = data.copy()
-            # for password that is none and the sign in type is in Google, or apple or facebook
-            if not data.password and (
-                    SignInTypeSchema.GOOGLE in data.signin_type
-                    or SignInTypeSchema.APPLE in data.signin_type
-                    or SignInTypeSchema.FACEBOOK in data.signin_type):
+            
+            # Optional but recommended: Prevent changing to the exact same password
+            if data.password and AppSecurity.verify_hash_password(
+                    plain_password=change_password.new_password,
+                    hashed_password=data.password
+                    ):
+                raise DomainUnprocessableEntityError("New password cannot be the same as the current password.")
+            
+            to_update = data.model_copy()
+            
+            # Check if this is an OAuth user setting a password for the first time
+            is_oauth_first_time = not data.password and any(
+                    provider in data.signin_type for provider in [
+                            SignInTypeSchema.GOOGLE,
+                            SignInTypeSchema.APPLE,
+                            SignInTypeSchema.FACEBOOK, ]
+                    )
+            
+            if is_oauth_first_time:
+                if SignInTypeSchema.PASSWORD not in to_update.signin_type:
+                    to_update.signin_type.append(SignInTypeSchema.PASSWORD)
+            
+            else:
+                # Standard flow: Verify the old password
+                if not change_password.old_password:
+                    raise DomainUnprocessableEntityError("Old password must not be empty.")
                 
-                # update the password with the new hashed password.
-                to_update.password = AppSecurity.hash_plain_password(change_password.new_password)
-                # then append the Password sign in type.
-                to_update.signin_type.append(SignInTypeSchema.PASSWORD)
-                await self.__uof.users.update_user_personal_info(current_user.user_id,
-                                                                 to_update.model_dump(exclude_none=True,
-                                                                                      exclude_unset=True))
-                return SuccessfulResponseSchema(message="Successfully update password.")
+                # FIf a non-OAuth user somehow has no password, prevent crash
+                if not data.password:
+                    raise DomainUnprocessableEntityError("Account is not configured for password login.")
+                
+                if not AppSecurity.verify_hash_password(plain_password=change_password.old_password,
+                                                        hashed_password=data.password):
+                    raise DomainInvalidCredentialsError("Incorrect old password.")
             
-            # Verify if the inputted old password is matched to the database.
-            if not change_password.old_password:
-                raise DomainUnprocessableEntityError("Old password must not be empty.")
-            
-            # verify the old password
-            if not AppSecurity.verify_hash_password(plain_password=change_password.old_password,
-                                                    hashed_password=data.password):
-                raise DomainInvalidCredentialsError("Incorrect old password.")
-            
-            # then set the old password with the new hashed password
             to_update.password = AppSecurity.hash_plain_password(change_password.new_password)
-            await self.__uof.users.update_user_personal_info(current_user.user_id,
-                                                             to_update.model_dump(exclude_none=True,
-                                                                                  exclude_unset=True))
-            return SuccessfulResponseSchema(message="Successfully update password.")
+            
+            await self.__uof.users.update_record(
+                    current_user.user_id,
+                    to_update.model_dump(exclude_none=True, exclude_unset=True)
+                    )
+            
+            return SuccessfulResponseSchema(message="Successfully updated password.")
         
         except Exception as e:
             raise e

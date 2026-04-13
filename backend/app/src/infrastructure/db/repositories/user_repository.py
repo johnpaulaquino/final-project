@@ -119,7 +119,7 @@ class UserRepository(UserInterface):
         result = await self.__db.execute(stmt)
         data = result.scalars().first()
         
-        return UserDTO.model_validate(data) if data else data
+        return UserWithPasswordDTO.model_validate(data) if data else data
     
     async def get_personal_info_only(self, user_id: str) -> UserPersonalInfoDTO:
         """

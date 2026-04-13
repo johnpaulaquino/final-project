@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends, File, UploadFile
 from starlette import status
 
+from app.src.api.api_utility import delete_auth_cookie
 from app.src.api.v1 import get_filenames_and_image_bytes
 from app.src.application.services.user_services import UserServices
 from app.src.core.constants import ConstantsData, EndpointTags
@@ -129,8 +130,14 @@ async def change_password(change_password: ChangePasswordSchema,
         user_response = await user_service.change_password(change_password, current_user)
         
         user_response.status_code = status.HTTP_200_OK
-        return SuccessfulResponse(user_response)
+        # delete cookies
+        response = SuccessfulResponse(user_response)
+        
+        delete_auth_cookie(response)
+        
+        return response
     except Exception as e:
+        print(e)
         raise e
 
 
