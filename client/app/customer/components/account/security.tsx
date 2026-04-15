@@ -18,7 +18,7 @@ export default function SecuritySettings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatusMessage(null); // Clear previous messages
+    setStatusMessage(null);
 
     // 1. Basic Front-End Validation
     if (!oldPassword || !newPassword || !confirmPassword) {
@@ -50,32 +50,34 @@ export default function SecuritySettings() {
         new_password: newPassword,
       };
 
-      // Ensure the route exactly matches your FastAPI route definition
       await apiClient.patch("/me/change-password", payload);
 
       // 3. HANDLE SUCCESS
       setStatusMessage({
         type: "success",
-        text: "Password updated successfully! All other devices have been logged out.",
+        text: "Password updated successfully! Redirecting to login...",
       });
 
-      // Clear the form fields
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
     } catch (error: any) {
       console.error("Failed to update password:", error);
+      setIsLoading(false); // Only stop loading if there is an error, so the button stays disabled during the redirect delay
 
-      // 4. HANDLE ERROR (Extracts message from your FastAPI raise exceptions)
+      // 4. HANDLE ERROR
       setStatusMessage({
         type: "error",
         text:
           error?.message ||
           "Failed to update password. Please check your old password and try again.",
       });
-    } finally {
-      setIsLoading(false);
     }
+    // Notice: I removed `finally { setIsLoading(false); }` so the button stays in the "Loading..." state while we wait for the redirect!
   };
 
   return (
@@ -134,7 +136,8 @@ export default function SecuritySettings() {
             placeholder="Old Password"
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors"
+            disabled={statusMessage?.type === "success"}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors disabled:opacity-50"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -147,7 +150,8 @@ export default function SecuritySettings() {
               placeholder="Password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors"
+              disabled={statusMessage?.type === "success"}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors disabled:opacity-50"
             />
           </div>
           <div>
@@ -159,14 +163,15 @@ export default function SecuritySettings() {
               placeholder="Password Confirmation"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors"
+              disabled={statusMessage?.type === "success"}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors disabled:opacity-50"
             />
           </div>
         </div>
         <div className="flex items-center gap-6 pt-4">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || statusMessage?.type === "success"}
             className="bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-[12px] shadow-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[180px]"
           >
             {isLoading ? (

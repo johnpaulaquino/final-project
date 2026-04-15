@@ -6,8 +6,8 @@ import DeliveryAddress from "../components/checkout/deliveryAddress";
 import PaymentMethod from "../components/checkout/paymentMethod";
 import OrderSummary from "../components/checkout/orderSummary";
 import { Address, useAccount } from "../context/contextAccount";
-import { useCart } from "../context/contextCart"; // 1. Import useCart
-import { apiClient } from "@/lib/api"; // 2. Import your apiClient
+import { useCart } from "../context/contextCart";
+import { apiClient } from "@/lib/api";
 
 export interface FormDataRequest {
   barangay: string;
@@ -24,24 +24,30 @@ export interface FormDataRequest {
 
 export default function CheckoutPage() {
   const { addresses, addAddress } = useAccount();
-  const { cart } = useCart(); // 3. Grab the cart data here!
+
+  // NEW: Grab both the cart AND the checkoutItems array from context
+  const { cart, checkoutItems, setCheckoutItems } = useCart();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePayment, setActivePayment] = useState("cc");
   const [isAddressExpanded, setIsAddressExpanded] = useState(true);
 
-  // Optional: Add a loading state to disable buttons while the API is calling
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
   );
+
+  // BEST APPROACH: Derive checkout cart instantly without useEffect
+  const checkoutCart = cart.filter((item) =>
+    checkoutItems.includes(item.Products.id),
+  );
+
   useEffect(() => {
-    // If addresses are loaded, AND we haven't selected one yet...
     if (addresses.length > 0 && selectedAddressId === null) {
       const defaultAddr =
         addresses.find((addr) => addr.is_default) || addresses[0];
       setSelectedAddressId(defaultAddr.id);
-      setIsAddressExpanded(false); // Auto-collapse because they are ready!
+      setIsAddressExpanded(false);
     }
   }, [addresses, selectedAddressId]);
 
@@ -62,7 +68,7 @@ export default function CheckoutPage() {
       };
       const response = await apiClient.post("/me/address", payload);
 
-      const data: Address = response.data.data || response.data; // Ensure you grab the object
+      const data: Address = response.data.data || response.data;
 
       const newAddress = {
         id: data.id,
@@ -84,7 +90,7 @@ export default function CheckoutPage() {
       addAddress(newAddress);
       setSelectedAddressId(newAddress.id);
       setIsModalOpen(false);
-      setIsAddressExpanded(true); // Leave expanded so they can click 'Done'
+      setIsAddressExpanded(true);
     } catch (error) {
       console.error("Failed to save address:", error);
     }
@@ -103,15 +109,14 @@ export default function CheckoutPage() {
     }
   };
 
-  // 4. THE API CALL
   const handleProcessPayment = async () => {
     if (addresses.length === 0) {
       alert("Please add a delivery address first!");
       return;
     }
 
-    if (cart.length === 0) {
-      alert("Your cart is empty!");
+    if (checkoutCart.length === 0) {
+      alert("No items selected for checkout!");
       return;
     }
 
@@ -121,7 +126,7 @@ export default function CheckoutPage() {
       const formattedPayment = getFormattedPaymentMethod(activePayment);
 
       const payload = {
-        orders: cart.map((item) => ({
+        orders: checkoutCart.map((item) => ({
           quantity: item.Carts.quantity,
           product_id: item.Carts.product_id,
           payment_method: formattedPayment,
@@ -129,10 +134,12 @@ export default function CheckoutPage() {
         })),
       };
 
-      // Call your backend
       await apiClient.post("/order/batch", payload);
 
       alert("Order Placed Successfully!");
+
+      // Cleanup: Clear the selected items from memory
+      setCheckoutItems([]);
     } catch (error) {
       console.error("Failed to checkout:", error);
       alert("Checkout failed. Please try again.");
@@ -158,7 +165,6 @@ export default function CheckoutPage() {
           </button>
         </div>
 
-        {/* delivery */}
         <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">
@@ -177,7 +183,6 @@ export default function CheckoutPage() {
           />
         </div>
 
-        {/* payment */}
         <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="bg-[#800000] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">
@@ -194,11 +199,11 @@ export default function CheckoutPage() {
 
       <div className="w-full xl:w-[450px] flex-shrink-0">
         <div className="sticky top-28">
-          {/* Pass the loading state down to disable the button while processing */}
           <OrderSummary
             onProcessPayment={handleProcessPayment}
             isAddressSaved={isAddressReady}
             isProcessing={isProcessing}
+            cart={checkoutCart} // Prop passing the dynamically filtered cart
           />
         </div>
       </div>

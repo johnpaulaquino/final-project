@@ -32,7 +32,13 @@ export default function headNavbar({
   const [notifications, setNotifications] = useState(initialNotifications);
   const hasUnread = notifications.some((n) => !n.isRead);
 
-  const { totalItems } = useCart();
+
+  const { totalItems, fetchCarts } = useCart();
+
+  // --- FIXED: Fetch the cart data immediately when the navbar loads ---
+  useEffect(() => {
+    fetchCarts(1, 10);
+  }, [fetchCarts]);
 
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));

@@ -43,7 +43,7 @@ class CartsRepository(UserInterface):
     
     async def delete_cart(self, cart_id: str, user_id: str):
         try:
-            stmt = delete(Carts).where(and_(Carts.id == cart_id,
+            stmt = delete(Carts).where(and_(Carts.product_id == cart_id,
                                             Carts.user_id == user_id))
             await self.__db.execute(stmt)
         except Exception as e:

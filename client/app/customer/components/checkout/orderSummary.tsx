@@ -2,21 +2,28 @@
 
 import React from "react";
 import Image from "next/image";
-import { useCart } from "../../context/contextCart";
+// Import CartItem type so TypeScript knows what the cart array looks like
+import { CartItem } from "../../context/contextCart";
 
-// 1. ADD THE EXTRA PARAMETER HERE
 interface OrderSummaryProps {
   onProcessPayment: () => void;
   isAddressSaved: boolean;
-  isProcessing?: boolean; // <-- Added this!
+  isProcessing?: boolean;
+  cart: CartItem[]; // <--- ADDED: Tell TypeScript to expect the filtered cart array
 }
 
 export default function OrderSummary({
   onProcessPayment,
   isAddressSaved,
-  isProcessing = false, // <-- Receive it here with a default value
+  isProcessing = false,
+  cart, // <--- ADDED: Receive the filtered cart from CheckoutPage
 }: OrderSummaryProps) {
-  const { cart, totalPrice } = useCart();
+  // REMOVED useCart() - We calculate the total dynamically based on the passed items!
+  const totalPrice = cart.reduce(
+    (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
+    0,
+  );
+
   const shippingCost: number = 0;
   const finalTotal = totalPrice + shippingCost;
 

@@ -94,7 +94,7 @@ class CartsServices:
     async def delete_user_cart(self, cart_id: str, current_user: DecodedTokenDTO):
         try:
             # check if there's a cart
-            cart_data = await self.__uof.carts.get_cart(cart_id, current_user.user_id)
+            cart_data = await self.__uof.carts.get_cart(current_user.user_id, cart_id)
             if not cart_data:
                 raise DomainNotFoundError("You can't delete cart that is not exist.")
             

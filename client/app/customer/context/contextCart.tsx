@@ -48,6 +48,10 @@ interface CartContextType {
   totalPrice: number;
   fetchCarts: (skip?: number, limit?: number) => Promise<void>;
   isLoading: boolean;
+
+  // --- ADDED: State to hold selected checkout items ---
+  checkoutItems: (string | number)[];
+  setCheckoutItems: React.Dispatch<React.SetStateAction<(string | number)[]>>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -55,6 +59,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- ADDED: The state variable for checkout selection ---
+  const [checkoutItems, setCheckoutItems] = useState<(string | number)[]>([]);
 
   const fetchCarts = useCallback(async (skip = 0, limit = 10) => {
     setIsLoading(true);
@@ -103,7 +110,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
 
         if (itemToUpdate) {
-          // eeply update the nested Carts.quantity
+          // deeply update the nested Carts.quantity
           return prevCart.map((item) =>
             item.Carts.product_id === product.Products.id
               ? {
@@ -134,10 +141,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const removeFromCart = (id: number | string) => {
-    setCart((prevCart) =>
-      prevCart.filter((item) => item.Carts.product_id !== id),
-    );
+  const removeFromCart = async (id: number | string) => {
+    try {
+      // 1. Tell backend to delete item (Adjust the route if your FastAPI endpoint expects something else)
+      await apiClient.delete(`/cart/${id}`);
+
+      // 2. Update Cart UI
+      setCart((prevCart) =>
+        prevCart.filter((item) => item.Carts.product_id !== id),
+      );
+
+      // 3. Remove from checked items (if it was checked)
+      setCheckoutItems((prev) => prev.filter((itemId) => itemId !== id));
+    } catch (error) {
+      console.error("Failed to remove item from DB:", error);
+      alert("Failed to remove item. Please try again.");
+    }
   };
 
   const updateQuantity = (id: number | string, newQuantity: number) => {
@@ -161,8 +180,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }),
     );
   };
-  const totalItems = new Set(cart.map((item) => item.Carts.product_id)).size;
-
+  const totalItems = cart.length;
   const totalPrice = cart.reduce(
     (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
     0,
@@ -179,6 +197,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         totalPrice,
         isLoading,
         fetchCarts,
+        // --- ADDED: Export them so your components can use them ---
+        checkoutItems,
+        setCheckoutItems,
       }}
     >
       {children}

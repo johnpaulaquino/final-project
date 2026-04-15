@@ -64,4 +64,5 @@ async def delete_user_cart(cart_id: str,
         cart_response.status_code = status.HTTP_200_OK
         return SuccessfulResponse(cart_response)
     except Exception as e:
+        print(e)
         raise e
