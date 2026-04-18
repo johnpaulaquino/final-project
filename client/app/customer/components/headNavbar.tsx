@@ -35,7 +35,6 @@ export default function headNavbar({
 
   const { totalItems, fetchCarts } = useCart();
 
-  // --- FIXED: Fetch the cart data immediately when the navbar loads ---
   useEffect(() => {
     fetchCarts(1, 10);
   }, [fetchCarts]);

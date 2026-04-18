@@ -10,7 +10,8 @@ from app.src.core.constants import ConstantsData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_products_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.schema import PaginatedSchema
-from app.src.schema.products_schema import ProductsFullInformationRequestSchema, UpdateProductsInformationRequestSchema
+from app.src.schema.products_schema import (CreateCategories, ProductsFullInformationRequestSchema,
+                                            UpdateProductsInformationRequestSchema, )
 from app.src.utils.successful_response import SuccessfulResponse
 
 # prefix endpoint
@@ -18,7 +19,7 @@ __base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/products"
 v1_products_router = APIRouter(tags=[EndpointTags.PRODUCTS], prefix=__base_endpoint, )
 
 
-@v1_products_router.post(f"{ConstantsData.API_V1_ENDPOINT}/insert", tags=[EndpointTags.ADMIN], )
+@v1_products_router.post("/", tags=[EndpointTags.ADMIN], )
 async def insert_product(
         products_schema: ProductsFullInformationRequestSchema = Depends(
                 ProductsFullInformationRequestSchema.depends_schema),
@@ -44,15 +45,30 @@ async def insert_product(
         raise e
 
 
+@v1_products_router.post("/category")
+async def insert_category(categories: CreateCategories,
+                          current_user: DecodedTokenDTO = Depends(get_current_user),
+                          product_services: ProductsServices = Depends(
+                                  get_products_service)):
+    try:
+        product_services_response = await product_services.insert_category(categories, current_user)
+        product_services_response.status_code = status.HTTP_201_CREATED
+        response = SuccessfulResponse(product_services_response)
+        
+        return response
+    
+    except Exception as e:
+        raise e
+
+
 @v1_products_router.get('/categories', tags=[EndpointTags.CUSTOMER])
 async def get_product_categories(product_services: ProductsServices = Depends(
         get_products_service)):
     try:
         
         product_response = await product_services.get_product_categories()
-        product_response.status_code = 200
+        product_response.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(product_response)
-        
         return response
     except Exception as e:
         raise e

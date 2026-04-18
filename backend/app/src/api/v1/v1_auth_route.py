@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from starlette import status
 
-from app.src.api.api_utility import set_auth_cookie
+from app.src.api.api_utility import delete_auth_cookie, set_auth_cookie
 from app.src.application.services.auth_services import AuthServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import (get_auth_service, get_email_infrastructure, get_redis_services,
@@ -207,17 +207,19 @@ async def refresh_token(refresh_token: str = Cookie(None),
         auth_services_response = await auth_services.refresh_token(refresh_token=refresh_token)
         
         auth_services_response.status_code = status.HTTP_200_OK
+        
         response = SuccessfulResponse(auth_services_response)
         # set cookie
         set_auth_cookie(response, auth_services_response)
         return response
     
     except Exception as e:
+        
         raise e
 
 
 @v1_auth_router.post("/logout")
-async def log_out_user(refresh_access_token: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_ACCESS_TOKEN),
+async def log_out_user(refresh_access_token: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_REFRESH_TOKEN),
                        auth_services: AuthServices = Depends(get_auth_service)):
     try:
         auth_services_response = await auth_services.log_out_user(refresh_token=refresh_access_token)
@@ -225,9 +227,7 @@ async def log_out_user(refresh_access_token: str = Cookie(default=None, alias=Co
         
         response = SuccessfulResponse(auth_services_response)
         
-        response.delete_cookie(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN)
-        response.delete_cookie(key=ConstantsKeyData.COOKIE_CSRF_TOKEN)
-        response.delete_cookie(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN)
+        delete_auth_cookie(response)
         
         return response
     except Exception as e:

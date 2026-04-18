@@ -25,8 +25,9 @@ class SessionTokenRepository(UserInterface[SessionTokenRequest]):
     async def find_record(self, token: str) -> SessionTokenDTO | None:
         stmt = select(SessionToken).where(SessionToken.token == token)
         result = await self._db.execute(stmt)
-        data = result.scalars()
-        return SessionTokenDTO.model_validate(data)
+        data = result.scalars().first()
+        
+        return SessionTokenDTO.model_validate(data) if data else data
     
     async def update_record(self, refresh_token: str, data: dict = None):
         stmt = update(SessionToken).values(**data).where(SessionToken.token == refresh_token)
@@ -36,7 +37,6 @@ class SessionTokenRepository(UserInterface[SessionTokenRequest]):
         stmt = delete(SessionToken).where(SessionToken.token == record_id)
         await self._db.execute(stmt)
     
-    async def revoke_token(self, token_id: str):
-        stmt = update(SessionToken).values(is_revoke=True).where(SessionToken.id == token_id)
-        print(stmt)
+    async def revoke_token(self, refresh_token: str):
+        stmt = update(SessionToken).values(is_revoke=True).where(SessionToken.token == refresh_token)
         await self._db.execute(stmt)

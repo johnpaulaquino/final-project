@@ -18,10 +18,10 @@ from app.src.utils.utility import Utility
 
 
 class UserServices(SharedServices):
-    def __init__(self, uof: SQLUnitOfWork, cloudinary_infrastructure: CloudinaryInfrastructure):
-        self.__uof = uof
+    def __init__(self, uow: SQLUnitOfWork, cloudinary_infrastructure: CloudinaryInfrastructure):
+        self.__uow = uow
         self.__cloudinary_infrastructure = cloudinary_infrastructure
-        super().__init__(uof, cloudinary_infrastructure)
+        super().__init__(uow, cloudinary_infrastructure)
     
     async def update_profile_information(self, data: UpdateUserSchema,
                                          current_user: DecodedTokenDTO,
@@ -30,7 +30,7 @@ class UserServices(SharedServices):
         is_uploaded = False
         to_update_personal_data = None
         try:
-            old_personal_data = await self.__uof.users.get_personal_info_only(current_user.user_id)
+            old_personal_data = await self.__uow.users.get_personal_info_only(current_user.user_id)
             if not old_personal_data:
                 raise DomainNotFoundError("Cannot update personal info, because it didn't exist.")
             
@@ -57,7 +57,7 @@ class UserServices(SharedServices):
             if old_personal_data == to_update_personal_data:
                 return SuccessfulResponseSchema(message="No changes made.")
             # update the records from database.
-            await self.__uof.users.update_user_personal_info(current_user.user_id,
+            await self.__uow.users.update_user_personal_info(current_user.user_id,
                                                              to_update_personal_data.model_dump(exclude_unset=True,
                                                                                                 exclude_none=True))
             # check if the old image, then destroy it in the cloudinary
@@ -78,7 +78,7 @@ class UserServices(SharedServices):
             # always check in the protected route if user exists.
             await self.check_if_user_exists(current_user.user_id)
             # check if there's an address
-            data = await self.__uof.users.get_addresses_only(current_user.user_id)
+            data = await self.__uow.users.get_addresses_only(current_user.user_id)
             if not data:
                 # then set the is_selected to true
                 address.is_default = True
@@ -98,7 +98,7 @@ class UserServices(SharedServices):
             address.st_bd_hno.house_no = Utility.capitalize_first_letters(address.st_bd_hno.house_no)
             
             # then insert into database
-            new_data = await self.__uof.users.insert_address(address)
+            new_data = await self.__uow.users.insert_address(address)
             response = SuccessfulResponseSchema(message="Successfully inserted address.", data=new_data)
             return response
         
@@ -107,7 +107,7 @@ class UserServices(SharedServices):
     
     async def get_user_addresses(self, current_user: DecodedTokenDTO):
         try:
-            data = await self.__uof.users.get_addresses_only(current_user.user_id)
+            data = await self.__uow.users.get_addresses_only(current_user.user_id)
             if not data:
                 return SuccessfulResponseSchema(message="Successfully but no records to retrieve.")
             
@@ -117,7 +117,7 @@ class UserServices(SharedServices):
     
     async def get_information(self, current_user: DecodedTokenDTO):
         try:
-            data = await self.__uof.users.find_record_by_id(current_user.user_id)
+            data = await self.__uow.users.find_record_by_id(current_user.user_id)
             if not data:
                 raise JWTInvalidException("No user found, please back to login.")
             
@@ -136,7 +136,7 @@ class UserServices(SharedServices):
             if geocoder.description_for_number(parsed_number, 'en') != "Philippines":
                 raise DomainUnprocessableEntityError("Invalid format, it should be Philippines format.")
             
-            data = await self.__uof.users.get_personal_info_only(current_user.user_id)
+            data = await self.__uow.users.get_personal_info_only(current_user.user_id)
             if not data:
                 raise DomainJWTInvalidError("Invalid user. Please back to login.")
             
@@ -149,7 +149,7 @@ class UserServices(SharedServices):
             # then update contact number in database
             to_update = {"phone_number": contact_number}
             
-            await self.__uof.users.update_user_personal_info(current_user.user_id, to_update)
+            await self.__uow.users.update_user_personal_info(current_user.user_id, to_update)
             return SuccessfulResponseSchema(message="Successfully sent OTP to you mobile number.", otp_code=otp_code)
         except Exception as e:
             raise e
@@ -160,7 +160,7 @@ class UserServices(SharedServices):
             if not otp_code:
                 raise DomainUnprocessableEntityError("OTP code should not be empty.")
             # retrieved user data
-            data = await self.__uof.users.get_personal_info_only(current_user.user_id)
+            data = await self.__uow.users.get_personal_info_only(current_user.user_id)
             
             # check if user exists
             if not data:
@@ -174,20 +174,20 @@ class UserServices(SharedServices):
             to_update = {"is_phone_verified": True}
             
             # then update the is phone verified to true.
-            await self.__uof.users.update_user_personal_info(current_user.user_id, to_update)
+            await self.__uow.users.update_user_personal_info(current_user.user_id, to_update)
             return SuccessfulResponseSchema(message="Successfully verified phone number.")
         except Exception as e:
             raise e
     
     async def update_address(self, address: UpdateAddress, address_id: str, current_user: DecodedTokenDTO):
         try:
-            data = await self.__uof.users.get_user_info_only(current_user.user_id)
+            data = await self.__uow.users.get_user_info_only(current_user.user_id)
             # check if user exists
             if not data:
                 raise DomainJWTInvalidError("Invalid user. Please back to login.")
             
             # check if the address want to update exists.
-            address_data = await self.__uof.users.get_address_only(address_id=address_id,
+            address_data = await self.__uow.users.get_address_only(address_id=address_id,
                                                                    user_id=current_user.user_id)
             
             if not address_data:
@@ -195,14 +195,13 @@ class UserServices(SharedServices):
             
             # copy original data and update the new address and exclude None
             to_update = address_data.model_copy(update=address.model_dump(exclude_none=True, exclude_unset=True))
-            print(address)
-            print(to_update)
+            
             # check if no changes in the schema
             if data == to_update:
                 return SuccessfulResponseSchema(message="No changes made.")
             
             # then update the address
-            await self.__uof.users.update_user_address(user_id=current_user.user_id,
+            await self.__uow.users.update_user_address(user_id=current_user.user_id,
                                                        address_id=address_id,
                                                        data=to_update.model_dump(exclude_none=True,
                                                                                  exclude_unset=True))
@@ -211,18 +210,18 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
-    async def change_password(self, change_password: ChangePasswordSchema, current_user: DecodedTokenDTO):
+    async def change_password(self, change_password: ChangePasswordSchema, refresh_token: str,
+                              current_user: DecodedTokenDTO):
         
         try:
-            data = await self.__uof.users.get_user_info_only_with_password(current_user.user_id)
+            data = await self.__uow.users.get_user_info_only_with_password(current_user.user_id)
             if not data:
                 raise DomainJWTInvalidError("Invalid user. Please back to login.")
             
             # Optional but recommended: Prevent changing to the exact same password
             if data.password and AppSecurity.verify_hash_password(
                     plain_password=change_password.new_password,
-                    hashed_password=data.password
-                    ):
+                    hashed_password=data.password):
                 raise DomainUnprocessableEntityError("New password cannot be the same as the current password.")
             
             to_update = data.model_copy()
@@ -254,10 +253,14 @@ class UserServices(SharedServices):
             
             to_update.password = AppSecurity.hash_plain_password(change_password.new_password)
             
-            await self.__uof.users.update_record(
+            await self.__uow.users.update_record(
                     current_user.user_id,
                     to_update.model_dump(exclude_none=True, exclude_unset=True)
                     )
+            
+            refresh_token_db = await self.check_session_token(refresh_token)
+            # revoke the refresh token in db
+            await self.__uow.token_session.revoke_token(refresh_token_db.token)
             
             return SuccessfulResponseSchema(message="Successfully updated password.")
         
@@ -267,7 +270,7 @@ class UserServices(SharedServices):
     async def change_email(self, new_email: str, current_user: DecodedTokenDTO):
         # TODO Project To follow na lang muna
         try:
-            data = await self.__uof.users.get_user_info_only(current_user.user_id)
+            data = await self.__uow.users.get_user_info_only(current_user.user_id)
             if not data:
                 raise DomainJWTInvalidError("Invalid user. Please back to login.")
             
@@ -279,11 +282,11 @@ class UserServices(SharedServices):
     
     async def delete_user_address(self, address_id: str, current_user: DecodedTokenDTO):
         try:
-            data = await self.__uof.users.get_address_only(user_id=current_user.user_id, address_id=address_id)
+            data = await self.__uow.users.get_address_only(user_id=current_user.user_id, address_id=address_id)
             if not data:
                 raise DomainNotFoundError("Cannot delete address that is not exists.")
             
-            await self.__uof.users.delete_user_address(user_id=current_user.user_id, address_id=address_id)
+            await self.__uow.users.delete_user_address(user_id=current_user.user_id, address_id=address_id)
             
             response = SuccessfulResponseSchema(message="Successfully deleted address.")
             return response

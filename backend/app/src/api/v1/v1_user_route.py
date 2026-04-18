@@ -1,12 +1,12 @@
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, File, UploadFile
+from fastapi import APIRouter, Body, Cookie, Depends, File, UploadFile
 from starlette import status
 
 from app.src.api.api_utility import delete_auth_cookie
 from app.src.api.v1 import get_filenames_and_image_bytes
 from app.src.application.services.user_services import UserServices
-from app.src.core.constants import ConstantsData, EndpointTags
+from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_redis_services, get_user_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress, UpdateAddress
@@ -125,9 +125,10 @@ async def insert_address(address: CreateAddress = Depends(CreateAddress.create_d
 @v1_user_router.patch("/change-password")
 async def change_password(change_password: ChangePasswordSchema,
                           current_user: DecodedTokenDTO = Depends(get_current_user),
+                          refresh_access_token: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_REFRESH_TOKEN),
                           user_service: UserServices = Depends(get_user_service)):
     try:
-        user_response = await user_service.change_password(change_password, current_user)
+        user_response = await user_service.change_password(change_password, refresh_access_token, current_user)
         
         user_response.status_code = status.HTTP_200_OK
         # delete cookies

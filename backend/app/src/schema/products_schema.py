@@ -234,6 +234,10 @@ class UpdateProductsInventorySchema(BaseModel):
     product_id: str | None = None
 
 
+class CreateCategories(BaseModel):
+    category: list[str]
+
+
 class ProductStatus(BaseModel):
     AVAILABLE: str = "Available"
     OUT_OF_STOCK: str = "Out of stock"

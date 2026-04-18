@@ -31,14 +31,14 @@ def set_auth_cookie(response: JSONResponse, response_schema: SuccessfulResponseS
 
 def delete_auth_cookie(response: JSONResponse):
     access_cookie = CookieResponseOnDelete(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN)
-    response.set_cookie(**access_cookie.model_dump())
+    response.delete_cookie(**access_cookie.model_dump())
     
     # refresh cookie
     refresh_cookie = CookieResponseOnDelete(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN)
     
-    response.set_cookie(**refresh_cookie.model_dump())
+    response.delete_cookie(**refresh_cookie.model_dump())
     
     # csrf cookie
     csrf_cookie = CookieResponseOnDelete(key=ConstantsKeyData.COOKIE_CSRF_TOKEN)
     csrf_cookie.httponly = False
-    response.set_cookie(**csrf_cookie.model_dump())
+    response.delete_cookie(**csrf_cookie.model_dump())

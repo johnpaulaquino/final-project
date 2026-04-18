@@ -2,9 +2,13 @@ from typing import List
 from uuid import uuid4
 
 from app.src.core.constants import ConstantsData
-from app.src.exceptions.domain_exceptions import DomainLargeFileError, DomainNotFoundError
+from app.src.core.security import AppSecurity
+from app.src.domain.dto.auth_dto import SessionTokenDTO
+from app.src.exceptions.domain_exceptions import (DomainForbiddenAccessError, DomainJWTInvalidError,
+                                                  DomainLargeFileError, DomainNotFoundError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
+from app.src.schema import RoleSchema
 from app.src.schema.products_schema import Images
 from app.src.utils.utility import Utility
 
@@ -92,3 +96,43 @@ class SharedServices:
             return data
         except Exception as e:
             raise e
+    
+    async def check_session_token(self, token: str) -> SessionTokenDTO:
+        
+        try:
+            
+            # hashed token in database
+            if not token:
+                raise DomainJWTInvalidError(message="Refresh token is missing. Please login again.", )
+            hashed_token = AppSecurity.hash_token(token)
+            refresh_token_db = await self.__uow.token_session.find_record(hashed_token)
+            
+            if not refresh_token_db:
+                raise DomainJWTInvalidError(message="Refresh token does not exist. Please login again.", )
+            
+            if refresh_token_db.is_revoke:
+                raise DomainJWTInvalidError(message="Refresh token has been revoked. Please login again.", )
+            
+            return refresh_token_db
+        except Exception as e:
+            raise e
+    
+    async def _check_user_if_exists(self, user_id: str):
+        # retrieved data first
+        data = await self.__uow.users.get_user_info_only(user_id)
+        if not data:
+            raise DomainJWTInvalidError("Invalid user, please back to login.")
+        
+        return data
+    
+    def validate_users_role(self, role: str, is_admin=True):
+        if not role:
+            raise DomainForbiddenAccessError("You don't have rights to access this.")
+        
+        if is_admin:
+            if role != RoleSchema.ADMIN:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")
+        
+        if not is_admin:
+            if role != RoleSchema.CUSTOMER:
+                raise DomainForbiddenAccessError("You don't have rights to access this.")

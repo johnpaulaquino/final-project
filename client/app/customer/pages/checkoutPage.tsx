@@ -203,7 +203,7 @@ export default function CheckoutPage() {
             onProcessPayment={handleProcessPayment}
             isAddressSaved={isAddressReady}
             isProcessing={isProcessing}
-            cart={checkoutCart} // Prop passing the dynamically filtered cart
+            cart={checkoutCart}
           />
         </div>
       </div>

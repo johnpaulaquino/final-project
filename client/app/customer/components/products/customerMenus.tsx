@@ -15,7 +15,8 @@ export default function CustomerMenus() {
   // Pull isLoading and fetchProducts from our updated context
   const { products, fetchProducts, isLoading } = useProduct();
 
-  const filters = ["All", ...categories];
+  // FIXED: Map over the category objects to extract just the string name
+  const filters = ["All", ...categories.map((cat) => cat.category)];
 
   // Fetch from the API whenever the activeFilter changes
   useEffect(() => {
@@ -42,9 +43,6 @@ export default function CustomerMenus() {
     };
   }, [selectedProduct]);
 
-  // We no longer need `filteredProducts` because the API returns EXACTLY what we asked for.
-  // We just render `products` directly.
-
   return (
     <div>
       <div className="mb-6">
@@ -56,7 +54,7 @@ export default function CustomerMenus() {
         <div className="flex gap-3 overflow-x-auto md:flex-wrap md:overflow-visible pb-4 pt-1 w-full scroll-smooth snap-x md:snap-none scrollbar-hide">
           {filters.map((filter) => (
             <button
-              key={filter}
+              key={filter} // This works safely now because filter is guaranteed to be a string
               onClick={() => setActiveFilter(filter)}
               className={`cursor-pointer shrink-0 snap-start px-6 py-2 rounded-[5px] text-sm font-bold whitespace-nowrap shadow-sm transition-colors ${
                 activeFilter === filter

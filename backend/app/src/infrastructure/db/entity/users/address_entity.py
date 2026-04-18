@@ -58,7 +58,7 @@ class UpdateAddress(BaseModel):
     city: Optional[str] = Body(default=None)
     barangay: Optional[str] = Body(default=None)
     postal_code: Optional[str] = Body(default=None)
-    st_bd_hno: OtherInfo = Body(...)
+    st_bd_hno: OtherInfo = Body()
     
     @staticmethod
     def update_depends(fullname: Optional[str] = Body(default=None),
@@ -67,7 +67,7 @@ class UpdateAddress(BaseModel):
                        city: Optional[str] = Body(default=None),
                        barangay: Optional[str] = Body(default=None),
                        postal_code: Optional[str] = Body(default=None),
-                       st_bd_hno: OtherInfo = Body(...)):
+                       st_bd_hno: OtherInfo = Body()):
         return UpdateAddress(fullname=fullname,
                              region=region,
                              province=province,

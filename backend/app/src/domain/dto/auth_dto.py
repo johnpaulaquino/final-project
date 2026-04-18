@@ -49,13 +49,13 @@ class SessionTokenDTO(BaseModel):
     """
     Will use to return the object into services layer. For session Token only.
     """
-    expires_at: datetime = None
-    user_id: str = None
-    token: str = None
-    id: str = None
-    is_revoke: bool = None
-    created_at: datetime = None
-    updated_at: datetime = None
+    expires_at: datetime | None = None
+    user_id: str | None = None
+    token: str | None = None
+    id: str | None = None
+    is_revoke: bool | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class DecodedTokenDTO(BaseModel):

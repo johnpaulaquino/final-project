@@ -4,13 +4,13 @@ from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.domain.dto.products_dto import ProductsInformationFilterWithTags
-from app.src.exceptions.domain_exceptions import (DomainForbiddenAccessError, DomainJWTInvalidError,
-                                                  DomainNotFoundError,
+from app.src.exceptions.domain_exceptions import (DomainNotFoundError,
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
-from app.src.schema.products_schema import (InventoryRequestSchema, ProductCategories, ProductDetailsRequestSchema,
+from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
+from app.src.schema.products_schema import (CreateCategories, InventoryRequestSchema, ProductCategories,
+                                            ProductDetailsRequestSchema,
                                             ProductRequestSchema,
                                             ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
@@ -44,14 +44,10 @@ class ProductsServices(SharedServices):
         product_images = []
         try:
             
-            # retrieved data first
-            data = await self.__uow.users.get_personal_info_only(current_user.user_id)
-            if not data:
-                raise DomainJWTInvalidError("Invalid user, please back to login.")
-            
-            # hen check if it's admin
-            if not current_user.role or current_user.role != RoleSchema.ADMIN:
-                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            # call the function that is from shared service where, retrieve user and validate it
+            await self._check_user_if_exists(current_user.user_id)
+            # then check if it's admin
+            self.validate_users_role(current_user.role)
             # check if the images uploaded in the server exceed to maximum 5, then raise an error.
             if len(filenames) > 5:
                 raise DomainUnprocessableEntityError(
@@ -82,6 +78,26 @@ class ProductsServices(SharedServices):
                 for product_image in product_images:
                     public_key = product_image.public_key
                     await self.cloudinary_infrastructure.destroy_images(public_key)
+            raise e
+    
+    @retry_on_transient
+    async def insert_category(self, categories: CreateCategories, current_user: DecodedTokenDTO):
+        try:
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # then check if it's admin
+            self.validate_users_role(current_user.role)
+            
+            # then validate data before it insert
+            list_of_categories = []
+            for category in categories.category:
+                
+                category = Utility.capitalize_first_letters(category)
+                list_of_categories.append(category)
+            
+            await self.__uow.products.insert_categories(list_of_categories)
+            return SuccessfulResponseSchema(message="Successfully inserted category.")
+        except Exception as e:
             raise e
     
     @retry_on_transient
@@ -130,7 +146,6 @@ class ProductsServices(SharedServices):
             return response
         
         except Exception as e:
-            print(str(e))
             raise e
     
     @retry_on_transient
@@ -174,6 +189,17 @@ class ProductsServices(SharedServices):
         return response
     
     @retry_on_transient
+    async def get_product_categories(self):
+        try:
+            data = await self.__uow.products.get_product_categories()
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully but no data to retrieve.")
+            
+            return SuccessfulResponseSchema(data=data, message="Successfully retrieved categories.")
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
     async def get_product_information_paginated_with_tags(self, paginated: PaginatedSchema):
         
         # calculate the offset
@@ -196,6 +222,13 @@ class ProductsServices(SharedServices):
         return response
     
     @retry_on_transient
+    async def get_low_stock_overview(self):
+        try:
+            pass
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
     async def update_product_information(self, product_id: str,
                                          new_data: UpdateProductsInformationRequestSchema,
                                          filenames: List[str],
@@ -203,10 +236,13 @@ class ProductsServices(SharedServices):
                                          img_bytes: List[bytes]):
         new_product_images = None
         is_images_uploaded = False
-        # hen check if it's admin
-        if not current_user.role or current_user.role != RoleSchema.ADMIN:
-            raise DomainForbiddenAccessError("You don't have rights to access this.")
+        
         try:
+            # check first if user exist
+            await self.check_if_user_exists(current_user.user_id)
+            # then check if it's admin
+            self.validate_users_role(current_user.role)
+            
             # first query the data from db
             data = await self.__uow.products.find_record(product_id)
             if not data:
@@ -314,9 +350,10 @@ class ProductsServices(SharedServices):
                                                    current_user: DecodedTokenDTO,
                                                    ):
         
-        # hen check if it's admin
-        if not current_user.role or current_user.role != RoleSchema.ADMIN:
-            raise DomainForbiddenAccessError("You don't have rights to access this.")
+        # check first if user exist
+        await self.check_if_user_exists(current_user.user_id)
+        # then check the role if it's admin
+        self.validate_users_role(current_user.role)
         try:
             # first query the data from db
             data = await self.__uow.products.find_record(product_id)
@@ -401,9 +438,11 @@ class ProductsServices(SharedServices):
         new_product_images = None
         
         try:
-            if not current_user.role or current_user.role != RoleSchema.ADMIN:
-                raise DomainForbiddenAccessError("You don't have rights to access this.")
-                # first query the data from db
+            # check first if user exist
+            await self.check_if_user_exists(current_user.user_id)
+            # then check the role if it's admin
+            self.validate_users_role(current_user.role)
+            # first query the data from db
             data = await self.__uow.products.get_product_details_only(product_id)
             
             if not data:
@@ -459,8 +498,10 @@ class ProductsServices(SharedServices):
     @retry_on_transient
     async def delete_product_information(self, product_id, current_user: DecodedTokenDTO):
         try:
-            if not current_user.role or current_user.role != RoleSchema.ADMIN:
-                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            # check first if user exist
+            await self.check_if_user_exists(current_user.user_id)
+            # then check the role if it's admin
+            self.validate_users_role(current_user.role)
             data = await self.__uow.products.find_record(product_id)
             if not data:
                 raise DomainNotFoundError("Cannot delete product that does not exist.")

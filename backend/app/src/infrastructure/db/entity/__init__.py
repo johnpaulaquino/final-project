@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel
 
 from app.src.infrastructure.db.entity.products.carts_entity import Carts
+from app.src.infrastructure.db.entity.products.categories_entity import Categories
 from app.src.infrastructure.db.entity.products.inventory_entity import Inventory
 from app.src.infrastructure.db.entity.products.orders_entity import Orders
 from app.src.infrastructure.db.entity.products.product_details_entity import ProductDetails
@@ -26,4 +27,5 @@ __all__ = ["Users",
            "Transactions",
            "Orders",
            "SessionToken",
+           "Categories",
            "ProductRatings"]

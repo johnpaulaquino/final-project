@@ -1,11 +1,12 @@
-from sqlalchemy import delete, distinct, func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.src.domain.dto.products_dto import (ListOfProductInformationDTO, ProductDetailsDTO, ProductInformationDTO,
                                              ProductsDataDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import Inventory, ProductDetails, ProductRatings, Products
-from app.src.schema.products_schema import ProductCategories, ProductsFullInformationRequestSchema, ProductsTags
+from app.src.infrastructure.db.entity import Categories, Inventory, ProductDetails, ProductRatings, Products
+from app.src.schema.products_schema import (ProductCategories, ProductsFullInformationRequestSchema,
+                                            ProductsTags, )
 
 
 class ProductsRepository(UserInterface):
@@ -38,12 +39,24 @@ class ProductsRepository(UserInterface):
         # return the Products DTO
         return ProductsDataDTO.model_validate(products, from_attributes=True)
     
+    async def insert_categories(self, categories):
+        try:
+            list_of_categories = []
+            for categ in categories:
+                category = Categories(category=categ)
+                list_of_categories.append(category)
+            
+            self._db.add_all(list_of_categories)
+        except Exception as e:
+            raise e
+    
     async def get_product_categories(self):
+        
         try:
             # select only the distinc category or unique.
-            stmt = select(distinct(Products.category).label("category"))
+            stmt = select(Categories).distinct(Categories.category)
             result = await self._db.execute(stmt)
-            data = result.scalars().fetchall()
+            data = result.scalars().unique().fetchall()
             return data
         except Exception as e:
             raise e
@@ -204,6 +217,12 @@ class ProductsRepository(UserInterface):
             result = await self._db.execute(stmt)
             data = result.scalars().first()
             return data
+        except Exception as e:
+            raise e
+    
+    async def get_low_stock_overview(self, offset, limit):
+        try:
+            pass
         except Exception as e:
             raise e
     
