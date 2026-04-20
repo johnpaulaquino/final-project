@@ -12,10 +12,12 @@ export interface Product {
     category: string;
     description?: string;
   };
+  
   review_count: number;
   quantity: number; // Backend stock
   avg_rating: number | null;
   images: { image_url: string }[];
+  low_stock_threshold: number; // New field for low stock threshold
 }
 
 export interface CartProduct {

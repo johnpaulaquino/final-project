@@ -2,20 +2,96 @@
 
 import React, { useState } from "react";
 import { useCategory } from "../../../customer/context/contextCategory";
+import { apiClient } from "@/lib/api";
 
 export default function Categories() {
   const { categories, addCategory, deleteCategory } = useCategory();
-  const [newCategoryName, setNewCategoryName] = useState("");
 
-  const handleAddClick = () => {
-    if (newCategoryName.trim()) {
-      addCategory(newCategoryName);
+  // Input & Loading States
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Feedback Message States
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Helper to show messages and auto-hide them after 3 seconds
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setErrorMessage(""); // Clear any existing errors
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  const showError = (msg: string) => {
+    setErrorMessage(msg);
+    setSuccessMessage(""); // Clear any existing successes
+    setTimeout(() => setErrorMessage(""), 3000);
+  };
+
+  // --- ADD CATEGORY ---
+  const handleAddClick = async () => {
+    const trimmedName = newCategoryName.trim();
+    if (!trimmedName) return;
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      const newCategoryDataList = [trimmedName];
+      // Note: Assuming your API base handles the "/v1" prefix if needed
+      await apiClient.post("/products/category", {
+        category: newCategoryDataList,
+      });
+
+      // Update the Context/UI
+      addCategory(trimmedName);
       setNewCategoryName("");
+      showSuccess(`"${trimmedName}" was added successfully!`);
+    } catch (error: any) {
+      console.error("Failed to add category:", error);
+      showError(error?.message || "Failed to add category. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- DELETE CATEGORY ---
+  const handleDeleteClick = async (
+    categoryId: string,
+    categoryName: string,
+  ) => {
+    if (!window.confirm(`Delete the "${categoryName}" category?`)) return;
+
+    try {
+      // Calls your endpoint: @v1_products_router.delete('/category/{category_id}')
+      await apiClient.delete(`/products/category/${categoryId}`);
+
+      // Update the Context/UI
+      deleteCategory(categoryId);
+      showSuccess(`"${categoryName}" was deleted successfully!`);
+    } catch (error: any) {
+      console.error("Failed to delete category:", error);
+      showError(
+        error?.message || "Failed to delete category. Please try again.",
+      );
     }
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl relative">
+      {/* FEEDBACK MESSAGES */}
+      {successMessage && (
+        <div className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200 animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="font-bold">Success!</span> {successMessage}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200 animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="font-bold">Error:</span> {errorMessage}
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-[10px] border border-blue-100">
@@ -27,7 +103,7 @@ export default function Categories() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Add Category */}
+        {/* Add Category Panel */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-[10px] border border-gray-100 shadow-sm">
             <h4 className="text-md font-black text-gray-900 mb-4">
@@ -38,35 +114,42 @@ export default function Categories() {
                 type="text"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
+                disabled={isSubmitting}
                 placeholder="e.g. Signature Drinks"
-                className="w-full p-3.5 rounded-[10px] border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors font-medium"
+                className="w-full p-3.5 rounded-[10px] border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors font-medium disabled:opacity-50"
                 onKeyDown={(e) => e.key === "Enter" && handleAddClick()}
               />
               <button
                 onClick={handleAddClick}
-                disabled={!newCategoryName.trim()}
+                disabled={!newCategoryName.trim() || isSubmitting}
                 className="w-full bg-[#800000] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-[10px] hover:bg-red-900 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Add Category
+                {isSubmitting ? (
+                  // Loading spinner
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  // Normal Icon
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                )}
+                {isSubmitting ? "Adding..." : "Add Category"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* List of Category */}
+        {/* List of Categories */}
         <div className="lg:col-span-2">
           <div className="bg-white p-6 md:p-8 rounded-[10px] border border-gray-100 shadow-sm min-h-[300px]">
             {categories.length === 0 ? (
@@ -100,18 +183,13 @@ export default function Categories() {
                     className="group p-3 border border-gray-100 rounded-[10px] bg-gray-50/50 hover:bg-white hover:border-blue-200 transition-colors flex justify-between items-center"
                   >
                     <div className="flex items-center gap-3">
-                      {/* Folder Icon */}
                       <span className="font-bold text-sm text-gray-800">
                         {cat.category}
                       </span>
                     </div>
 
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Delete the "${cat}" category?`)) {
-                          deleteCategory(cat.id);
-                        }
-                      }}
+                      onClick={() => handleDeleteClick(cat.id, cat.category)}
                       className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500 rounded-[5px] transition-colors cursor-pointer"
                       title="Delete Category"
                     >

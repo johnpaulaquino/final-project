@@ -260,18 +260,20 @@ export const apiClient = {
   },
 
   logout: async () => {
-    // 1. Clear frontend memory
+    // Clear frontend memory
     setAccessToken(null);
 
-    // 2. Tell backend to invalidate/delete the HttpOnly cookie (Optional but recommended)
     try {
-      // Assuming you create a /logout endpoint on FastAPI that deletes the cookie
-      // await fetchWithTimeout(`${API_BASE_URL}/api/v1/auth/logout`, { method: "POST", credentials: "include" });
+      //call the logout endpoint to clear the HttpOnly refresh token cookie
+      await fetchWithTimeout(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
     } catch (e) {
       console.warn("Backend logout failed, but frontend is cleared.");
     }
 
-    // 3. Redirect
+    //Redirect back to the login page (or homepage)
     if (typeof window !== "undefined") {
       window.location.href = "/";
     }

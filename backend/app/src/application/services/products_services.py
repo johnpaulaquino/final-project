@@ -520,3 +520,20 @@ class ProductsServices(SharedServices):
             return response
         except Exception as e:
             raise e
+    
+    @retry_on_transient
+    async def delete_category(self, category_id: str, current_user: DecodedTokenDTO):
+        try:
+            # validate user if exists
+            await self.check_if_user_exists(current_user.user_id)
+            
+            # check the user role
+            self.validate_users_role(current_user.role)
+            
+            data = await self.__uow.products.find_category(category_id)
+            if not data:
+                raise DomainNotFoundError("Cannot delete category that is not exists.")
+            await self.__uow.products.delete_category(category_id)
+            return SuccessfulResponseSchema(message="Successfully deleted category.")
+        except Exception as e:
+            raise e

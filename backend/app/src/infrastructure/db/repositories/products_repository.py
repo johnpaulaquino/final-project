@@ -344,3 +344,19 @@ class ProductsRepository(UserInterface):
         """
         stmt = delete(Products).where(Products.id == record_id)
         await self._db.execute(stmt)
+    
+    async def find_category(self, category_id: str):
+        try:
+            stmt = select(Categories).where(Categories.id == category_id)
+            result = await self._db.execute(stmt)
+            data = result.scalars().one()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def delete_category(self, category_id: str):
+        try:
+            stmt = delete(Categories).where(Categories.id == category_id)
+            await self._db.execute(stmt)
+        except Exception as e:
+            raise e

@@ -51,6 +51,7 @@ async def insert_category(categories: CreateCategories,
                           product_services: ProductsServices = Depends(
                                   get_products_service)):
     try:
+        
         product_services_response = await product_services.insert_category(categories, current_user)
         product_services_response.status_code = status.HTTP_201_CREATED
         response = SuccessfulResponse(product_services_response)
@@ -81,6 +82,7 @@ async def get_products_by_categories(category: str = Query(), paginated: Paginat
                                              get_products_service)):
     
     try:
+        
         product_response = await product_services.get_products_by_categories(category, paginated)
         product_response.status_code = 200
         response = SuccessfulResponse(product_response)
@@ -230,6 +232,22 @@ async def delete_product(product_id: str,
         response = SuccessfulResponse(services_response)
         
         # return the http response
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.delete('/category/{category_id}')
+async def delete_category(category_id: str,
+                          product_services: ProductsServices = Depends(get_products_service),
+                          current_user: DecodedTokenDTO = Depends(get_current_user), ):
+    try:
+        product_services_response = await product_services.delete_category(category_id, current_user)
+        
+        product_services_response.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(product_services_response)
+        
         return response
     except Exception as e:
         raise e
