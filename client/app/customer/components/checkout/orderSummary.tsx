@@ -1,26 +1,29 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react"; // Added useState
 import Image from "next/image";
 import { CartItem, useCart } from "../../context/contextCart";
 import { useOrders, Order } from "../../context/contextOrder";
+import ConfirmationModal from "../ConfirmationModal";
 
 interface OrderSummaryProps {
   onProcessPayment: () => void;
   isAddressSaved: boolean;
   isProcessing?: boolean;
-  cart: CartItem[]; 
+  cart: CartItem[];
 }
 
-export default function orderSummary({
+export default function OrderSummary({
   onProcessPayment,
   isAddressSaved,
   isProcessing = false,
-  cart, 
+  cart,
 }: OrderSummaryProps) {
-  
-  const { addOrder } = useOrders();
+  const { addOrder } = useOrders() as any;
   const { clearCart } = useCart();
+
+  // --- NEW: State to control our dynamic modal ---
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const totalPrice = cart.reduce(
     (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
@@ -30,30 +33,33 @@ export default function orderSummary({
   const shippingCost: number = 0;
   const finalTotal = totalPrice + shippingCost;
 
+  // This is the actual function that runs WHEN THE MODAL IS CONFIRMED
   const handlePlaceOrder = () => {
-    const sharedStringId = `#ORD-${Math.floor(10000 + Math.random() * 90000)}`;
-    const currentDate = new Date().toISOString();
-
     cart.forEach((item) => {
       const newOrder: Order = {
-        id: Math.floor(Math.random() * 1000000), 
-        string_id: sharedStringId,
-        user_id: 1, 
-        client_name: "Current User", 
-        product_id: Number(item.Carts.product_id), 
+        id: Math.floor(Math.random() * 1000000),
+        string_id: null as any,
         product_name: item.Products.product_name,
         quantity: item.Carts.quantity,
-        price: parseFloat(item.Products.price) * item.Carts.quantity, 
-        order_status: 'Pending',
-        address_id: 1, 
-        created_at: currentDate,
+        price: parseFloat(item.Products.price),
+        total_amount: parseFloat(item.Products.price) * item.Carts.quantity,
+        order_status: "Pending",
+        transaction_reference: null as any,
+        created_at: null as any,
       };
-      
-      addOrder(newOrder);
+
+      if (addOrder) {
+        addOrder(newOrder);
+      }
     });
-    
-    clearCart(); 
-    onProcessPayment(); 
+
+    clearCart();
+    setIsConfirmModalOpen(false);
+    onProcessPayment();
+
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.href = "/";
+    }
   };
 
   return (
@@ -141,9 +147,8 @@ export default function orderSummary({
         </span>
       </div>
 
-      {/* checkout button */}
       <button
-        onClick={handlePlaceOrder}
+        onClick={() => setIsConfirmModalOpen(true)}
         disabled={cart.length === 0 || !isAddressSaved || isProcessing}
         className="w-full bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
       >
@@ -155,6 +160,21 @@ export default function orderSummary({
               ? "Confirm Address to Continue"
               : "Place Order"}
       </button>
+
+      {/* THE DYNAMIC MODAL: Adapted for placing an order */}
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        title="Confirm Order"
+        message={`Are you sure you want to place this order for ₱${finalTotal.toFixed(2)}?`}
+        cancelText="Cancel"
+        confirmText="Confirm Order"
+        processingText="Processing..."
+        isProcessing={isProcessing}
+        onCancel={() => setIsConfirmModalOpen(false)}
+        onConfirm={handlePlaceOrder}
+        // Use the dark blue theme instead of red for positive actions
+        confirmColorClass="bg-[#0B1527] hover:bg-gray-800"
+      />
     </div>
   );
 }

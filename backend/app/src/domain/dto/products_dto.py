@@ -29,6 +29,7 @@ class ProductInformationDTO(BaseModel):
     description: str | None = None
     images: List[dict] | None = None
     inventory_id: int | None = None
+    stock_status: str | None = None
 
 
 class ListOfProductInformationDTO(BaseModel):

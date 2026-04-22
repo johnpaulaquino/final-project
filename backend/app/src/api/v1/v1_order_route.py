@@ -109,4 +109,5 @@ async def cancel_order(order_id: str,
         
         return SuccessfulResponse(order_response)
     except Exception as e:
+        print(e)
         raise e

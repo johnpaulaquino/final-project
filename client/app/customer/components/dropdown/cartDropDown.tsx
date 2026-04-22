@@ -68,6 +68,7 @@ export default function CartDropDown({
   const handleCheckout = () => {
     setCheckoutItems(selectedItems);
     setActiveTab("Checkout");
+    
   };
 
   return (
