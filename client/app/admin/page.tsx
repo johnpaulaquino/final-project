@@ -12,12 +12,14 @@ import Notifications from './pages/notificationPage';
 import Analytics from './pages/analyticsPage';
 
 import ProductsLayout from './pages/products/productsLayout';
+import CustomerLayout from './pages/customer/customerLayout';
 
 import InventoryCheck from './pages/inventoryCheckPage';
 
 // Customer Pages
 import CustomerList from './pages/customer/customerPage';
 import SalesHistory from './pages/customer/historySalesPage';
+import OrderManagement from './pages/customer/orderManagementPage';
 
 export default function AdminPage() {
   // Default to the Overview dashboard on load
@@ -33,6 +35,12 @@ export default function AdminPage() {
       return <ProductsLayout activeTab={activeTab} setActiveTab={setActiveTab} />;
     }
 
+    const customerTabs = ['Customer List', 'Sales History', 'Order Management'];
+
+    if (customerTabs.includes(activeTab)) {
+      return <CustomerLayout activeTab={activeTab} setActiveTab={setActiveTab} />;
+    }
+
     // 2. Otherwise, render normal top-level pages
     switch (activeTab) {
       case 'Overview': return <Overview />;
@@ -43,7 +51,8 @@ export default function AdminPage() {
       // Customers Sub-menu
       case 'Customer List': return <CustomerList />;
       case 'Sales History': return <SalesHistory />;
-      
+      case 'Order Management': return <OrderManagement />;
+
       default: return <Overview />;
     }
   };

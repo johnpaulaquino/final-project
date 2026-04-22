@@ -260,6 +260,12 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
             >
               Sales History
             </button>
+            <button
+              onClick={() => setActiveTab("Order Management")}
+              className={`py-2 text-sm text-left transition-colors ${activeTab === "Order Management" ? "text-[#800000] font-bold" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              Order Management
+            </button>
           </div>
         )}
       </div>

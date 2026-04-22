@@ -54,6 +54,8 @@ interface CartContextType {
   // --- ADDED: State to hold selected checkout items ---
   checkoutItems: (string | number)[];
   setCheckoutItems: React.Dispatch<React.SetStateAction<(string | number)[]>>;
+
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -182,6 +184,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }),
     );
   };
+
+  const clearCart = async () => {
+    // Note: If you have a backend endpoint to clear the user's cart upon checkout, 
+    // you would await it here (e.g., await apiClient.delete('/cart/clear'); )
+    setCart([]);
+    setCheckoutItems([]);
+  };
+
   const totalItems = cart.length;
   const totalPrice = cart.reduce(
     (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
@@ -202,6 +212,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // --- ADDED: Export them so your components can use them ---
         checkoutItems,
         setCheckoutItems,
+        clearCart,
       }}
     >
       {children}

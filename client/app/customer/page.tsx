@@ -7,6 +7,7 @@ import Menu from './pages/menuPage';
 import Deals from './pages/dealsPage';
 import Checkout from './pages/checkoutPage';
 import AccountSetting from './pages/accountSettingPage';
+import Order from './pages/orderPage';
 import Chatbot from './components/chatbot/chatBot';
 
 
@@ -24,6 +25,7 @@ export default function Page() {
         {activeTab === 'Deals' && <Deals />}
         {activeTab === 'Checkout' && <Checkout />}
         {activeTab === 'AccountSetting' && <AccountSetting />}
+        {activeTab === 'Order' && <Order />}
         <Chatbot/>
       </div>
 

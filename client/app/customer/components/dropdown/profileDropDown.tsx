@@ -4,14 +4,15 @@ import { apiClient } from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function profileDropDown({
-  setActiveTab,
-}: {
-  setActiveTab: (tab: string) => void;
-}) {
+export default function profileDropDown({setActiveTab,}: {setActiveTab: (tab: string) => void;}) {
+
   const handleProfileClick = () => {
     setActiveTab("AccountSetting");
   };
+
+  const handleOrdersClick = () => {
+    setActiveTab("Order");
+  }
 
   const handleLogout = async () => {
     try {
@@ -38,9 +39,9 @@ export default function profileDropDown({
 
       {/* menus */}
       <div className="p-2 flex flex-col gap-1">
-        <Link
-          href="/orders"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors"
+        <button
+          onClick={handleOrdersClick}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors"
         >
           <svg
             className="w-5 h-5 text-gray-400"
@@ -57,7 +58,7 @@ export default function profileDropDown({
             />
           </svg>
           <span className="font-medium text-sm">My Orders</span>
-        </Link>
+        </button>
 
         <button
           onClick={handleProfileClick}

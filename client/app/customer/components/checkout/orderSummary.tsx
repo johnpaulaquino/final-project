@@ -2,23 +2,26 @@
 
 import React from "react";
 import Image from "next/image";
-// Import CartItem type so TypeScript knows what the cart array looks like
-import { CartItem } from "../../context/contextCart";
+import { CartItem, useCart } from "../../context/contextCart";
+import { useOrders, Order } from "../../context/contextOrder";
 
 interface OrderSummaryProps {
   onProcessPayment: () => void;
   isAddressSaved: boolean;
   isProcessing?: boolean;
-  cart: CartItem[]; // <--- ADDED: Tell TypeScript to expect the filtered cart array
+  cart: CartItem[]; 
 }
 
-export default function OrderSummary({
+export default function orderSummary({
   onProcessPayment,
   isAddressSaved,
   isProcessing = false,
-  cart, // <--- ADDED: Receive the filtered cart from CheckoutPage
+  cart, 
 }: OrderSummaryProps) {
-  // REMOVED useCart() - We calculate the total dynamically based on the passed items!
+  
+  const { addOrder } = useOrders();
+  const { clearCart } = useCart();
+
   const totalPrice = cart.reduce(
     (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
     0,
@@ -26,6 +29,32 @@ export default function OrderSummary({
 
   const shippingCost: number = 0;
   const finalTotal = totalPrice + shippingCost;
+
+  const handlePlaceOrder = () => {
+    const sharedStringId = `#ORD-${Math.floor(10000 + Math.random() * 90000)}`;
+    const currentDate = new Date().toISOString();
+
+    cart.forEach((item) => {
+      const newOrder: Order = {
+        id: Math.floor(Math.random() * 1000000), 
+        string_id: sharedStringId,
+        user_id: 1, 
+        client_name: "Current User", 
+        product_id: Number(item.Carts.product_id), 
+        product_name: item.Products.product_name,
+        quantity: item.Carts.quantity,
+        price: parseFloat(item.Products.price) * item.Carts.quantity, 
+        order_status: 'Pending',
+        address_id: 1, 
+        created_at: currentDate,
+      };
+      
+      addOrder(newOrder);
+    });
+    
+    clearCart(); 
+    onProcessPayment(); 
+  };
 
   return (
     <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col h-full">
@@ -114,12 +143,12 @@ export default function OrderSummary({
 
       {/* checkout button */}
       <button
-        onClick={onProcessPayment}
-        disabled={cart.length === 0 || !isAddressSaved || isProcessing} // Disable if processing
+        onClick={handlePlaceOrder}
+        disabled={cart.length === 0 || !isAddressSaved || isProcessing}
         className="w-full bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
       >
         {isProcessing
-          ? "Processing..." // Show loading text
+          ? "Processing..."
           : cart.length === 0
             ? "Cart is Empty"
             : !isAddressSaved
