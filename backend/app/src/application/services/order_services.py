@@ -1,3 +1,4 @@
+from app.src.application.services import retry_on_transient
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError, DomainForbiddenAccessError,
                                                   DomainJWTInvalidError,
@@ -18,6 +19,7 @@ class OrderServices:
     
     # the user id depends on the user who are logged in.
     # will insert safe router to this
+    @retry_on_transient
     async def insert_order(self, new_order: CreateOrderSchema, current_user: DecodedTokenDTO):
         
         try:
@@ -74,6 +76,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def batch_insert_order(self, new_orders: BatchCreateOrderSchema, current_user: DecodedTokenDTO):
         try:
             
@@ -133,6 +136,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def handle_gcash_payment(self):
         
         try:
@@ -140,12 +144,14 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def handle_stripe_payment(self):
         try:
             pass
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def confirm_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
         
         try:
@@ -179,6 +185,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def ship_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
         try:
             # validate the role
@@ -207,6 +214,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def cancel_order(self, order_id,
                            current_user: DecodedTokenDTO):
         try:
@@ -244,6 +252,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def delivered_order(self, order_id, user_id, current_user: DecodedTokenDTO):
         
         try:
@@ -251,6 +260,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def received_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
         try:
             # validate the role
@@ -280,6 +290,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def get_paginated_orders(self, paginated: PaginatedSchema,
                                    order_status: str,
                                    current_user: DecodedTokenDTO):
@@ -311,6 +322,7 @@ class OrderServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def __check_product_orders_user_exist(self, order_id, user_id, message):
         
         try:

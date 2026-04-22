@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from './customer/context/contextCart';
+import { CartProvider } from "./customer/context/contextCart";
 import { AccountProvider } from "./customer/context/contextAccount";
-import { CategoryProvider } from "./customer/context/contextCategory"; 
+import { CategoryProvider } from "./customer/context/contextCategory";
 import { ProductProvider } from "./customer/context/contextProduct";
 import { BannerProvider } from "./customer/context/contextBanner";
+
+import { NotificationProvider } from "./customer/context/contextNotification";
 import { OrderProvider } from "./customer/context/contextOrder";
 
 const geistSans = Geist({
@@ -33,19 +35,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <CartProvider>
-          <AccountProvider>
-            <CategoryProvider>
-              <ProductProvider>
-                <BannerProvider>
-                  <OrderProvider>
-                    {children}
-                  </OrderProvider>
-                </BannerProvider>
-              </ProductProvider>
-            </CategoryProvider>
-          </AccountProvider>
-        </CartProvider>
+        {/* Outermost: Knows WHO the user is */}
+        <AccountProvider>
+          {/* Middle: User-specific features (Cart & Notifications) */}
+          <NotificationProvider>
+            <CartProvider>
+              <OrderProvider>
+                {/* Innermost: Global App Data (Products, Categories, Banners) */}
+                <CategoryProvider>
+                  <ProductProvider>
+                    <BannerProvider>
+                      {/* Your Pages */}
+                      {children}
+                    </BannerProvider>
+                  </ProductProvider>
+                </CategoryProvider>
+              </OrderProvider>
+            </CartProvider>
+          </NotificationProvider>
+        </AccountProvider>
       </body>
     </html>
   );

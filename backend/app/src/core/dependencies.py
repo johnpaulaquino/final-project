@@ -1,10 +1,13 @@
-from typing import Any, AsyncGenerator
+from typing import Annotated, Any, AsyncGenerator
 
-from fastapi import Depends, Request
+from fastapi import Cookie, Depends, Request, WebSocketException
 from fastapi.security import OAuth2PasswordBearer
+from jose import ExpiredSignatureError
+from starlette import status
 
 from app.src.application.services.auth_services import AuthServices
 from app.src.application.services.carts_services import CartsServices
+from app.src.application.services.notification_services import NotificationServices
 from app.src.application.services.order_services import OrderServices
 from app.src.application.services.products_services import ProductsServices
 from app.src.application.services.user_services import UserServices
@@ -106,3 +109,45 @@ def get_cart_service(
         uow: SQLUnitOfWork = Depends(get_uow),
         ) -> CartsServices:
     return CartsServices(uow)
+
+
+def get_notification_service(uow: SQLUnitOfWork = Depends(get_uow)) -> NotificationServices:
+    return NotificationServices(uow)
+
+
+def get_current_user_websocket(access_token: Annotated[str | None, Cookie()] = None,
+                               ) -> DecodedTokenDTO:
+    """
+    Validates the user via HttpOnly cookie before allowing a WebSocket connection.
+    Throws a 1008 Policy Violation if auth fails, triggering the frontend to refresh.
+    """
+    
+    # No cookie found? Reject immediately.
+    if not access_token:
+        raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid token."
+                )
+    
+    try:
+        # Decode the token using your secret key
+        payload = AppSecurity.decode_jwt_token(access_token)
+        
+        if not payload.get("user_id"):
+            raise WebSocketException(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason="Invalid token."
+                    )
+        
+        # Success! Return the user_id to the router
+        return DecodedTokenDTO(**payload)
+    
+    except ExpiredSignatureError as e:
+        raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason=str(e)
+                )
+    
+    except Exception as e:
+        # Catch-all for tampered or invalid tokens
+        raise e
