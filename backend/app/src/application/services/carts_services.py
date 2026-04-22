@@ -1,3 +1,4 @@
+from app.src.application.services import retry_on_transient
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.domain_exceptions import DomainForbiddenAccessError, DomainNotFoundError
 from app.src.exceptions.http_exceptions import JWTInvalidException
@@ -11,6 +12,7 @@ class CartsServices:
     def __init__(self, uof: SQLUnitOfWork):
         self.__uof = uof
     
+    @retry_on_transient
     async def insert_cart(self, cart_data: CreateCart, current_user: DecodedTokenDTO):
         try:
             
@@ -45,6 +47,7 @@ class CartsServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def get_product_cart(self, cart_id: str, product_id: str, current_user: DecodedTokenDTO):
         try:
             # check first if there's a user
@@ -63,6 +66,7 @@ class CartsServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def get_paginated_user_cart(self, paginated: PaginatedSchema, current_user: DecodedTokenDTO):
         try:
             # check first if user exists
@@ -91,6 +95,7 @@ class CartsServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def delete_user_cart(self, cart_id: str, current_user: DecodedTokenDTO):
         try:
             # check if there's a cart
@@ -105,6 +110,7 @@ class CartsServices:
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def check_user_exists(self, current_user: DecodedTokenDTO):
         try:
             # check first if there's a user
