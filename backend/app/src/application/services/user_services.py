@@ -1,6 +1,7 @@
 import phonenumbers
 from phonenumbers import geocoder
 
+from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
@@ -23,6 +24,7 @@ class UserServices(SharedServices):
         self.__cloudinary_infrastructure = cloudinary_infrastructure
         super().__init__(uow, cloudinary_infrastructure)
     
+    @retry_on_transient
     async def update_profile_information(self, data: UpdateUserSchema,
                                          current_user: DecodedTokenDTO,
                                          filename: str,
@@ -73,6 +75,7 @@ class UserServices(SharedServices):
             
             raise e
     
+    @retry_on_transient
     async def insert_address(self, address: CreateAddress, current_user: DecodedTokenDTO):
         try:
             # always check in the protected route if user exists.
@@ -105,6 +108,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def get_user_addresses(self, current_user: DecodedTokenDTO):
         try:
             data = await self.__uow.users.get_addresses_only(current_user.user_id)
@@ -115,6 +119,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def get_information(self, current_user: DecodedTokenDTO):
         try:
             data = await self.__uow.users.find_record_by_id(current_user.user_id)
@@ -126,6 +131,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def send_sms_otp(self, contact_number: str, current_user: DecodedTokenDTO, old_otp: str):
         try:
             # Implement dito yung, isang verification lang kada 1 device per hour para maiwasan ang spam verification.
@@ -154,6 +160,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def verify_sms_otp(self, otp_code: str, otp_from_redis: str, current_user: DecodedTokenDTO):
         try:
             # check otp
@@ -179,6 +186,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def update_address(self, address: UpdateAddress, address_id: str, current_user: DecodedTokenDTO):
         try:
             data = await self.__uow.users.get_user_info_only(current_user.user_id)
@@ -210,6 +218,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def change_password(self, change_password: ChangePasswordSchema, refresh_token: str,
                               current_user: DecodedTokenDTO):
         
@@ -267,6 +276,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def change_email(self, new_email: str, current_user: DecodedTokenDTO):
         # TODO Project To follow na lang muna
         try:
@@ -280,6 +290,7 @@ class UserServices(SharedServices):
         except Exception as e:
             raise e
     
+    @retry_on_transient
     async def delete_user_address(self, address_id: str, current_user: DecodedTokenDTO):
         try:
             data = await self.__uow.users.get_address_only(user_id=current_user.user_id, address_id=address_id)

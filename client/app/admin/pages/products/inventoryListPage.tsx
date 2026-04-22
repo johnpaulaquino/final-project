@@ -7,12 +7,11 @@ import { Product } from "../../../customer/context/contextCart";
 
 export default function InventoryList() {
   // deleteProduct is removed from here since it will be handled inside your modal
-  const { products,fetchProducts, updateProduct } = useProduct();
+  const { products, fetchProducts, updateProduct } = useProduct();
   useEffect(() => {
-      // You can adjust skip and limit here if you implement pagination later
-      fetchProducts("All", 1, 10);
-    }, ["All", fetchProducts]);
-  
+    // You can adjust skip and limit here if you implement pagination later
+    fetchProducts("All", 1, 10);
+  }, ["All", fetchProducts]);
 
   // State for Modal
   const [isEditOpen, setIsEditOpen] = useState(false);

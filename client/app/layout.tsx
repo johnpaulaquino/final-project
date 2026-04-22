@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from './customer/context/contextCart';
+import { CartProvider } from "./customer/context/contextCart";
 import { AccountProvider } from "./customer/context/contextAccount";
-import { CategoryProvider } from "./customer/context/contextCategory"; 
+import { CategoryProvider } from "./customer/context/contextCategory";
 import { ProductProvider } from "./customer/context/contextProduct";
 import { BannerProvider } from "./customer/context/contextBanner";
 import { OrderProvider } from "./customer/context/contextOrder";
+import { NotificationProvider } from "./customer/context/contextNotification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,9 @@ export default function RootLayout({
               <ProductProvider>
                 <BannerProvider>
                   <OrderProvider>
+                    <NotificationProvider>
                     {children}
+                    </NotificationProvider>
                   </OrderProvider>
                 </BannerProvider>
               </ProductProvider>
