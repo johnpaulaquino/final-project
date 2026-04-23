@@ -123,13 +123,13 @@ export function NotificationProvider({
     const wsUrl = "ws://localhost:9898/api/v1/biskota/notifications/";
 
     const connectWebSocket = () => {
-      console.log("Attempting to connect to:", wsUrl); // Debug log to verify URL
+      console.log("Attempting to connect to:", wsUrl);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log("🟢 WebSocket Connected!");
-        isRefreshingRef.current = false;
+        isRefreshingRef.current = false; // Reset lock on successful connection
       };
 
       ws.onmessage = (event) => {
@@ -142,14 +142,32 @@ export function NotificationProvider({
           `🔴 WebSocket Closed. Code: ${event.code}, Reason: ${event.reason}`,
         );
 
-        if (event.code === 1008) {
-          if (isRefreshingRef.current) return;
+        // 1008 = Policy Violation (Custom FastAPI Error)
+        // 1006 = Abnormal Closure (Browser dropped connection due to 401 Unauthorized)
+        if (event.code === 1008 || event.code === 1006) {
+          if (isRefreshingRef.current) return; // Prevent spamming the refresh endpoint
+
+          console.log(
+            "🔄 Unauthorized WebSocket drop detected. Attempting token refresh...",
+          );
           isRefreshingRef.current = true;
+
           try {
+            // Hit your refresh token endpoint
             await apiClient.post("/auth/refresh-token", {});
-            setTimeout(() => connectWebSocket(), 1000);
+
+            // Wait 1 second, then try to reconnect with the fresh cookie!
+            setTimeout(() => {
+              isRefreshingRef.current = false; // Unlock so it can try again in the future
+              connectWebSocket();
+            }, 1000);
           } catch (error) {
-            console.error("Websocket refresh failed.");
+            console.error(
+              "❌ Websocket refresh failed. User likely needs to log in again.",
+              error,
+            );
+            // If the refresh token is also dead, we leave the WebSocket disconnected.
+            isRefreshingRef.current = false;
           }
         }
       };

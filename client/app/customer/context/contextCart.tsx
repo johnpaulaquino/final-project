@@ -12,12 +12,12 @@ export interface Product {
     category: string;
     description?: string;
   };
-  
+  stock_status: string;
   review_count: number;
   quantity: number; // Backend stock
   avg_rating: number | null;
   images: { image_url: string }[];
-  low_stock_threshold: number; // New field for low stock threshold
+  low_stock_threshold: number; 
 }
 
 export interface CartProduct {
@@ -33,10 +33,12 @@ export interface CartProduct {
     category: string;
     description?: string;
   };
+  stock_status: string;
   review_count: number;
   quantity: number; // Backend stock
   avg_rating: number | null;
   images: { image_url: string }[];
+  low_stock_threshold: number; // New field for low stock threshold
 }
 
 export type CartItem = CartProduct;
@@ -186,7 +188,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearCart = async () => {
-    // Note: If you have a backend endpoint to clear the user's cart upon checkout, 
+    // Note: If you have a backend endpoint to clear the user's cart upon checkout,
     // you would await it here (e.g., await apiClient.delete('/cart/clear'); )
     setCart([]);
     setCheckoutItems([]);

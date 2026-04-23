@@ -13,8 +13,11 @@ export default function menuProducts({ product }: { product: Product }) {
   };
 
   // Stock status logic
-  const isOutOfStock = product.quantity <= 0;
-  const isLowStock = product.quantity > 0 && product.quantity < 5;
+  const isOutOfStock =
+    product.stock_status?.toLocaleLowerCase() === "Out of Stock".toLowerCase();
+  const isLowStock =
+    product.stock_status?.toLocaleLowerCase() ===
+    "Low of Stock".toLocaleLowerCase();
 
   return (
     <div

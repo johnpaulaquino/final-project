@@ -1,126 +1,142 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
+import { apiClient } from "@/lib/api";
 
-export type OrderStatus = 'Action Needed' | 'Pending' | 'Approved' | 'Shipped' | 'Delivered';
+export type OrderStatus =
+  | "Pending"
+  | "Approved"
+  | "Shipped"
+  | "Delivered"
+  | "Received"
+  | "Cancelled"
+  | "Returned";
 
 export interface Order {
   id: number;
-  string_id: string;
-  user_id: number;
-  client_name: string;
-  product_id: number;
+  string_id: string | null;
   product_name: string;
   quantity: number;
   price: number;
+  total_amount: number;
   order_status: OrderStatus;
-  address_id: number;
-  created_at: string;
-  updated_at?: string;
+  transaction_reference: string | null;
+  created_at: string | null;
 }
 
-const initialOrders: Order[] = [
-  {
-    id: 1,
-    string_id: '#ORD-001',
-    user_id: 101,
-    client_name: 'Alice Johnson',
-    product_id: 501,
-    product_name: 'Classic Butter Biskota',
-    quantity: 5,
-    price: 74.95,
-    order_status: 'Delivered',
-    address_id: 901,
-    created_at: '2026-04-20T10:30:00Z',
-  },
-  {
-    id: 2,
-    string_id: '#ORD-002',
-    user_id: 102,
-    client_name: 'Bob Smith',
-    product_id: 502,
-    product_name: 'Double Chocolate Chunk',
-    quantity: 1,
-    price: 16.00,
-    order_status: 'Pending',
-    address_id: 902,
-    created_at: '2026-04-21T08:15:00Z',
-  },
-  {
-    id: 3,
-    string_id: '#ORD-003',
-    user_id: 103,
-    client_name: 'Charlie Davis',
-    product_id: 503,
-    product_name: 'Keto Nutty Crunch',
-    quantity: 2,
-    price: 49.98,
-    order_status: 'Approved',
-    address_id: 903,
-    created_at: '2026-04-21T09:45:00Z',
-  },
-];
+// 1. ADD PAGINATION INTERFACE
+interface PaginationMeta {
+  hasNext: boolean;
+  totalRecords: number;
+  start_page: number;
+  end_page: number;
+}
 
 interface OrderContextType {
   orders: Order[];
-  addOrder: (order: Order) => void;
-  updateOrderStatus: (id: number, status: OrderStatus) => void;
-  deleteOrder: (id: number) => void;
+  isLoading: boolean;
+  pagination: PaginationMeta; // <-- Add it to the context type
+  fetchOrders: (status: string, skip: number, limit: number) => Promise<void>;
+  cancelOrder: (id: string) => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 1. INITIAL LOAD: Check localStorage first, fallback to mock data
-  useEffect(() => {
-    const savedOrders = localStorage.getItem('biskota_orders');
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    }
-    setIsLoaded(true);
-  }, []);
+  // 2. ADD PAGINATION STATE
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    hasNext: false,
+    totalRecords: 0,
+    start_page: 1,
+    end_page: 1,
+  });
 
-  // 2. SAVE ON CHANGE: Save to localStorage whenever orders update
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('biskota_orders', JSON.stringify(orders));
-    }
-  }, [orders, isLoaded]);
+  const fetchOrders = useCallback(
+    async (status: string, skip: number, limit: number) => {
+      setIsLoading(true);
+      try {
+        const response = await apiClient.get(
+          `/order/?order_status=${status}&skip=${skip}&limit=${limit}`,
+        );
 
-  // 3. CROSS-TAB SYNC: Listen for changes made by other tabs (Admin vs Customer)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'biskota_orders' && e.newValue) {
-        setOrders(JSON.parse(e.newValue));
+        console.log("🚨 RAW API RESPONSE:", response);
+
+        // SAFELY EXTRACT THE ARRAY:
+        // Checks multiple common FastAPI wrappers to find where the array is actually hiding
+        let rawOrders = [];
+        if (Array.isArray(response?.Orders)) rawOrders = response.Orders;
+        else if (Array.isArray(response?.data?.Orders))
+          rawOrders = response.data.Orders;
+        else if (Array.isArray(response?.data)) rawOrders = response.data;
+        else if (Array.isArray(response)) rawOrders = response;
+
+        const mappedOrders: Order[] = rawOrders.map((item: any) => ({
+          id: item.Orders.id,
+          string_id: item.Orders.string_id,
+          product_name: item.product_name,
+          quantity: item.Orders.quantity,
+          price: item.Orders.price,
+          total_amount: item.total_amount,
+          order_status: item.Orders.order_status,
+          transaction_reference: item.transaction_reference,
+          created_at: item.Orders.created_at,
+        }));
+
+        setOrders(mappedOrders);
+
+        // CAPTURE THE PAGINATION DATA
+        if (response?.paginated) {
+          setPagination({
+            hasNext: response.paginated.has_next,
+            totalRecords: response.paginated.total_records,
+            start_page: response.paginated.start_page,
+            end_page: response.paginated.end_page,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
       }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    },
+    [],
+  );
 
-  // --- Actions ---
-  const addOrder = (order: Order) => {
-    setOrders((prev) => [order, ...prev]);
-  };
-
-  const updateOrderStatus = (id: number, status: OrderStatus) => {
+  const cancelOrder = async (id: string) => {
+    // 1. Optimistic UI update (Instantly changes the screen to feel fast)
     setOrders((prev) =>
       prev.map((order) =>
-        order.id === id ? { ...order, order_status: status, updated_at: new Date().toISOString() } : order
-      )
+        order.string_id === id
+          ? { ...order, order_status: "Cancelled" as OrderStatus }
+          : order,
+      ),
     );
+
+    try {
+      // 2. THE REAL API CALL: Hitting your specific cancel endpoint
+      // Note: Most specific action endpoints use PUT or POST. Adjust to apiClient.post if your backend requires it!
+      await apiClient.patch(`/order/${id}/cancel`, {});
+    } catch (error) {
+      console.error("Failed to cancel order:", error);
+      // Optional: If the API fails, you could trigger fetchOrders() here to revert the UI back to Pending
+    }
   };
 
-  const deleteOrder = (id: number) => {
-    setOrders((prev) => prev.filter((order) => order.id !== id));
-  };
-
+  // 4. PROVIDE THE PAGINATION STATE
   return (
-    <OrderContext.Provider value={{ orders, addOrder, updateOrderStatus, deleteOrder }}>
+    <OrderContext.Provider
+      value={{ orders, isLoading, pagination, fetchOrders, cancelOrder }}
+    >
       {children}
     </OrderContext.Provider>
   );
@@ -128,6 +144,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
 export function useOrders() {
   const context = useContext(OrderContext);
-  if (!context) throw new Error('useOrders must be used within an OrderProvider');
+  if (!context)
+    throw new Error("useOrders must be used within an OrderProvider");
   return context;
 }

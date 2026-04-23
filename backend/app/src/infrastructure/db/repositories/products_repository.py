@@ -1,11 +1,12 @@
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.src.domain.dto.products_dto import (ListOfProductInformationDTO, ProductDetailsDTO, ProductInformationDTO,
                                              ProductsDataDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.infrastructure.db.entity import Categories, Inventory, ProductDetails, ProductRatings, Products
-from app.src.schema.products_schema import (ProductCategories, ProductsFullInformationRequestSchema,
+from app.src.schema.products_schema import (ProductCategories, ProductStatusSchema,
+                                            ProductsFullInformationRequestSchema,
                                             ProductsTags, )
 
 
@@ -119,7 +120,13 @@ class ProductsRepository(UserInterface):
                 .group_by(ProductRatings.product_id)
                 .subquery()
         )
+        status_case = case(
+                (Inventory.quantity <= 0, ProductStatusSchema.OUT_OF_STOCK),
+                (Inventory.quantity <= Inventory.low_stock_threshold, ProductStatusSchema.LOW_OF_STOCK),
+                else_=ProductStatusSchema.AVAILABLE
+                ).label("stock_status")
         stmt = (select(Products,
+                       status_case,
                        Inventory.quantity,
                        ratings_subq.c.avg_rating,
                        ProductDetails.description,
@@ -149,8 +156,14 @@ class ProductsRepository(UserInterface):
                         )
                 .group_by(ProductRatings.product_id)
                 .subquery())
+        status_case = case(
+                (Inventory.quantity <= 0, ProductStatusSchema.OUT_OF_STOCK),
+                (Inventory.quantity <= Inventory.low_stock_threshold, ProductStatusSchema.LOW_OF_STOCK),
+                else_=ProductStatusSchema.AVAILABLE
+                ).label("stock_status")
         stmt = (select(Products,
                        Inventory.quantity,
+                       status_case,
                        ratings_subq.c.avg_rating,
                        ratings_subq.c.review_count,
                        ProductDetails.description,
@@ -194,9 +207,14 @@ class ProductsRepository(UserInterface):
                 .group_by(ProductRatings.product_id)
                 .subquery()
         )
-        
+        status_case = case(
+                (Inventory.quantity <= 0, ProductStatusSchema.OUT_OF_STOCK),
+                (Inventory.quantity <= Inventory.low_stock_threshold, ProductStatusSchema.LOW_OF_STOCK),
+                else_=ProductStatusSchema.AVAILABLE
+                ).label("stock_status")
         stmt = (select(Products,
                        Inventory.quantity,
+                       status_case,
                        ProductDetails.description,
                        ratings_subq.c.avg_rating,
                        ProductDetails.images
@@ -242,8 +260,14 @@ class ProductsRepository(UserInterface):
                 .group_by(ProductRatings.product_id)
                 .subquery()
         )
+        status_case = case(
+                (Inventory.quantity <= 0, ProductStatusSchema.OUT_OF_STOCK),
+                (Inventory.quantity <= Inventory.low_stock_threshold, ProductStatusSchema.LOW_OF_STOCK),
+                else_=ProductStatusSchema.AVAILABLE
+                ).label("stock_status")
         stmt = (select(Products,
                        Inventory.quantity,
+                       status_case,
                        ProductDetails.description,
                        ratings_subq.c.avg_rating,
                        ProductDetails.images
@@ -259,6 +283,7 @@ class ProductsRepository(UserInterface):
     
     async def get_paginated_record_with_new_products_tag_total_records(self):
         try:
+            
             stmt = select(func.count(Products.id).where(Products.tags.any(ProductsTags.NEW_PRODUCT)))
             result = await self._db.execute(stmt)
             data = result.scalars().first()

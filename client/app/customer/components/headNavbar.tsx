@@ -32,7 +32,6 @@ export default function headNavbar({
   const [notifications, setNotifications] = useState(initialNotifications);
   const hasUnread = notifications.some((n) => !n.isRead);
 
-
   const { totalItems, fetchCarts } = useCart();
 
   useEffect(() => {
@@ -185,13 +184,7 @@ export default function headNavbar({
 
             {/* dropdown */}
             {isNotifOpen && (
-              <NotificationDropdown
-                notifications={notifications}
-                onClose={() => setIsNotifOpen(false)}
-                onMarkAllRead={handleMarkAllRead}
-                onDelete={handleDeleteNotification}
-                onClearHistory={handleClearHistory}
-              />
+              <NotificationDropdown onClose={() => setIsNotifOpen(false)} />
             )}
           </div>
 

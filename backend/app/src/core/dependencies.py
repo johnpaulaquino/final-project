@@ -1,6 +1,6 @@
 from typing import Annotated, Any, AsyncGenerator
 
-from fastapi import Cookie, Depends, Request
+from fastapi import Cookie, Depends, Request, WebSocketException
 from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError
 from starlette import status
@@ -14,7 +14,6 @@ from app.src.application.services.user_services import UserServices
 from app.src.core.constants import ConstantsData, ConstantsKey
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.exceptions.http_exceptions import JWTExpiredException, JWTInvalidException
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db import LocalSession
 from app.src.infrastructure.db.uow import SQLUnitOfWork
@@ -125,8 +124,9 @@ def get_current_user_websocket(access_token: Annotated[str | None, Cookie()] = N
     
     # No cookie found? Reject immediately.
     if not access_token:
-        raise JWTInvalidException(
-                status_code=status.WS_1008_POLICY_VIOLATION,
+        raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid token."
                 )
     
     try:
@@ -134,15 +134,18 @@ def get_current_user_websocket(access_token: Annotated[str | None, Cookie()] = N
         payload = AppSecurity.decode_jwt_token(access_token)
         
         if not payload.get("user_id"):
-            raise JWTInvalidException(
-                    status_code=status.WS_1008_POLICY_VIOLATION, )
+            raise WebSocketException(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason="Invalid token."
+                    )
         
         # Success! Return the user_id to the router
         return DecodedTokenDTO(**payload)
     
-    except ExpiredSignatureError:
-        raise JWTExpiredException(
-                status_code=status.WS_1008_POLICY_VIOLATION,
+    except ExpiredSignatureError as e:
+        raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason=str(e)
                 )
     
     except Exception as e:
