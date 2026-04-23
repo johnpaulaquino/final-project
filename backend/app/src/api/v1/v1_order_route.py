@@ -65,6 +65,21 @@ async def get_paginated_orders(paginated: PaginatedSchema = Depends(),
         raise e
 
 
+@v1_order_router.get("/admin", tags=[EndpointTags.CUSTOMER])
+async def get_paginated_admin_orders(paginated: PaginatedSchema = Depends(),
+                                     order_status=Query(default=OrderStatusSchema.Pending),
+                                     current_user: DecodedTokenDTO = Depends(get_current_user),
+                                     order_services: OrderServices = Depends(get_order_service),
+                                     ):
+    try:
+        order_response = await order_services.get_admin_paginated_orders(paginated, order_status, current_user)
+        order_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(order_response)
+    except Exception as e:
+        raise e
+
+
 @v1_order_router.patch("/{order_id}/confirm", tags=[EndpointTags.ADMIN])
 async def confirm_order(order_id: str,
                         data: ConfirmOrderSchema,

@@ -1,4 +1,5 @@
 from app.src.application.services import retry_on_transient
+from app.src.application.services.shared_services import SharedServices
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError, DomainForbiddenAccessError,
                                                   DomainJWTInvalidError,
@@ -13,9 +14,11 @@ from app.src.schema.transaction_schema import CreateTransactionSchema
 from app.src.utils.utility import Utility
 
 
-class OrderServices:
+class OrderServices(SharedServices):
     def __init__(self, uof: SQLUnitOfWork):
+        
         self.uof = uof
+        super().__init__(uof)
     
     # the user id depends on the user who are logged in.
     # will insert safe router to this
@@ -161,15 +164,18 @@ class OrderServices:
             
             # check the product and order
             order_data, product_data = await self.__check_product_orders_user_exist(order_id, data.user_id,
-                                                                                    "Cannot confirm order that is not exist.")
+                                                                                    "Cannot approve order that is not exist.")
+            # check if the user exists
+            await self._check_user_if_exists(data.user_id)
             
             if order_data.Orders.order_status != OrderStatusSchema.Pending:
-                raise DomainEntityStatusInvalidError("Can't confirm order that is not pending.")
+                raise DomainEntityStatusInvalidError("Can't approve order that is not pending.")
             
             # update order status
             order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Approved).model_dump(exclude_none=True,
                                                                                                      exclude_unset=True)
-            await self.uof.orders.update_order(order_id, current_user.user_id, order_to_update)
+            
+            await self.uof.orders.update_order(order_id, data.user_id, order_to_update)
             
             # update the inventory
             new_quantity = order_data.quantity - order_data.reserved_stock
@@ -181,8 +187,9 @@ class OrderServices:
                     exclude_unset=True, exclude_none=True)
             await self.uof.products.update_product_inventory(product_data.Products.id, inventory_to_update)
             
-            return SuccessfulResponseSchema(message="Successfully Confirmed order.")
+            return SuccessfulResponseSchema(message="Successfully approved order.")
         except Exception as e:
+            
             raise e
     
     @retry_on_transient
@@ -206,7 +213,7 @@ class OrderServices:
                     exclude_none=True, exclude_unset=True
                     )
             await self.uof.orders.update_order(order_id,
-                                               current_user.user_id,
+                                               data.user_id,
                                                order_to_update)
             
             return SuccessfulResponseSchema(message="Successfully Shipped order.")
@@ -287,6 +294,37 @@ class OrderServices:
             
             return SuccessfulResponseSchema(message="Successfully Received order.")
         
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def get_admin_paginated_orders(self, paginated: PaginatedSchema,
+                                         order_status: str,
+                                         current_user: DecodedTokenDTO):
+        
+        try:
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            # check if the account is admin
+            self.validate_users_role(current_user.role)
+            
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            validated_order_status = Utility.capitalize_first_letters(order_status)
+            if validated_order_status not in OrderStatusSchema and validated_order_status != "All":
+                raise DomainEntityStatusInvalidError(f"{order_status} is not a valid order status.")
+            
+            order_data = await self.uof.orders.admin_paginated_orders(offset,
+                                                                      paginated.limit,
+                                                                      validated_order_status)
+            total_records = await self.uof.orders.get_total_records(user_id=current_user.user_id,
+                                                                    order_status=validated_order_status)
+            
+            paginated_data = Utility.get_paginated_data(offset=offset,
+                                                        total_records=total_records,
+                                                        skip=paginated.skip,
+                                                        limit=paginated.limit)
+            return SuccessfulResponseSchema(message="Successfully retrieved orders.", data=order_data,
+                                            paginated=paginated_data)
         except Exception as e:
             raise e
     
