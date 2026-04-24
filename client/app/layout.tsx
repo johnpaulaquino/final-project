@@ -6,9 +6,8 @@ import { AccountProvider } from "./customer/context/contextAccount";
 import { CategoryProvider } from "./customer/context/contextCategory";
 import { ProductProvider } from "./customer/context/contextProduct";
 import { BannerProvider } from "./customer/context/contextBanner";
-
-import { NotificationProvider } from "./customer/context/contextNotification";
 import { OrderProvider } from "./customer/context/contextOrder";
+import { NotificationProvider } from "./customer/context/contextNotification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,25 +34,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Outermost: Knows WHO the user is */}
-        <AccountProvider>
-          {/* Middle: User-specific features (Cart & Notifications) */}
-          <NotificationProvider>
-            <CartProvider>
-              <OrderProvider>
-                {/* Innermost: Global App Data (Products, Categories, Banners) */}
-                <CategoryProvider>
-                  <ProductProvider>
-                    <BannerProvider>
-                      {/* Your Pages */}
-                      {children}
-                    </BannerProvider>
-                  </ProductProvider>
-                </CategoryProvider>
-              </OrderProvider>
-            </CartProvider>
-          </NotificationProvider>
-        </AccountProvider>
+        <CartProvider>
+          <AccountProvider>
+            <CategoryProvider>
+              <ProductProvider>
+                <BannerProvider>
+                  <OrderProvider>
+                    <NotificationProvider>
+                    {children}
+                    </NotificationProvider>
+                  </OrderProvider>
+                </BannerProvider>
+              </ProductProvider>
+            </CategoryProvider>
+          </AccountProvider>
+        </CartProvider>
       </body>
     </html>
   );

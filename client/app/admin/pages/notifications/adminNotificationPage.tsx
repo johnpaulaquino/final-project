@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 // Adjust the import path to where your contextNotification.tsx is saved!
 
-export default function Notifications() {
+export default function adminNotificationPage() {
   const { notifications, markAllAsRead, deleteNotification, unreadCount } =
     useNotification();
 
@@ -35,7 +35,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 min-h-[500px] animate-in fade-in duration-300">
+    <div className="bg-white rounded-[10px] p-6 md:p-8 shadow-sm border border-gray-100 min-h-[500px] animate-in fade-in duration-300">
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">

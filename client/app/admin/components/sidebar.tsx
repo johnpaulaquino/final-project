@@ -12,6 +12,7 @@ interface SidebarProps {
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const [isProductsOpen, setIsProductsOpen] = useState(true);
   const [isCustomersOpen, setIsCustomersOpen] = useState(true);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(true);
 
   const handleLogout = async () => {
     try {
@@ -65,17 +66,29 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         </button>
 
         {/* Notifications */}
-        <button
-          onClick={() => setActiveTab("Notifications")}
-          className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors w-full ${
-            activeTab === "Notifications"
-              ? "bg-[#800000] text-white shadow-md"
-              : "text-gray-500 hover:bg-gray-50"
-          }`}
-        >
-          <div className="flex items-center gap-3">
+        <div>
+          <button
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="w-full flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+              Notifications
+            </div>
             <svg
-              className="w-5 h-5"
+              className={`w-4 h-4 transition-transform text-gray-400 ${isNotificationsOpen ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -84,15 +97,28 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                d="M19 9l-7 7-7-7"
               />
             </svg>
-            Notifications
+          </button>
+
+          {isNotificationsOpen && (
+          <div className="flex flex-col gap-1 pl-[44px] pr-4 py-2 relative before:content-[''] before:absolute before:left-[23px] before:top-2 before:bottom-2 before:w-[1px] before:bg-gray-200">
+            <button
+              onClick={() => setActiveTab("Admin Inbox")}
+              className={`py-2 text-sm text-left transition-colors ${activeTab === "Admin Inbox" ? "text-[#800000] font-bold" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              Admin Inbox
+            </button>
+            <button
+              onClick={() => setActiveTab("Send to Customer")}
+              className={`py-2 text-sm text-left transition-colors ${activeTab === "Send to Customer" ? "text-[#800000] font-bold" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              Send to Customers
+            </button>
           </div>
-          <span className="w-5 h-5 bg-red-50 text-red-600 text-[10px] font-bold rounded-full flex items-center justify-center">
-            2
-          </span>
-        </button>
+          )}
+        </div>
 
         {/* Analytics */}
         <button
