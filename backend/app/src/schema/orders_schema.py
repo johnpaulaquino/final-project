@@ -68,7 +68,15 @@ class ConfirmOrderSchema(BaseModel):
     user_id: str = Body(...)
 
 
-class ShippedOrderSchemaSchema(ConfirmOrderSchema):
+class ShippedOrderSchema(ConfirmOrderSchema):
+    pass
+
+
+class DeliveredOrderSchema(ConfirmOrderSchema):
+    pass
+
+
+class ReceivedOrderSchema(ConfirmOrderSchema):
     pass
 
 

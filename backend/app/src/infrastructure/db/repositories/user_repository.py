@@ -1,6 +1,6 @@
-from sqlalchemy import delete, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_, select
+from sqlmodel import and_
 
 from app.src.core.constants import ConstantsData
 from app.src.domain.dto.auth_dto import UserDTO, UserWithPasswordDTO
@@ -8,10 +8,11 @@ from app.src.domain.dto.users_dto import (UserAddressDTO, UserAddressesDTO, User
                                           UserFullInformationWithoutPasswordDTO, UserPersonalInfoDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
-from app.src.infrastructure.db.entity import Address, PersonalInfo, Users
+from app.src.infrastructure.db.entity import Address, Orders, PersonalInfo, Transactions, Users
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
 from app.src.schema import EnvironmentStatus
 from app.src.schema.auth_schema import SignUpRequest
+from app.src.schema.orders_schema import OrderStatusSchema
 
 
 class UserRepository(UserInterface):
@@ -176,6 +177,37 @@ class UserRepository(UserInterface):
         try:
             stmt = update(Users).values(is_deleted=True).where(Users.id == record_id)
             await self.__db.execute(stmt)
+        except Exception as e:
+            raise e
+    
+    async def get_paginated_user_sales(self, offset, limit: int):
+        try:
+            stmt = (select(Users.id,
+                           PersonalInfo.firstname,
+                           PersonalInfo.middle_name,
+                           PersonalInfo.lastname,
+                           func.sum(Transactions.total_amount).label("total_amount"),
+                           Transactions.transaction_reference,
+                           Orders.id.label("order_id"),
+                           Transactions.id.label("transaction_id"))
+                    .select_from(Users)
+                    .join(PersonalInfo, Users.id == PersonalInfo.user_id)
+                    .outerjoin(Orders, Users.id == Orders.user_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(Orders.order_status.in_([OrderStatusSchema.Delivered,
+                                                    OrderStatusSchema.Received]))
+                    .group_by(Transactions.transaction_reference,
+                              Users.id,
+                              PersonalInfo.firstname,
+                              PersonalInfo.middle_name,
+                              PersonalInfo.lastname,
+                              Orders.id,
+                              Transactions.id)
+                    .offset(offset)
+                    .limit(limit))
+            result = await self.__db.execute(stmt)
+            data = result.mappings().fetchall()
+            return data
         except Exception as e:
             raise e
     

@@ -6,7 +6,7 @@ from app.src.core.dependencies import get_current_user, get_order_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.schema import PaginatedSchema
 from app.src.schema.orders_schema import (BatchCreateOrderSchema, ConfirmOrderSchema, CreateOrderSchema,
-                                          OrderStatusSchema, )
+                                          DeliveredOrderSchema, OrderStatusSchema, ReceivedOrderSchema, )
 from app.src.utils.successful_response import SuccessfulResponse
 
 # prefix endpoint
@@ -44,6 +44,21 @@ async def insert_order_item(item_orders: BatchCreateOrderSchema,
         orders_response = await order_services.batch_insert_order(new_orders=item_orders, current_user=current_user)
         # set the status response
         orders_response.status_code = status.HTTP_201_CREATED
+        
+        return SuccessfulResponse(orders_response)
+    except Exception as e:
+        raise e
+
+
+@v1_order_router.get('/user-sales')
+async def get_paginated_user_sales(paginated: PaginatedSchema = Query(),
+                                   current_user: DecodedTokenDTO = Depends(get_current_user),
+                                   order_services: OrderServices = Depends(get_order_service),
+                                   ):
+    try:
+        orders_response = await order_services.get_paginated_user_sales(paginated, current_user)
+        # set the status response
+        orders_response.status_code = status.HTTP_200_OK
         
         return SuccessfulResponse(orders_response)
     except Exception as e:
@@ -98,7 +113,7 @@ async def confirm_order(order_id: str,
         raise e
 
 
-@v1_order_router.patch("/{order_id}/shipped", tags=[EndpointTags.ADMIN])
+@v1_order_router.patch("/{order_id}/ship", tags=[EndpointTags.ADMIN])
 async def update_order_to_shipped(order_id: str,
                                   data: ConfirmOrderSchema,
                                   current_user: DecodedTokenDTO = Depends(get_current_user),
@@ -107,6 +122,38 @@ async def update_order_to_shipped(order_id: str,
     
     try:
         order_result = await order_services.ship_order(order_id, data, current_user)
+        order_result.status_code = status.HTTP_200_OK
+        response = SuccessfulResponse(order_result)
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_order_router.patch("/{order_id}/deliver", tags=[EndpointTags.ADMIN])
+async def update_order_to_delivered(order_id: str,
+                                    data: DeliveredOrderSchema,
+                                    current_user: DecodedTokenDTO = Depends(get_current_user),
+                                    order_services
+                                    : OrderServices = Depends(get_order_service)):
+    
+    try:
+        order_result = await order_services.delivered_order(order_id, data, current_user)
+        order_result.status_code = status.HTTP_200_OK
+        response = SuccessfulResponse(order_result)
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_order_router.patch("/{order_id}/receive", tags=[EndpointTags.CUSTOMER])
+async def update_order_to_received(order_id: str,
+                                   data: ReceivedOrderSchema,
+                                   current_user: DecodedTokenDTO = Depends(get_current_user),
+                                   order_services
+                                   : OrderServices = Depends(get_order_service)):
+    
+    try:
+        order_result = await order_services.received_order(order_id, data, current_user)
         order_result.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(order_result)
         return response
