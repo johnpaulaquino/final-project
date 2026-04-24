@@ -28,9 +28,9 @@ export interface Order {
   order_status: OrderStatus;
   transaction_reference: string | null;
   created_at: string | null;
+  user_id: string;
 }
 
-// 1. ADD PAGINATION INTERFACE
 interface PaginationMeta {
   hasNext: boolean;
   totalRecords: number;
@@ -41,9 +41,18 @@ interface PaginationMeta {
 interface OrderContextType {
   orders: Order[];
   isLoading: boolean;
-  pagination: PaginationMeta; // <-- Add it to the context type
+  pagination: PaginationMeta;
   fetchOrders: (status: string, skip: number, limit: number) => Promise<void>;
+  fetchAdminOrders: (
+    status: string,
+    skip: number,
+    limit: number,
+  ) => Promise<void>;
+  confirmOrder: (id: string, payload: any) => Promise<void>;
+  shipOrder: (id: string, payload: any) => Promise<void>;
   cancelOrder: (id: string) => Promise<void>;
+  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -52,7 +61,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 2. ADD PAGINATION STATE
   const [pagination, setPagination] = useState<PaginationMeta>({
     hasNext: false,
     totalRecords: 0,
@@ -60,18 +68,68 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     end_page: 1,
   });
 
+  const fetchAdminOrders = useCallback(
+    async (status: string, skip: number, limit: number) => {
+      setIsLoading(true);
+      try {
+        const queryParams =
+          status === "All"
+            ? `admin/?skip=${skip}&limit=${limit}`
+            : `admin/?order_status=${status}&skip=${skip}&limit=${limit}`;
+
+        const response = await apiClient.get(`/order/${queryParams}`);
+
+        let rawOrders = [];
+        if (Array.isArray(response?.Orders)) rawOrders = response.Orders;
+        else if (Array.isArray(response?.data?.Orders))
+          rawOrders = response.data.Orders;
+        else if (Array.isArray(response?.data)) rawOrders = response.data;
+        else if (Array.isArray(response)) rawOrders = response;
+
+        const mappedOrders: Order[] = rawOrders.map((item: any) => ({
+          id: item.Orders.id,
+          string_id: item.Orders.string_id,
+          product_name: item.product_name,
+          quantity: item.Orders.quantity,
+          price: item.Orders.price,
+          total_amount: item.total_amount,
+          order_status: item.Orders.order_status,
+          transaction_reference: item.transaction_reference,
+          created_at: item.Orders.created_at,
+          user_id: item.Orders.user_id,
+        }));
+
+        setOrders(mappedOrders);
+
+        if (response?.paginated) {
+          setPagination({
+            hasNext: response.paginated.has_next,
+            totalRecords: response.paginated.total_records,
+            start_page: response.paginated.start_page,
+            end_page: response.paginated.end_page,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
   const fetchOrders = useCallback(
     async (status: string, skip: number, limit: number) => {
       setIsLoading(true);
       try {
-        const response = await apiClient.get(
-          `/order/?order_status=${status}&skip=${skip}&limit=${limit}`,
-        );
+        const queryParams =
+          status === "All"
+            ? `?skip=${skip}&limit=${limit}`
+            : `?order_status=${status}&skip=${skip}&limit=${limit}`;
 
-        console.log("🚨 RAW API RESPONSE:", response);
+        const response = await apiClient.get(`/order/${queryParams}`);
 
-        // SAFELY EXTRACT THE ARRAY:
-        // Checks multiple common FastAPI wrappers to find where the array is actually hiding
         let rawOrders = [];
         if (Array.isArray(response?.Orders)) rawOrders = response.Orders;
         else if (Array.isArray(response?.data?.Orders))
@@ -93,7 +151,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
         setOrders(mappedOrders);
 
-        // CAPTURE THE PAGINATION DATA
         if (response?.paginated) {
           setPagination({
             hasNext: response.paginated.has_next,
@@ -112,8 +169,24 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // --- NEW: Implement confirmOrder ---
+  const confirmOrder = async (id: string, payload: any) => {
+    // Optimistic UI Update
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.string_id === id
+          ? { ...order, order_status: "Approved" as OrderStatus }
+          : order,
+      ),
+    );
+    try {
+      await apiClient.patch(`/order/${id}/confirm`, payload);
+    } catch (error) {
+      console.error("Failed to confirm order:", error);
+    }
+  };
+
   const cancelOrder = async (id: string) => {
-    // 1. Optimistic UI update (Instantly changes the screen to feel fast)
     setOrders((prev) =>
       prev.map((order) =>
         order.string_id === id
@@ -121,21 +194,59 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           : order,
       ),
     );
-
     try {
-      // 2. THE REAL API CALL: Hitting your specific cancel endpoint
-      // Note: Most specific action endpoints use PUT or POST. Adjust to apiClient.post if your backend requires it!
       await apiClient.patch(`/order/${id}/cancel`, {});
     } catch (error) {
       console.error("Failed to cancel order:", error);
-      // Optional: If the API fails, you could trigger fetchOrders() here to revert the UI back to Pending
     }
   };
 
-  // 4. PROVIDE THE PAGINATION STATE
+  const updateOrderStatus = async (id: string, status: OrderStatus) => {
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.string_id === id ? { ...order, order_status: status } : order,
+      ),
+    );
+  };
+
+  const deleteOrder = async (id: string) => {
+    setOrders((prev) => prev.filter((order) => order.string_id !== id));
+    try {
+      await apiClient.delete(`/order/${id}`);
+    } catch (error) {
+      console.error("Failed to delete order:", error);
+    }
+  };
+
+  const shipOrder = async (id: string, payload: any) => {
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.string_id === id
+          ? { ...order, order_status: "Shipped" as OrderStatus }
+          : order,
+      ),
+    );
+    try {
+      await apiClient.patch(`/order/${id}/shipped`, payload);
+    } catch (error) {
+      console.error("Failed to ship order:", error);
+    }
+  };
+
   return (
     <OrderContext.Provider
-      value={{ orders, isLoading, pagination, fetchOrders, cancelOrder }}
+      value={{
+        orders,
+        isLoading,
+        pagination,
+        fetchOrders,
+        fetchAdminOrders, // FIXED: Now properly maps to the fetchAdminOrders function
+        cancelOrder,
+        updateOrderStatus,
+        confirmOrder,
+        shipOrder,
+        deleteOrder,
+      }}
     >
       {children}
     </OrderContext.Provider>

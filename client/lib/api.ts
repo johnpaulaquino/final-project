@@ -119,7 +119,8 @@ export async function apiFetch(
             credentials: "include",
           },
         );
-
+        console.log("refresh", refreshRes);
+        
         if (!refreshRes.ok) throw new Error("Refresh failed");
 
         const refreshData = await refreshRes.json();

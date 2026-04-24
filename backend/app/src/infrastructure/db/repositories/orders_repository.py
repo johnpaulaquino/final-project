@@ -120,6 +120,40 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
+    async def admin_paginated_orders(self, offset: int, limit: int, order_status: str):
+        try:
+            
+            conditions = []
+            if order_status in OrderStatusSchema:
+                
+                conditions.append(Orders.order_status == order_status)
+            stmt = (select(Orders,
+                           Products.product_name,
+                           Products.price,
+                           Products.category,
+                           Inventory.quantity,
+                           Inventory.sold_stock,
+                           Inventory.reserved_stock,
+                           Inventory.cancelled_stock,
+                           Inventory.low_stock_threshold,
+                           Transactions.transaction_reference,
+                           Transactions.payment_status,
+                           Transactions.total_amount,
+                           Transactions.payment_provider_reference)
+                    .select_from(Orders)
+                    .join(Products, Products.id == Orders.product_id)
+                    .outerjoin(Inventory, Products.id == Inventory.product_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(and_(*conditions))
+                    .limit(limit)
+                    .offset(offset))
+            result = await self._db.execute(stmt)
+            data = result.mappings().fetchall()
+            data = {"Orders": data}
+            return OrderDTOFullDataList(**data)
+        except Exception as e:
+            raise e
+    
     async def find_order_with_status(self, order_id, user_id, order_status) -> OrderDTOFullData:
         try:
             stmt = (select(Orders,
