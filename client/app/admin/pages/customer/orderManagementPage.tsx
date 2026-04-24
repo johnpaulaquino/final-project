@@ -23,7 +23,9 @@ export default function OrderManagementPage() {
     pagination,
     fetchAdminOrders,
     updateOrderStatus,
+    deliverOrder,
     confirmOrder,
+
     shipOrder,
   } = useOrders();
 
@@ -67,7 +69,6 @@ export default function OrderManagementPage() {
   //     updateOrderStatus(id, newStatus);
   //   }
   // };
-
   const handleRowClick = (order: any) => {
     const currentStatus = order.order_status?.toLowerCase() || "";
 
@@ -83,6 +84,13 @@ export default function OrderManagementPage() {
         user_id: order.user_id,
         nextStatus: "Shipped",
       });
+    } else if (currentStatus === "shipped") {
+      // 🚀 ADDED: Open modal for Delivering
+      setUpdateModalData({
+        id: order.string_id,
+        user_id: order.user_id,
+        nextStatus: "Delivered",
+      });
     }
   };
 
@@ -91,6 +99,10 @@ export default function OrderManagementPage() {
     setIsUpdating(true);
 
     try {
+      const payload = {
+        user_id: updateModalData.user_id,
+      };
+
       if (updateModalData.nextStatus === "Approved") {
         console.log(
           "Confirming order:",
@@ -98,19 +110,27 @@ export default function OrderManagementPage() {
           "for User:",
           updateModalData.user_id,
         );
-
-        // ROUTE 1: Call the new confirmOrder with your required body data
-        const payload = {
-          user_id: updateModalData.user_id,
-        };
-
         await confirmOrder(updateModalData.id, payload);
-      } else {
-        const payload = {
-          user_id: updateModalData.user_id,
-        };
-        // ROUTE 2: Standard status update for Shipped, etc.
+      } else if (updateModalData.nextStatus === "Shipped") {
+        console.log(
+          "Shipping order:",
+          updateModalData.id,
+          "for User:",
+          updateModalData.user_id,
+        );
         await shipOrder(updateModalData.id, payload);
+      } else if (updateModalData.nextStatus === "Delivered") {
+        // 🚀 ADDED: Route to the Deliver Order API Call
+        console.log(
+          "Delivering order:",
+          updateModalData.id,
+          "for User:",
+          updateModalData.user_id,
+        );
+        await deliverOrder(updateModalData.id, payload);
+      } else {
+        // Fallback for any other generic updates
+        await updateOrderStatus(updateModalData.id, updateModalData.nextStatus);
       }
     } finally {
       setIsUpdating(false);
@@ -155,13 +175,31 @@ export default function OrderManagementPage() {
     }
   };
 
-  const isApproving = updateModalData?.nextStatus === "Approved";
-  const modalTitle = isApproving ? "Approve Order?" : "Ship Order?";
-  const modalMessage = isApproving
-    ? "Are you sure you want to approve this order? It will be moved to the Approved list."
-    : "Are you sure you want to mark this order as shipped? It will be moved to the Shipped list.";
-  const confirmText = isApproving ? "Yes, Approve" : "Yes, Ship";
-  const processingText = isApproving ? "Approving..." : "Shipping...";
+  // 🚀 MODIFIED: Dynamic Content for the Modal logic
+  let modalTitle = "";
+  let modalMessage = "";
+  let confirmText = "";
+  let processingText = "";
+
+  if (updateModalData?.nextStatus === "Approved") {
+    modalTitle = "Approve Order?";
+    modalMessage =
+      "Are you sure you want to approve this order? It will be moved to the Approved list.";
+    confirmText = "Yes, Approve";
+    processingText = "Approving...";
+  } else if (updateModalData?.nextStatus === "Shipped") {
+    modalTitle = "Ship Order?";
+    modalMessage =
+      "Are you sure you want to mark this order as shipped? It will be moved to the Shipped list.";
+    confirmText = "Yes, Ship";
+    processingText = "Shipping...";
+  } else if (updateModalData?.nextStatus === "Delivered") {
+    modalTitle = "Deliver Order?";
+    modalMessage =
+      "Are you sure you want to mark this order as delivered? It will be moved to the Delivered list.";
+    confirmText = "Yes, Deliver";
+    processingText = "Delivering...";
+  }
 
   return (
     <div className="w-full flex flex-col gap-6 p-4 md:p-6 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden relative">
@@ -221,9 +259,11 @@ export default function OrderManagementPage() {
               </tr>
             ) : filteredOrders.length > 0 ? (
               filteredOrders.map((order: any) => {
+                // 🚀 ADDED: Shipped rows are now clickable
                 const isClickableRow =
                   order.order_status === "Pending" ||
-                  order.order_status === "Approved";
+                  order.order_status === "Approved" ||
+                  order.order_status === "Shipped";
 
                 return (
                   <tr
@@ -248,9 +288,8 @@ export default function OrderManagementPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`text-xs font-bold px-3 py-1.5 rounded-md  cursor-pointer focus:outline-none ${getStatusStyles(order.order_status)}`}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-md focus:outline-none ${getStatusStyles(order.order_status)}`}
                       >
-                        {" "}
                         {order.order_status}
                       </span>
                     </td>

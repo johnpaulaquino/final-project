@@ -126,34 +126,11 @@ export function NotificationProvider({
           `🔴 WebSocket Closed. Code: ${event.code}, Reason: ${event.reason}`,
         );
 
+        // Normal Closure
         if (event.code === 1000) return;
 
-        // AUTH REFRESH FLOW
-        if (event.code === 1008 || event.code === 1006) {
-          if (isRefreshingRef.current) return;
-
-          console.log(
-            "🔄 Unauthorized WebSocket drop detected. Attempting token refresh...",
-          );
-          isRefreshingRef.current = true;
-
-          try {
-            await apiClient.post("/auth/refresh-token", {});
-
-            setTimeout(() => {
-              isRefreshingRef.current = false;
-              connectWebSocket();
-            }, 1000);
-
-            return;
-          } catch (error) {
-            console.error(
-              "❌ Websocket refresh failed. User likely needs to log in again.",
-              error,
-            );
-            isRefreshingRef.current = false;
-          }
-        }
+        // REMOVED: The manual /auth/refresh-token logic that was causing the infinite loop.
+        // We now rely entirely on api.ts to handle auth state and cookie refreshing.
 
         // GENERAL AUTO-RECONNECT FLOW (Fixed 5 seconds, 5 attempts)
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -169,8 +146,10 @@ export function NotificationProvider({
           }, timeout);
         } else {
           console.error(
-            "🚫 Maximum WebSocket reconnect attempts reached. Please refresh the page.",
+            "🚫 Maximum WebSocket reconnect attempts reached. Giving up.",
           );
+          // Notice we DO NOT use window.location.href = "/" here.
+          // If the user is truly unauthorized, api.ts will have already safely kicked them out.
         }
       };
 

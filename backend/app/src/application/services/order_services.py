@@ -7,7 +7,7 @@ from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
 from app.src.schema.orders_schema import (BatchCreateOrderSchema, ConfirmOrderSchema, CreateOrderSchema,
-                                          OrderStatusSchema, UpdateOrdersSchema,
+                                          DeliveredOrderSchema, OrderStatusSchema, UpdateOrdersSchema,
                                           )
 from app.src.schema.products_schema import UpdateProductsInventorySchema
 from app.src.schema.transaction_schema import CreateTransactionSchema
@@ -177,16 +177,6 @@ class OrderServices(SharedServices):
             
             await self.uof.orders.update_order(order_id, data.user_id, order_to_update)
             
-            # update the inventory
-            new_quantity = order_data.quantity - order_data.reserved_stock
-            sold_stock = order_data.sold_stock + order_data.reserved_stock
-            # call the class and make it dict using model dump.
-            inventory_to_update = UpdateProductsInventorySchema(quantity=new_quantity,
-                                                                sold_stock=sold_stock,
-                                                                reserved_stock=0).model_dump(
-                    exclude_unset=True, exclude_none=True)
-            await self.uof.products.update_product_inventory(product_data.Products.id, inventory_to_update)
-            
             return SuccessfulResponseSchema(message="Successfully approved order.")
         except Exception as e:
             
@@ -215,7 +205,15 @@ class OrderServices(SharedServices):
             await self.uof.orders.update_order(order_id,
                                                data.user_id,
                                                order_to_update)
-            
+            # update the inventory
+            new_quantity = order_data.quantity - order_data.reserved_stock
+            sold_stock = order_data.sold_stock + order_data.reserved_stock
+            # call the class and make it dict using model dump.
+            inventory_to_update = UpdateProductsInventorySchema(quantity=new_quantity,
+                                                                sold_stock=sold_stock,
+                                                                reserved_stock=0).model_dump(
+                    exclude_unset=True, exclude_none=True)
+            await self.uof.products.update_product_inventory(product_data.Products.id, inventory_to_update)
             return SuccessfulResponseSchema(message="Successfully Shipped order.")
         
         except Exception as e:
@@ -245,7 +243,7 @@ class OrderServices(SharedServices):
                                                order_to_update)
             
             # back to its original quantity
-            new_quantity = order_data.quantity + order_data.sold_stock
+            new_quantity = order_data.quantity + order_data.reserved_stock
             sold_stock = order_data.sold_stock - order_data.Orders.quantity
             
             inventory_to_update = UpdateProductsInventorySchema(quantity=new_quantity,
@@ -260,22 +258,46 @@ class OrderServices(SharedServices):
             raise e
     
     @retry_on_transient
-    async def delivered_order(self, order_id, user_id, current_user: DecodedTokenDTO):
+    async def delivered_order(self, order_id, data: DeliveredOrderSchema, current_user: DecodedTokenDTO):
         
         try:
-            pass
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # validate role
+            self.validate_users_role(current_user.role)
+            
+            # check the product and order
+            order_data, product_data = await self.__check_product_orders_user_exist(order_id, data.user_id,
+                                                                                    "Cannot Delivered order that is not exist.")
+            # set the validated
+            # if the order status is not Delivered, then raise an error.
+            if order_data.Orders.order_status != OrderStatusSchema.Shipped:
+                raise DomainEntityStatusInvalidError("Can't set as Delivered the order that is not Shipped.")
+            
+            # update order status
+            order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Delivered).model_dump(
+                    exclude_none=True, exclude_unset=True
+                    )
+            await self.uof.orders.update_order(order_id,
+                                               data.user_id,
+                                               order_to_update)
+            
+            return SuccessfulResponseSchema(message="Successfully Delivered order.")
+        
         except Exception as e:
             raise e
     
     @retry_on_transient
-    async def received_order(self, order_id, data: ConfirmOrderSchema, current_user: DecodedTokenDTO):
+    async def received_order(self, order_id, current_user: DecodedTokenDTO):
         try:
-            # validate the role
-            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN:
-                raise DomainForbiddenAccessError("You don't have rights to access this.")
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # validate role
+            self.validate_users_role(current_user.role)
             
             # check the product and order
-            order_data, product_data = await self.__check_product_orders_user_exist(order_id, data.user_id,
+            order_data, product_data = await self.__check_product_orders_user_exist(order_id, current_user.user_id,
                                                                                     "Cannot ship order that is not exist.")
             # set the validated
             validated_order_status = Utility.capitalize_first_letters(order_data.order_status)
@@ -284,7 +306,6 @@ class OrderServices(SharedServices):
                 raise DomainEntityStatusInvalidError("Can't set as received the order that is not Delivered.")
             
             # update order status
-            
             order_to_update = UpdateOrdersSchema(order_status=OrderStatusSchema.Received).model_dump(
                     exclude_none=True, exclude_unset=True
                     )
@@ -325,6 +346,24 @@ class OrderServices(SharedServices):
                                                         limit=paginated.limit)
             return SuccessfulResponseSchema(message="Successfully retrieved orders.", data=order_data,
                                             paginated=paginated_data)
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def get_paginated_user_sales(self, paginated: PaginatedSchema,
+                                       current_user: DecodedTokenDTO):
+        try:
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            # check if admin
+            self.validate_users_role(current_user.role)
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            # get the data
+            data = await self.uof.users.get_paginated_user_sales(offset=offset, limit=paginated.limit)
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully, but no records to retrieved.", data=data)
+            
+            return SuccessfulResponseSchema(message="Successfully retrieved data.", data=data)
         except Exception as e:
             raise e
     
@@ -377,7 +416,7 @@ class OrderServices(SharedServices):
             if not order_data:
                 raise DomainNotFoundError(message)
             
-            # fin product.
+            # find product.
             product = await self.uof.products.find_record(order_data.Orders.product_id)
             # check if not product exists.
             if not product:

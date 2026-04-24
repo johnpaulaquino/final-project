@@ -52,6 +52,7 @@ interface OrderContextType {
   shipOrder: (id: string, payload: any) => Promise<void>;
   cancelOrder: (id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  deliverOrder: (id: string, payload: any) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
 }
 
@@ -168,6 +169,21 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+  const deliverOrder = async (id: string, payload: any) => {
+    // Optimistic UI Update
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.string_id === id
+          ? { ...order, order_status: "Delivered" as OrderStatus }
+          : order,
+      ),
+    );
+    try {
+      await apiClient.patch(`/order/${id}/deliver`, payload);
+    } catch (error) {
+      console.error("Failed to confirm order:", error);
+    }
+  };
 
   // --- NEW: Implement confirmOrder ---
   const confirmOrder = async (id: string, payload: any) => {
@@ -201,12 +217,19 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateOrderStatus = async (id: string, status: OrderStatus) => {
+  const shipOrder = async (id: string, payload: any) => {
     setOrders((prev) =>
       prev.map((order) =>
-        order.string_id === id ? { ...order, order_status: status } : order,
+        order.string_id === id
+          ? { ...order, order_status: "Shipped" as OrderStatus }
+          : order,
       ),
     );
+    try {
+      await apiClient.patch(`/order/${id}/ship`, payload);
+    } catch (error) {
+      console.error("Failed to ship order:", error);
+    }
   };
 
   const deleteOrder = async (id: string) => {
@@ -218,19 +241,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const shipOrder = async (id: string, payload: any) => {
+  const updateOrderStatus = async (id: string, status: OrderStatus) => {
     setOrders((prev) =>
       prev.map((order) =>
-        order.string_id === id
-          ? { ...order, order_status: "Shipped" as OrderStatus }
-          : order,
+        order.string_id === id ? { ...order, order_status: status } : order,
       ),
     );
-    try {
-      await apiClient.patch(`/order/${id}/shipped`, payload);
-    } catch (error) {
-      console.error("Failed to ship order:", error);
-    }
   };
 
   return (
@@ -243,6 +259,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         fetchAdminOrders, // FIXED: Now properly maps to the fetchAdminOrders function
         cancelOrder,
         updateOrderStatus,
+        deliverOrder,
         confirmOrder,
         shipOrder,
         deleteOrder,
