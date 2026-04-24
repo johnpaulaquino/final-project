@@ -46,6 +46,7 @@ export default function OrderSummary({
         order_status: "Pending",
         transaction_reference: null as any,
         created_at: null as any,
+        user_id: null as any,
       };
 
       if (addOrder) {
