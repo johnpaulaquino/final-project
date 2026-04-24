@@ -8,11 +8,12 @@ import HeadNavbar from './components/headNavbar';
 
 // Page Components (You will need to create these files)
 import Overview from './pages/overviewPage';
-import Notifications from './pages/notificationPage';
+import Notifications from './pages/notifications/adminNotificationPage';
 import Analytics from './pages/analyticsPage';
 
 import ProductsLayout from './pages/products/productsLayout';
 import CustomerLayout from './pages/customer/customerLayout';
+import NotificationLayout from './pages/notifications/notificationLayout';
 
 import InventoryCheck from './pages/inventoryCheckPage';
 
@@ -28,6 +29,8 @@ export default function AdminPage() {
   // Helper function to render the correct component
   const renderContent = () => {
     
+    
+
     // 1. If the tab belongs to products, render the smooth Wrapper!
     const productTabs = ['Inventory List', 'Add Item', 'Categories', 'Carousel'];
     
@@ -39,6 +42,12 @@ export default function AdminPage() {
 
     if (customerTabs.includes(activeTab)) {
       return <CustomerLayout activeTab={activeTab} setActiveTab={setActiveTab} />;
+    }
+
+    const notificationTabs = ['Admin Inbox', 'Send to Customer'];
+
+    if (notificationTabs.includes(activeTab)) {
+      return <NotificationLayout activeTab={activeTab} setActiveTab={setActiveTab} />;
     }
 
     // 2. Otherwise, render normal top-level pages
