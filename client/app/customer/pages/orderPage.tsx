@@ -141,7 +141,7 @@ export default function OrderPage() {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-lg font-bold text-[#0B1527] uppercase tracking-wide">
-                    #{order.transaction_reference}...
+                    #{order.string_id}
                   </h2>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusColor(order.order_status)}`}

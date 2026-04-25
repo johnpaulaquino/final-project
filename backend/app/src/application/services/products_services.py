@@ -236,8 +236,8 @@ class ProductsServices(SharedServices):
                                          img_bytes: List[bytes]):
         new_product_images = None
         is_images_uploaded = False
-        
         try:
+            print(new_data)
             # check first if user exist
             await self.check_if_user_exists(current_user.user_id)
             # then check if it's admin
@@ -252,7 +252,6 @@ class ProductsServices(SharedServices):
             inventory = InventoryRequestSchema(**data.model_dump())
             details = ProductDetailsRequestSchema(**data.model_dump())
             # then make a copy on the original data and replace the old one
-            
             # check first if images is 5 in database then raise an error. Only update the Not None value.
             if filenames:
                 available_image_to_upload = (5 - len(details.images)) - len(filenames)

@@ -74,9 +74,9 @@ export default function menuProducts({ product }: { product: Product }) {
           {product.Products.product_name}
         </h3>
 
-        {product.Products.description && (
+        {product.description && (
           <p className="text-xs text-gray-500 font-medium mb-4 flex-grow line-clamp-2">
-            {product.Products.description}
+            {product.description}
           </p>
         )}
 

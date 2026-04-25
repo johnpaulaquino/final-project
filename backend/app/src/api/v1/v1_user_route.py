@@ -156,7 +156,7 @@ async def delete_user_address(address_id: str,
         raise e
 
 
-@v1_user_router.patch('/{user_id}')
+@v1_user_router.patch('/')
 async def update_user_personal_information(data: UpdateUserSchema = Depends(UpdateUserSchema.depends),
                                            current_user: DecodedTokenDTO = Depends(get_current_user),
                                            image: Optional[UploadFile] = File(None),

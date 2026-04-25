@@ -14,7 +14,7 @@ interface ProductContextType {
   ) => Promise<void>;
   addProduct: (product: Product) => void;
   deleteProduct: (id: number | string) => void;
-  updateProduct: (updatedProduct: Product) => void;
+  updateProduct: (id: string | number, formData: FormData) => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -54,12 +54,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     setProducts((prev) => prev.filter((product) => product.Products.id !== id));
   };
 
-  const updateProduct = (updatedProduct: Product) => {
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.Products.id === updatedProduct.Products.id ? updatedProduct : p,
-      ),
-    );
+  const updateProduct = async (id: string | number, formData: FormData) => {
+    try {
+      await apiClient.patch(`/products/full/${id}`, formData);
+      await fetchProducts("All", 1, 10);
+    } catch (error) {
+      console.error("Failed to update product:", error);
+      throw error;
+    }
   };
 
   return (

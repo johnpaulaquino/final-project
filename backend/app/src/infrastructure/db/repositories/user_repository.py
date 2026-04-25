@@ -187,9 +187,7 @@ class UserRepository(UserInterface):
                            PersonalInfo.middle_name,
                            PersonalInfo.lastname,
                            func.sum(Transactions.total_amount).label("total_amount"),
-                           Transactions.transaction_reference,
-                           Orders.id.label("order_id"),
-                           Transactions.id.label("transaction_id"))
+                           Transactions.transaction_reference, )
                     .select_from(Users)
                     .join(PersonalInfo, Users.id == PersonalInfo.user_id)
                     .outerjoin(Orders, Users.id == Orders.user_id)
@@ -200,13 +198,34 @@ class UserRepository(UserInterface):
                               Users.id,
                               PersonalInfo.firstname,
                               PersonalInfo.middle_name,
-                              PersonalInfo.lastname,
-                              Orders.id,
-                              Transactions.id)
+                              PersonalInfo.lastname)
                     .offset(offset)
                     .limit(limit))
             result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_total_paginated_user_sales(self):
+        try:
+            stmt = (
+                    select(func.count(func.distinct(Transactions.transaction_reference)))
+                    .select_from(Users)
+                    .join(PersonalInfo, Users.id == PersonalInfo.user_id)
+                    .outerjoin(Orders, Users.id == Orders.user_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(Orders.order_status.in_([
+                            OrderStatusSchema.Delivered,
+                            OrderStatusSchema.Received,
+                            ]))
+            )
+            
+            # Use scalar() because it returns a single integer, not a row/tuple
+            result = await self.__db.execute(stmt)
+            data = result.scalar() or 0
+            
+            # If there are no records, scalar() might return None, so default to 0
             return data
         except Exception as e:
             raise e

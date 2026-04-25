@@ -71,6 +71,18 @@ class Utility:
         return data
     
     @staticmethod
+    def generate_ref_number(prefix: str = "BKT") -> str:
+        
+        random_chars = secrets.token_hex(4).upper()
+        
+        # Get current Year (last two digits) and Month
+        now = datetime.today()
+        yy = now.year
+        mm = now.strftime("%m")
+        
+        return f"{prefix}-{yy}{mm}-{random_chars}"
+    
+    @staticmethod
     def get_offset(skip: int, limit: int):
         if skip <= 0:
             skip = 1
