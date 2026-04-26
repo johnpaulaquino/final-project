@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from fastapi import Body
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import ARRAY, Column, DateTime, String, func
 from sqlmodel import Field, SQLModel
 
 
@@ -11,6 +11,7 @@ class BaseNotifications(SQLModel):
     description: str = Field(nullable=False)
     user_id: str = Field(default=None, foreign_key="users.id", )
     notification_type: str = Field(default="System", )  # System, Order, New Account, etc.
+    receivers: list[str] = Field(default_factory=lambda: [], sa_column=Column(ARRAY(String), nullable=True))
 
 
 class Notifications(BaseNotifications, table=True):
@@ -37,5 +38,17 @@ class CreateNotification(BaseNotifications):
                        description: str = Body(...),
                        notification_type: str = Body(default="System")):
         return CreateNotification(title=title,
+                                  description=description,
+                                  notification_type=notification_type)
+
+
+class UpdateNotification(BaseNotifications):
+    pass
+    
+    @staticmethod
+    def create_depends(title: str = Body(...),
+                       description: str = Body(...),
+                       notification_type: str = Body(default="System")):
+        return UpdateNotification(title=title,
                                   description=description,
                                   notification_type=notification_type)

@@ -10,7 +10,7 @@ from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
 from app.src.infrastructure.db.entity import Address, Orders, PersonalInfo, Transactions, Users
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
-from app.src.schema import EnvironmentStatus
+from app.src.schema import EnvironmentStatus, RoleSchema
 from app.src.schema.auth_schema import SignUpRequest
 from app.src.schema.orders_schema import OrderStatusSchema
 
@@ -257,6 +257,17 @@ class UserRepository(UserInterface):
             if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
                 return DomainError(str(e))
             raise DomainError
+    
+    async def get_user_ids(self):
+        try:
+            stmt = select(Users.id).where(and_(Users.is_active == True,
+                                               Users.role == RoleSchema.CUSTOMER,
+                                               Users.is_deleted == False))
+            result = await self.__db.execute(stmt)
+            data = result.scalars().fetchall()
+            return data
+        except Exception as e:
+            raise e
     
     async def update_default_address(self, address_id: str, user_id: str):
         try:

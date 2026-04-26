@@ -290,13 +290,13 @@ class OrderServices(SharedServices):
             await self._check_user_if_exists(current_user.user_id)
             
             # validate role
-            self.validate_users_role(current_user.role)
+            self.validate_users_role(current_user.role, is_admin=False)
             
             # check the product and order
             order_data, product_data = await self.__check_product_orders_user_exist(order_id, current_user.user_id,
                                                                                     "Cannot ship order that is not exist.")
             # set the validated
-            validated_order_status = Utility.capitalize_first_letters(order_data.order_status)
+            validated_order_status = Utility.capitalize_first_letters(order_data.Orders.order_status)
             # if the order status is not Delivered, then raise an error.
             if validated_order_status != OrderStatusSchema.Delivered:
                 raise DomainEntityStatusInvalidError("Can't set as received the order that is not Delivered.")

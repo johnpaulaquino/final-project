@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useOrders, OrderStatus } from "../context/contextOrder";
 import ConfirmationModal from "../components/ConfirmationModal";
 
-// Matches your FastAPI statuses
 const STATUS_TABS: OrderStatus[] = [
   "Pending",
   "Approved",
@@ -16,38 +15,100 @@ const STATUS_TABS: OrderStatus[] = [
 ];
 
 export default function OrderPage() {
-  // 1. Pull data, loading states, and pagination from Context
-  const { orders, isLoading, pagination, fetchOrders, cancelOrder } =
-    useOrders();
-  // 2. NEW: Confirmation Modal State
+  const {
+    orders,
+    isLoading,
+    pagination,
+    fetchOrders,
+    cancelOrder,
+    receiveOrder,
+  } = useOrders();
+
+  // Cancel Modal State
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // Local state for UI Filtering and Pagination
+  // Receive Modal State
+  const [orderToReceive, setOrderToReceive] = useState<string | null>(null);
+  const [isReceiving, setIsReceiving] = useState(false);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
   const [activeTab, setActiveTab] = useState<OrderStatus>("Pending");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 2. Fetch data whenever the tab or page number changes
+  // Auto-dismiss Toast after 3.5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   useEffect(() => {
     fetchOrders(activeTab, currentPage, 10);
-    console.log("Fetching orders:", activeTab, currentPage);
   }, [activeTab, currentPage, fetchOrders]);
 
-  // Handle Tab Click (Always reset to page 1)
   const handleTabChange = (status: OrderStatus) => {
     setActiveTab(status);
     setCurrentPage(1);
   };
-  // --- NEW: Trigger the actual cancellation ---
+
   const handleConfirmCancel = async () => {
     if (orderToCancel === null) return;
-
     setIsCancelling(true);
-    await cancelOrder(orderToCancel);
-    setIsCancelling(false);
-    setOrderToCancel(null); // Close the modal
+
+    try {
+      await cancelOrder(orderToCancel);
+      setOrderToCancel(null);
+      setToast({ message: "Order successfully cancelled.", type: "success" });
+
+      // 🚀 FIXED: Removed the tab switching logic.
+      // You will stay on the current tab, and the Context will refresh the data!
+    } catch (error: any) {
+      setOrderToCancel(null);
+      setToast({
+        message: error?.message || "Failed to cancel order. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
   };
-  // --- UI Helpers ---
+
+  const handleConfirmReceive = async () => {
+    if (orderToReceive === null) return;
+    setIsReceiving(true);
+
+    const specificOrder = orders.find((o) => o.string_id === orderToReceive);
+    const payload = { user_id: specificOrder?.user_id };
+
+    try {
+      await receiveOrder(orderToReceive, payload);
+      setOrderToReceive(null);
+      setToast({
+        message: "Order successfully marked as received!",
+        type: "success",
+      });
+
+      // 🚀 FIXED: Removed the tab switching logic.
+      // You will stay on the current tab!
+    } catch (error: any) {
+      setOrderToReceive(null);
+      setToast({
+        message:
+          error?.message || "Failed to update order. Connection timed out.",
+        type: "error",
+      });
+    } finally {
+      setIsReceiving(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Pending":
@@ -69,15 +130,12 @@ export default function OrderPage() {
     }
   };
 
-  // Bulletproof Timezone Formatter
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown Date";
-    // Force UTC format to match FastAPI and prevent timezone jumping
     const safeDateString =
       dateString.endsWith("Z") || dateString.includes("+")
         ? dateString
         : `${dateString}Z`;
-
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
@@ -87,11 +145,8 @@ export default function OrderPage() {
     }).format(new Date(safeDateString));
   };
 
-  console.log("My order", orders);
-
   return (
     <div className="w-full max-w-5xl mx-auto p-4 md:p-6 relative">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#0B1527] mb-1">
           Order History
@@ -101,7 +156,6 @@ export default function OrderPage() {
         </p>
       </div>
 
-      {/* Filter Tabs */}
       <div className="flex overflow-x-auto gap-2 pb-2 mb-6 custom-scrollbar">
         {STATUS_TABS.map((status) => (
           <button
@@ -118,7 +172,6 @@ export default function OrderPage() {
         ))}
       </div>
 
-      {/* Order List */}
       <div className="space-y-4">
         {isLoading ? (
           <div className="flex justify-center items-center py-12 bg-gray-50 rounded-2xl">
@@ -178,7 +231,6 @@ export default function OrderPage() {
                 </div>
               </div>
 
-              {/* Right Side / Actions */}
               <div className="flex flex-col md:items-end w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-0 border-gray-100">
                 <span className="text-[10px] font-bold text-gray-400 tracking-wider uppercase mb-1">
                   Total Amount
@@ -187,13 +239,21 @@ export default function OrderPage() {
                   ₱{order.total_amount.toFixed(2)}
                 </span>
 
-                {/* MODIFIED: Now opens the modal instead of instantly cancelling */}
                 {order.order_status === "Pending" && (
                   <button
-                    onClick={() => setOrderToCancel(order.string_id)} // Opens Modal!
+                    onClick={() => setOrderToCancel(order.string_id)}
                     className="text-xs font-bold text-red-600 border border-red-200 rounded-lg px-5 py-2.5 hover:bg-red-50 hover:border-red-300 transition-all w-full md:w-auto"
                   >
                     Cancel Order
+                  </button>
+                )}
+
+                {order.order_status === "Delivered" && (
+                  <button
+                    onClick={() => setOrderToReceive(order.string_id)}
+                    className="text-xs font-bold text-green-600 border border-green-200 rounded-lg px-5 py-2.5 hover:bg-green-50 hover:border-green-300 transition-all w-full md:w-auto"
+                  >
+                    Order Received
                   </button>
                 )}
               </div>
@@ -202,7 +262,6 @@ export default function OrderPage() {
         )}
       </div>
 
-      {/* Pagination Controls */}
       <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-100">
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -225,6 +284,8 @@ export default function OrderPage() {
           Next
         </button>
       </div>
+
+      {/* Cancel Order Modal */}
       <ConfirmationModal
         isOpen={orderToCancel !== null}
         title="Cancel Order?"
@@ -234,9 +295,65 @@ export default function OrderPage() {
         processingText="Cancelling..."
         isProcessing={isCancelling}
         onCancel={() => setOrderToCancel(null)}
-        onConfirm={() => handleConfirmCancel()}
+        onConfirm={handleConfirmCancel}
         confirmColorClass="bg-red-600 hover:bg-red-700"
       />
+
+      {/* Receive Order Modal */}
+      <ConfirmationModal
+        isOpen={orderToReceive !== null}
+        title="Confirm Delivery"
+        message="Please confirm that you have received this order in good condition. Once confirmed, the order will be marked as complete."
+        cancelText="Not Yet"
+        confirmText="Yes, I Received It"
+        processingText="Confirming..."
+        isProcessing={isReceiving}
+        onCancel={() => setOrderToReceive(null)}
+        onConfirm={handleConfirmReceive}
+        confirmColorClass="bg-green-600 hover:bg-green-700"
+      />
+
+      {/* Toast Notification Component */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-xl border animate-in slide-in-from-bottom-5 fade-in duration-300 ${
+            toast.type === "success"
+              ? "bg-white text-green-700 border-green-100 shadow-green-900/5"
+              : "bg-white text-red-700 border-red-100 shadow-red-900/5"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <svg
+              className="w-6 h-6 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+          ) : (
+            <svg
+              className="w-6 h-6 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+          )}
+          <span className="font-bold text-sm">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }

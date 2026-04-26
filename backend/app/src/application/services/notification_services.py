@@ -33,7 +33,7 @@ class NotificationServices(SharedServices):
             data = await self.__uof.notifications.get_paginated_data(offset, paginated.limit, current_user.user_id)
             if not data:
                 return SuccessfulResponseSchema(message="Successfully, but no data to retrieve.")
-            
+            print(data)
             total_notification = await self.__uof.notifications.get_total_notifications(current_user.user_id)
             paginated_data = Utility.get_paginated_data(offset=offset,
                                                         skip=paginated.skip,
@@ -66,4 +66,30 @@ class NotificationServices(SharedServices):
             
             return SuccessfulResponseSchema(message="Successfully clear all notifications.")
         except Exception as e:
+            raise e
+    
+    async def send_notification_to_all_users(self, notification: CreateNotification, current_user: DecodedTokenDTO):
+        try:
+            # check if users exists
+            await self._check_user_if_exists(current_user.user_id)
+            # check user role
+            self.validate_users_role(current_user.role)
+            
+            # get user_id of all users
+            data = await self.__uof.users.get_user_ids()
+            
+            if not data:
+                return SuccessfulResponseSchema(message="No user to notify.")
+            
+            # create notification
+            notification.user_id = current_user.user_id
+            # set all user id from receiver
+            
+            notification.receivers = data
+            await self.__uof.notifications.insert_record(notification)
+            # return successful response
+            # send data for the api layer, but it will delete it on the api layer
+            return SuccessfulResponseSchema(message="Successfully notify users.", data=data)
+        except Exception as e:
+            print(str(e))
             raise e

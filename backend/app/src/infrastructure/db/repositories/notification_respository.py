@@ -1,4 +1,4 @@
-from sqlalchemy import delete, func, update
+from sqlalchemy import delete, func, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_, select
 
@@ -31,7 +31,10 @@ class NotificationRepository(UserInterface):
     
     async def get_paginated_data(self, offset: int, limit: int, user_id):
         try:
-            stmt = select(Notifications).where(Notifications.user_id == user_id).offset(offset).limit(limit)
+            stmt = select(Notifications).where(
+                    or_(Notifications.user_id == user_id, Notifications.receivers.any(user_id))).offset(offset).limit(
+                    limit)
+            
             result = await self.__db.execute(stmt)
             data = result.scalars().fetchall()
             
@@ -42,7 +45,8 @@ class NotificationRepository(UserInterface):
     
     async def get_total_notifications(self, user_id: str):
         try:
-            stmt = select(func.count(Notifications.id)).where(Notifications.user_id == user_id)
+            stmt = select(func.count(Notifications.id)).where(
+                    or_(Notifications.user_id == user_id, Notifications.receivers.any(user_id)))
             result = await self.__db.execute(stmt)
             data = result.scalar()
             return data
