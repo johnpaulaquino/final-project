@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useOrders, OrderStatus } from "../context/contextOrder";
 import ConfirmationModal from "../components/ConfirmationModal";
+import RatingModal from "../components/ratingModal";
 
 const STATUS_TABS: OrderStatus[] = [
   "Pending",
@@ -22,6 +23,7 @@ export default function OrderPage() {
     fetchOrders,
     cancelOrder,
     receiveOrder,
+    rateOrder,
   } = useOrders();
 
   // Cancel Modal State
@@ -31,6 +33,11 @@ export default function OrderPage() {
   // Receive Modal State
   const [orderToReceive, setOrderToReceive] = useState<string | null>(null);
   const [isReceiving, setIsReceiving] = useState(false);
+
+  // Rating Modal State (Temporary until we implement the actual rating flow)
+  const [orderToRate, setOrderToRate] = useState<string | null>(null);
+  const [isRating, setIsRating] = useState(false); 
+  const [productNameToRate, setProductNameToRate] = useState<string>("");
 
   // Toast Notification State
   const [toast, setToast] = useState<{
@@ -108,6 +115,28 @@ export default function OrderPage() {
       setIsReceiving(false);
     }
   };
+
+  const handleConfirmRate = async (rating: number, review: string) => {
+    if (!orderToRate) return;
+    setIsRating(true);
+
+    try {
+      await rateOrder(orderToRate, { rating, review });
+      setOrderToRate(null);
+      setToast({
+        message: "Thank you! Your rating has been submitted.",
+        type: "success",
+      });
+    } catch (error: any) {
+      setToast({
+        message: error?.message || "Failed to submit rating. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsRating(false);
+    }
+  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -256,6 +285,18 @@ export default function OrderPage() {
                     Order Received
                   </button>
                 )}
+
+                {order.order_status === "Received" && (
+                  <button
+                    onClick={() => {
+                      setProductNameToRate(order.product_name);
+                      setOrderToRate(order.string_id);
+                    }}
+                    className="text-xs font-bold text-[#800000] border border-[#800000]/30 rounded-lg px-5 py-2.5 hover:bg-[#800000]/5 transition-all w-full md:w-auto"
+                  >
+                    Rate Product
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -311,6 +352,14 @@ export default function OrderPage() {
         onCancel={() => setOrderToReceive(null)}
         onConfirm={handleConfirmReceive}
         confirmColorClass="bg-green-600 hover:bg-green-700"
+      />
+
+      <RatingModal
+        isOpen={orderToRate !== null}
+        productName={productNameToRate}
+        isSubmitting={isRating}
+        onClose={() => setOrderToRate(null)}
+        onSubmit={handleConfirmRate}
       />
 
       {/* Toast Notification Component */}

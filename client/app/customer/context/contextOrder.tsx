@@ -54,6 +54,7 @@ interface OrderContextType {
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   deliverOrder: (id: string, payload: any) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
+  rateOrder: (id: string, payload: { rating: number; review: string }) => Promise<void>; // idk pa kung anong lalagay kasi wala pang route para mag Post ng rating sa order, so just a placeholder for now
   receiveOrder: (id: string, payload: any) => Promise<void>;
 }
 
@@ -266,6 +267,17 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  // Rate Order Function
+  const rateOrder = async (id: string, payload: { rating: number; review: string }) => {
+  try {
+    // Modify the endpoint URL to match your FastAPI backend
+    await apiClient.post(`/order/${id}/rate`, payload); // Assuming the endpoint is POST /order/{id}/rate
+  } catch (error) {
+    console.error("Failed to submit rating:", error);
+    throw error;
+  }
+};
+
   return (
     <OrderContext.Provider
       value={{
@@ -281,6 +293,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         receiveOrder,
         shipOrder,
         deleteOrder,
+        rateOrder,
       }}
     >
       {children}
