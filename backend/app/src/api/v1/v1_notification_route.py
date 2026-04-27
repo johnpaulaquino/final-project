@@ -30,7 +30,7 @@ async def realtime_notification(websocket: WebSocket,
                 # We wait for messages from the client.
                 # Even if the client never sends anything, this keeps the loop alive.
                 data = await websocket.receive_text()
-                print(data)
+        
         except WebSocketDisconnect:
             # Handle clean disconnects (User closed the browser tab)
             await ConnectionManager.disconnect(current_user.user_id)
@@ -98,5 +98,45 @@ async def get_paginated_notifications(paginated: PaginatedSchema = Query(),
         
         response = SuccessfulResponse(notification_services_response)
         return response
+    except Exception as e:
+        raise e
+
+
+@v1_notification_router.patch('/read-all')
+async def mark_all_as_read_user_notification(current_user: DecodedTokenDTO = Depends(get_current_user),
+                                             notification_services: NotificationServices = Depends(
+                                                     get_notification_service), ):
+    try:
+        notification_services_response = await notification_services.mark_all_as_read_user_notification(current_user)
+        notification_services_response.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(notification_services_response)
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_notification_router.patch("/clear-all")
+async def clear_all_notification(current_user: DecodedTokenDTO = Depends(get_current_user),
+                                 notification_services: NotificationServices = Depends(
+                                         get_notification_service)):
+    try:
+        notification_service_response = await notification_services.clear_all_user_notifications(current_user)
+        notification_service_response.status_code = status.HTTP_200_OK
+        return SuccessfulResponse(notification_service_response)
+    except Exception as e:
+        raise e
+
+
+@v1_notification_router.delete("/{notification_id}")
+async def delete_notification(notification_id: str,
+                              current_user: DecodedTokenDTO = Depends(get_current_user),
+                              notification_services: NotificationServices = Depends(
+                                      get_notification_service)):
+    try:
+        notification_service_response = await notification_services.delete_notification(notification_id, current_user)
+        notification_service_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(notification_service_response)
     except Exception as e:
         raise e
