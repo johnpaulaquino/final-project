@@ -108,6 +108,33 @@ class UserRepository(UserInterface):
         data = result.scalars().first()
         return UserDTO.model_validate(data) if data else data
     
+    async def get_all_active_users(self, offset, limit):
+        try:
+            stmt = (select(Users.email, Users.created_at, Users.role, PersonalInfo.firstname,
+                           PersonalInfo.middle_name, PersonalInfo.lastname)
+                    .join(PersonalInfo, Users.id == PersonalInfo.user_id)
+                    .where(and_(Users.is_deleted == False,
+                                Users.role != RoleSchema.ADMIN,
+                                Users.is_active == True))
+                    .offset(offset)
+                    .limit(limit))
+            result = await self.__db.execute(stmt)
+            data = result.mappings().fetchall()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_all_active_users_count(self):
+        try:
+            stmt = select(func.count(Users.id)).where(and_(Users.is_deleted == False,
+                                                           Users.role != RoleSchema.ADMIN,
+                                                           Users.is_active == True))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
     async def get_user_info_only_with_password(self, user_id: str) -> UserWithPasswordDTO:
         """
         To get the personal info only.

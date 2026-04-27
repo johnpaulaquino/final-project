@@ -53,6 +53,27 @@ class NotificationRepository(UserInterface):
         except Exception as e:
             raise e
     
+    async def get_all_paginated_data(self, offset: int, limit: int):
+        try:
+            stmt = select(Notifications).offset(offset).limit(limit)
+            
+            result = await self.__db.execute(stmt)
+            data = result.scalars().fetchall()
+            
+            return data
+        
+        except Exception as e:
+            raise e
+    
+    async def get_all_total_notifications(self):
+        try:
+            stmt = select(func.count(Notifications.id))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
     async def update_record(self, record_id: str, data: dict | None = None):
         try:
             pass

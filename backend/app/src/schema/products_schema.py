@@ -81,18 +81,6 @@ class ProductsFullInformationRequestSchema(BaseModel):
             return 0
         return value
     
-    @field_validator("category")
-    def validate_category(cls, value):
-        if not value:
-            return value
-        
-        categories_check = [ProductCategories.DRINKS.value.lower(), ProductCategories.PASTRY.value.lower()]
-        categories = [ProductCategories.DRINKS.value, ProductCategories.PASTRY.value]
-        if value not in categories:
-            raise DomainUnprocessableEntityError(
-                    f"Category must be in {categories_check}.")
-        return value
-    
     @field_validator("tags")
     def validate_tags(cls, value):
         if value is None:

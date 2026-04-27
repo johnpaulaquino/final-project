@@ -4,7 +4,7 @@ from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.domain.dto.products_dto import ProductsInformationFilterWithTags
-from app.src.exceptions.domain_exceptions import (DomainNotFoundError,
+from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainNotFoundError,
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
@@ -48,6 +48,11 @@ class ProductsServices(SharedServices):
             await self._check_user_if_exists(current_user.user_id)
             # then check if it's admin
             self.validate_users_role(current_user.role)
+            
+            # check if the category is in the database
+            categories_data = await self.__uow.products.get_product_categories()
+            if product_request.category not in categories_data:
+                raise DomainUnprocessableEntityError(f"Category should be in {categories_data}.")
             # check if the images uploaded in the server exceed to maximum 5, then raise an error.
             if len(filenames) > 5:
                 raise DomainUnprocessableEntityError(
@@ -90,8 +95,11 @@ class ProductsServices(SharedServices):
             
             # then validate data before it insert
             list_of_categories = []
+            # get the categories from database
+            data = await self.__uow.products.get_product_categories()
             for category in categories.category:
-                
+                if category in data:
+                    raise DomainAlreadyExistsError("Category is already exist.")
                 category = Utility.capitalize_first_letters(category)
                 list_of_categories.append(category)
             
@@ -237,7 +245,7 @@ class ProductsServices(SharedServices):
         new_product_images = None
         is_images_uploaded = False
         try:
-            print(new_data)
+            
             # check first if user exist
             await self.check_if_user_exists(current_user.user_id)
             # then check if it's admin
