@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useNotification } from "../../context/contextNotification";
-// 1. IMPORT THE HOOK DIRECTLY
 
 // We only need onClose as a prop now, because the Navbar controls if the menu is visible
 interface NotificationDropdownProps {
@@ -16,6 +16,8 @@ export default function NotificationDropdown({
   const { notifications, markAllAsRead, deleteNotification, clearHistory } =
     useNotification();
 
+  // Track which notifications are expanded by their ID
+  const [expandedNotifs, setExpandedNotifs] = useState<Record<string, boolean>>({});
   // Helper function to convert FastAPI's ISO timestamp to relative time ("5 mins ago")
   const formatTimeAgo = (dateString: string) => {
     if (!dateString) return "Just now";
@@ -63,57 +65,67 @@ export default function NotificationDropdown({
       {/* Notification List */}
       <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
         {notifications.length > 0 ? (
-          notifications.map((notif, index) => (
-            <div
-              key={notif.id}
-              className={`group relative px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer flex flex-col gap-1 ${
-                index !== notifications.length - 1
-                  ? "border-b border-gray-50"
-                  : ""
-              } ${!notif.is_user_read ? "bg-[#fffcfc]" : ""}`}
-            >
-              <div className="flex justify-between items-center">
-                {/* Red dot for unread notifications */}
-                <div className="flex items-center gap-2">
-                  {!notif.is_user_read && (
-                    <div className="h-1.5 w-1.5 bg-[#800000] rounded-full shrink-0"></div>
-                  )}
-                  <h4 className="text-[13px] font-bold text-[#1e293b]">
-                    {notif.title}
-                  </h4>
+          notifications.map((notif, index) => {
+            // Check text length and expand state INSIDE the loop so it applies per-item
+            const isLongText = notif.description && notif.description.length > 90;
+            const isExpanded = expandedNotifs[notif.id] || false;
+
+            return (
+              <div
+                key={notif.id}
+                className={`group relative px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer flex flex-col gap-1 ${
+                  index !== notifications.length - 1
+                    ? "border-b border-gray-50"
+                    : ""
+                } ${!notif.is_user_read ? "bg-[#fffcfc]" : ""}`}
+              >
+                <div className="flex justify-between items-center">
+                  {/* Red dot for unread notifications */}
+                  <div className="flex items-center gap-2">
+                    {!notif.is_user_read && (
+                      <div className="h-1.5 w-1.5 bg-[#800000] rounded-full shrink-0"></div>
+                    )}
+                    <h4 className="text-[13px] font-bold text-[#1e293b]">
+                      {notif.title}
+                    </h4>
+                  </div>
+
+                  {/* Notification Time & Delete Button */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] font-medium text-gray-400">
+                      {formatTimeAgo(notif.created_at)}
+                    </span>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(notif.id); // Replaced prop with context action
+                      }}
+                      className="opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    >
+                      <Image
+                        src="/icons/delete.png"
+                        alt="Delete"
+                        width={14}
+                        height={14}
+                        className="cursor-pointer object-contain rounded-full transition-all duration-200 hover:[filter:invert(13%)_sepia(84%)_saturate(4414%)_hue-rotate(349deg)_brightness(72%)_contrast(111%)]"
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Notification Time & Delete Button */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] font-medium text-gray-400">
-                    {formatTimeAgo(notif.created_at)}
-                  </span>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNotification(notif.id); // Replaced prop with context action
-                    }}
-                    className="opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                <div className={`pr-6 ${!notif.is_user_read ? "pl-3.5" : ""}`}>
+                  <p
+                    className={`text-[12px] font-medium text-gray-500 leading-snug transition-all duration-200 ${
+                      isExpanded ? "" : "line-clamp-2"
+                    }`}
                   >
-                    <Image
-                      src="/icons/delete.png"
-                      alt="Delete"
-                      width={14}
-                      height={14}
-                      className="cursor-pointer object-contain rounded-full transition-all duration-200 hover:[filter:invert(13%)_sepia(84%)_saturate(4414%)_hue-rotate(349deg)_brightness(72%)_contrast(111%)]"
-                    />
-                  </button>
+                    {notif.description}
+                  </p>
                 </div>
               </div>
-
-              <p
-                className={`text-[12px] font-medium text-gray-500 leading-snug pr-6 ${!notif.is_user_read ? "pl-3.5" : ""}`}
-              >
-                {notif.description}
-              </p>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="px-5 py-8 text-center text-sm text-gray-500 font-medium">
             Your history is clear.

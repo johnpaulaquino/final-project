@@ -25,7 +25,8 @@ export default function OrderManagementPage() {
     updateOrderStatus,
     deliverOrder,
     confirmOrder,
-
+    statusCounts,
+    fetchStatusCounts,
     shipOrder,
   } = useOrders();
 
@@ -44,6 +45,9 @@ export default function OrderManagementPage() {
   useEffect(() => {
     const fetchFunc = fetchAdminOrders;
     fetchFunc(activeTab, currentPage, 10);
+    
+    fetchStatusCounts();
+
     console.log("Fetching orders:", activeTab, orders);
   }, [activeTab, currentPage, fetchAdminOrders]);
 
@@ -202,24 +206,37 @@ export default function OrderManagementPage() {
   }
 
   return (
-    <div className="w-full flex flex-col gap-6 p-4 md:p-6 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden relative">
+    <div className="w-full flex flex-col gap-6 p-4 md:p-6 bg-white border-gray-100 overflow-hidden relative">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-2 gap-4">
         <div className="flex flex-col md:flex-row w-full xl:w-auto items-start md:items-center gap-4 overflow-hidden">
           <div className="w-full overflow-x-auto scrollbar-no pb-2 md:pb-0">
-            <div className="flex items-center gap-2 w-max pr-4">
-              {tabs.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab)}
-                  className={`flex items-center justify-center whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-lg transition-all border ${
-                    activeTab === tab
-                      ? "bg-[#800000] text-white border-[#800000] shadow-sm"
-                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
+            <div className="flex items-center gap-2 w-max pr-4 m-4">
+              {tabs.map((tab) => {
+                // Get the count for this specific tab. If undefined, default to 0.
+                const itemCount = statusCounts?.[tab] || 0;
+
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => handleTabChange(tab)}
+                    // Added 'relative' to the className below so the dot positions correctly
+                    className={`relative flex items-center justify-center whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-lg transition-all border ${
+                      activeTab === tab
+                        ? "bg-[#800000] text-white border-[#800000] shadow-sm"
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {tab}
+
+                    {/* The Red Dot Counter */}
+                    {itemCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center bg-[#800000] rounded-full border-[2px] border-white text-[10px] font-bold text-white leading-none shadow-sm">
+                        {itemCount > 99 ? "99+" : itemCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
