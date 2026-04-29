@@ -4,11 +4,12 @@ from alembic.util import status
 from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
 from starlette import status
 
-from app.src.api.v1 import get_filenames_and_image_bytes
+from app.src.api.api_utility import get_filenames_and_image_bytes
 from app.src.application.services.products_services import ProductsServices
 from app.src.core.constants import ConstantsData, EndpointTags
-from app.src.core.dependencies import get_current_user, get_products_service
+from app.src.core.dependencies import get_current_user, get_products_carousel_service, get_products_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
+from app.src.exceptions.http_exceptions import DataUnProcessableContent
 from app.src.schema import PaginatedSchema
 from app.src.schema.products_schema import (CreateCategories, ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
@@ -58,6 +59,56 @@ async def insert_category(categories: CreateCategories,
         
         return response
     
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.post("/carousel")
+async def insert_carousel(image: UploadFile = File(None),
+                          current_user: DecodedTokenDTO = Depends(get_current_user),
+                          product_services: ProductsServices = Depends(
+                                  get_products_carousel_service)):
+    try:
+        # make sure that user will upload a file
+        if not image:
+            raise DataUnProcessableContent("Please upload image.")
+        filenames, images_bytes = await get_filenames_and_image_bytes([image])
+        product_services_response = await product_services.insert_carousel(current_user, filenames, images_bytes)
+        product_services_response.status_code = status.HTTP_201_CREATED
+        
+        response = SuccessfulResponse(product_services_response)
+        
+        return response
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.get('/carousel')
+async def get_paginated_carousel(paginated: PaginatedSchema = Query(),
+                                 current_user: DecodedTokenDTO = Depends(get_current_user),
+                                 product_services: ProductsServices = Depends(
+                                         get_products_carousel_service),
+                                 ):
+    try:
+        product_services_response = await product_services.get_paginated_carousel(paginated, current_user)
+        product_services_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(product_services_response)
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.get('/carousel/{carousel_id}')
+async def get_paginated_carousel(carousel_id: str,
+                                 current_user: DecodedTokenDTO = Depends(get_current_user),
+                                 product_services: ProductsServices = Depends(
+                                         get_products_carousel_service),
+                                 ):
+    try:
+        product_services_response = await product_services.delete_carousel(carousel_id, current_user)
+        product_services_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(product_services_response)
     except Exception as e:
         raise e
 

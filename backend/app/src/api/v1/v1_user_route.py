@@ -1,16 +1,16 @@
 from typing import Optional
 
-from fastapi import APIRouter, Body, Cookie, Depends, File, UploadFile
+from fastapi import APIRouter, Body, Cookie, Depends, File, Query, UploadFile
 from starlette import status
 
-from app.src.api.api_utility import delete_auth_cookie
-from app.src.api.v1 import get_filenames_and_image_bytes
+from app.src.api.api_utility import delete_auth_cookie, get_filenames_and_image_bytes
 from app.src.application.services.user_services import UserServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_redis_services, get_user_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress, UpdateAddress
 from app.src.infrastructure.redis_infrastructure import RedisInfrastructure
+from app.src.schema import PaginatedSchema, RoleSchema
 from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserSchema
 from app.src.utils.successful_response import SuccessfulResponse
 
@@ -56,6 +56,21 @@ async def send_sms_otp(
         raise e
 
 
+@v1_user_router.get("/all", tags=[RoleSchema.ADMIN])
+async def get_all_active_users(paginated: PaginatedSchema = Query(),
+                               current_user: DecodedTokenDTO = Depends(get_current_user),
+                               user_service: UserServices = Depends(get_user_service),
+                               ):
+    try:
+        user_service_response = await user_service.get_all_active_users(paginated, current_user)
+        user_service_response.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(user_service_response)
+        return response
+    except Exception as e:
+        raise e
+
+
 @v1_user_router.post("/otp/verify")
 async def verify_otp_code(otp_code: str,
                           current_user: DecodedTokenDTO = Depends(get_current_user),
@@ -73,21 +88,6 @@ async def verify_otp_code(otp_code: str,
         services_response.status_code = status.HTTP_200_OK
         # then return the response
         return SuccessfulResponse(services_response)
-    except Exception as e:
-        raise e
-
-
-@v1_user_router.patch("/address/{address_id}")
-async def update_address(address_id: str,
-                         address: UpdateAddress = Depends(UpdateAddress.update_depends),
-                         current_user: DecodedTokenDTO = Depends(get_current_user),
-                         user_service: UserServices = Depends(get_user_service),
-                         ):
-    try:
-        user_service_response = await user_service.update_address(address, address_id, current_user)
-        
-        user_service_response.status_code = status.HTTP_200_OK
-        return SuccessfulResponse(user_service_response)
     except Exception as e:
         raise e
 
@@ -142,21 +142,7 @@ async def change_password(change_password: ChangePasswordSchema,
         raise e
 
 
-@v1_user_router.delete("/address/{address_id}")
-async def delete_user_address(address_id: str,
-                              current_user: DecodedTokenDTO = Depends(get_current_user),
-                              user_service: UserServices = Depends(get_user_service)):
-    try:
-        user_response = await user_service.delete_user_address(address_id, current_user)
-        user_response.status_code = status.HTTP_200_OK
-        
-        response = SuccessfulResponse(user_response)
-        return response
-    except Exception as e:
-        raise e
-
-
-@v1_user_router.patch('/{user_id}')
+@v1_user_router.patch('/')
 async def update_user_personal_information(data: UpdateUserSchema = Depends(UpdateUserSchema.depends),
                                            current_user: DecodedTokenDTO = Depends(get_current_user),
                                            image: Optional[UploadFile] = File(None),
@@ -170,5 +156,34 @@ async def update_user_personal_information(data: UpdateUserSchema = Depends(Upda
         user_response.status_code = status.HTTP_200_OK
         
         return SuccessfulResponse(user_response)
+    except Exception as e:
+        raise e
+
+
+@v1_user_router.patch("/address/{address_id}")
+async def update_address(address_id: str,
+                         address: UpdateAddress = Depends(UpdateAddress.update_depends),
+                         current_user: DecodedTokenDTO = Depends(get_current_user),
+                         user_service: UserServices = Depends(get_user_service),
+                         ):
+    try:
+        user_service_response = await user_service.update_address(address, address_id, current_user)
+        
+        user_service_response.status_code = status.HTTP_200_OK
+        return SuccessfulResponse(user_service_response)
+    except Exception as e:
+        raise e
+
+
+@v1_user_router.delete("/address/{address_id}")
+async def delete_user_address(address_id: str,
+                              current_user: DecodedTokenDTO = Depends(get_current_user),
+                              user_service: UserServices = Depends(get_user_service)):
+    try:
+        user_response = await user_service.delete_user_address(address_id, current_user)
+        user_response.status_code = status.HTTP_200_OK
+        
+        response = SuccessfulResponse(user_response)
+        return response
     except Exception as e:
         raise e

@@ -1,10 +1,10 @@
 from datetime import datetime
-from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, func
 from sqlmodel import Field, SQLModel
 
 from app.src.schema.orders_schema import OrderStatusSchema
+from app.src.utils.utility import Utility
 
 
 class Orders(SQLModel, table=True):
@@ -16,7 +16,7 @@ class Orders(SQLModel, table=True):
         and revoke or back again into its original quantity when the order is cancelled.
     """
     id: int = Field(primary_key=True)
-    string_id: str = Field(unique=True, default_factory=lambda: str(uuid4()), nullable=False)
+    string_id: str = Field(unique=True, default_factory=lambda: Utility.generate_ref_number("ORD"), nullable=False)
     user_id: str = Field(sa_column=Column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False))
     product_id: str = Field(sa_column=Column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False))
     quantity: int = Field(default=None, nullable=False)

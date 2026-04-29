@@ -34,8 +34,12 @@ def __get_cloudinary_factory(sub_folder_name: str):
     return dependency
 
 
+# for user injection
+__cloudinary_users = __get_cloudinary_factory(sub_folder_name="")
+
 # for products injection
 __cloudinary_products = __get_cloudinary_factory(sub_folder_name="products")
+__cloudinary_products_carousel = __get_cloudinary_factory(sub_folder_name="carousel")
 
 
 # email_infrastructure
@@ -91,7 +95,7 @@ def get_auth_service(
 
 def get_user_service(
         uow: SQLUnitOfWork = Depends(get_uow),
-        cloudinary_infrastructure: CloudinaryInfrastructure = Depends(__cloudinary_products),
+        cloudinary_infrastructure: CloudinaryInfrastructure = Depends(__cloudinary_users),
         
         ) -> UserServices:
     return UserServices(uow, cloudinary_infrastructure=cloudinary_infrastructure)
@@ -100,6 +104,15 @@ def get_user_service(
 def get_products_service(
         uow: SQLUnitOfWork = Depends(get_uow),
         cloudinary_infrastructure: CloudinaryInfrastructure = Depends(__cloudinary_products),
+        ) -> ProductsServices:
+    return ProductsServices(uow,
+                            cloudinary_infrastructure=cloudinary_infrastructure)
+
+
+# it is part of the product
+def get_products_carousel_service(
+        uow: SQLUnitOfWork = Depends(get_uow),
+        cloudinary_infrastructure: CloudinaryInfrastructure = Depends(__cloudinary_products_carousel),
         ) -> ProductsServices:
     return ProductsServices(uow,
                             cloudinary_infrastructure=cloudinary_infrastructure)

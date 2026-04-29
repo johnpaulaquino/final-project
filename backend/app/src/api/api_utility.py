@@ -1,5 +1,7 @@
 from datetime import timedelta
+from typing import List, Optional
 
+from fastapi import File, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.src.core.constants import ConstantsData, ConstantsKeyData
@@ -42,3 +44,19 @@ def delete_auth_cookie(response: JSONResponse):
     csrf_cookie = CookieResponseOnDelete(key=ConstantsKeyData.COOKIE_CSRF_TOKEN)
     csrf_cookie.httponly = False
     response.delete_cookie(**csrf_cookie.model_dump())
+
+
+async def get_filenames_and_image_bytes(images: Optional[List[UploadFile]] = File(None)):
+    filenames = []
+    images_bytes = []
+    
+    # check if not null
+    if images:
+        for image in images:
+            if image:
+                filename = image.filename
+                image_byte = await image.read()
+                filenames.append(filename)
+                images_bytes.append(image_byte)
+    
+    return filenames, images_bytes

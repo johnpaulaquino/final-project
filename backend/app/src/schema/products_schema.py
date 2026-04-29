@@ -81,18 +81,6 @@ class ProductsFullInformationRequestSchema(BaseModel):
             return 0
         return value
     
-    @field_validator("category")
-    def validate_category(cls, value):
-        if not value:
-            return value
-        
-        categories_check = [ProductCategories.DRINKS.value.lower(), ProductCategories.PASTRY.value.lower()]
-        categories = [ProductCategories.DRINKS.value, ProductCategories.PASTRY.value]
-        if value not in categories:
-            raise DomainUnprocessableEntityError(
-                    f"Category must be in {categories_check}.")
-        return value
-    
     @field_validator("tags")
     def validate_tags(cls, value):
         if value is None:
@@ -108,17 +96,16 @@ class ProductsFullInformationRequestSchema(BaseModel):
 
 
 class UpdateProductsInformationRequestSchema(BaseModel):
-    product_name: Optional[str] = None
-    price: Optional[float] = None
-    category: Optional[str] = None
-    status: Optional[str] = None
-    quantity: Optional[int] = Field(default=0)
-    low_stock_threshold: Optional[int] = Field(default=20)
-    description: Optional[str] = Field(default=None)
-    images: Optional[List[Images | None]] = Field(default=None)
-    tags: Optional[list[str]] = None
-    
-    public_ids: Optional[List[str]] = Body(None)
+    product_name: Optional[str] = Body(default=None)
+    price: Optional[float] = Body(default=None)
+    category: Optional[str] = Body(default=None)
+    status: Optional[str] = Body(default=None)
+    quantity: Optional[int] = Body(default=0)
+    low_stock_threshold: Optional[int] = Body(default=20)
+    description: Optional[str] = Body(default=None)
+    images: Optional[List[Images | None]] = Body(default=None)
+    tags: Optional[list[str]] = Body(default=[])
+    public_ids: Optional[List[str]] = Body(default=[])
     
     @field_validator("price")
     def validate_price_field(cls, value):
@@ -172,7 +159,7 @@ class UpdateProductsInformationRequestSchema(BaseModel):
                               tags: Optional[list[str]] = Body(None),
                               low_stock_threshold: Optional[int] = Body(None),
                               description: Optional[str] = Body(None),
-                              public_ids: Optional[List[str]] = Body(None),
+                              public_ids: Optional[List[str]] = Body(default=[]),
                               ):
         return UpdateProductsInformationRequestSchema(product_name=product_name,
                                                       price=price,

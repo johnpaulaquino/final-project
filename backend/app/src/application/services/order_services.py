@@ -83,21 +83,17 @@ class OrderServices(SharedServices):
     async def batch_insert_order(self, new_orders: BatchCreateOrderSchema, current_user: DecodedTokenDTO):
         try:
             
-            # validate the role
-            if Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN:
-                raise DomainForbiddenAccessError("You don't have rights to access this.")
-            
-            # get user in db.
-            user = await self.uof.users.find_record_by_id(current_user.user_id)
-            
-            # check if user not exists
-            if not user:
-                raise DomainJWTInvalidError("No user not found. Please back to login.")
+            # check if users exists
+            await self._check_user_if_exists(current_user.user_id)
+            # validate user role
+            self.validate_users_role(current_user.role, is_admin=False)
             
             # get the products ids
             product_ids = [order.product_id for order in new_orders.orders]
             # find products
             product_data = await self.uof.products.find_products_with_product_ids(product_ids)
+            
+            reference_number = None
             # check if product not exists.
             if not product_data:
                 raise DomainNotFoundError("You cannot place an orders that the product is not exist.")
@@ -123,7 +119,7 @@ class OrderServices(SharedServices):
                 # update reserve quantity that will map on inventory column.
                 await self.uof.products.update_product_inventory(order.product_id, to_update)
                 
-                reference_number = order_data.format_order_number
+                reference_number = Utility.generate_ref_number() if reference_number is None else reference_number
                 total_amount = current_product.Products.price * order.quantity
                 
                 # Insert transaction into database.
@@ -294,13 +290,13 @@ class OrderServices(SharedServices):
             await self._check_user_if_exists(current_user.user_id)
             
             # validate role
-            self.validate_users_role(current_user.role)
+            self.validate_users_role(current_user.role, is_admin=False)
             
             # check the product and order
             order_data, product_data = await self.__check_product_orders_user_exist(order_id, current_user.user_id,
                                                                                     "Cannot ship order that is not exist.")
             # set the validated
-            validated_order_status = Utility.capitalize_first_letters(order_data.order_status)
+            validated_order_status = Utility.capitalize_first_letters(order_data.Orders.order_status)
             # if the order status is not Delivered, then raise an error.
             if validated_order_status != OrderStatusSchema.Delivered:
                 raise DomainEntityStatusInvalidError("Can't set as received the order that is not Delivered.")
@@ -362,8 +358,10 @@ class OrderServices(SharedServices):
             data = await self.uof.users.get_paginated_user_sales(offset=offset, limit=paginated.limit)
             if not data:
                 return SuccessfulResponseSchema(message="Successfully, but no records to retrieved.", data=data)
-            
-            return SuccessfulResponseSchema(message="Successfully retrieved data.", data=data)
+            total_records = await self.uof.users.get_total_paginated_user_sales()
+            paginated_data = Utility.get_paginated_data(offset=offset, skip=paginated.skip, limit=paginated.limit,
+                                                        total_records=total_records)
+            return SuccessfulResponseSchema(message="Successfully retrieved data.", data=data, paginated=paginated_data)
         except Exception as e:
             raise e
     

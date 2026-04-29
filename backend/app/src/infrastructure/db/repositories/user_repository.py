@@ -10,7 +10,7 @@ from app.src.domain.interfaces.user_interface import UserInterface
 from app.src.exceptions.domain_exceptions import DomainError
 from app.src.infrastructure.db.entity import Address, Orders, PersonalInfo, Transactions, Users
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress
-from app.src.schema import EnvironmentStatus
+from app.src.schema import EnvironmentStatus, RoleSchema
 from app.src.schema.auth_schema import SignUpRequest
 from app.src.schema.orders_schema import OrderStatusSchema
 
@@ -108,6 +108,33 @@ class UserRepository(UserInterface):
         data = result.scalars().first()
         return UserDTO.model_validate(data) if data else data
     
+    async def get_all_active_users(self, offset, limit):
+        try:
+            stmt = (select(Users.email, Users.created_at, Users.role, PersonalInfo.firstname,
+                           PersonalInfo.middle_name, PersonalInfo.lastname)
+                    .join(PersonalInfo, Users.id == PersonalInfo.user_id)
+                    .where(and_(Users.is_deleted == False,
+                                Users.role != RoleSchema.ADMIN,
+                                Users.is_active == True))
+                    .offset(offset)
+                    .limit(limit))
+            result = await self.__db.execute(stmt)
+            data = result.mappings().fetchall()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_all_active_users_count(self):
+        try:
+            stmt = select(func.count(Users.id)).where(and_(Users.is_deleted == False,
+                                                           Users.role != RoleSchema.ADMIN,
+                                                           Users.is_active == True))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
     async def get_user_info_only_with_password(self, user_id: str) -> UserWithPasswordDTO:
         """
         To get the personal info only.
@@ -187,9 +214,7 @@ class UserRepository(UserInterface):
                            PersonalInfo.middle_name,
                            PersonalInfo.lastname,
                            func.sum(Transactions.total_amount).label("total_amount"),
-                           Transactions.transaction_reference,
-                           Orders.id.label("order_id"),
-                           Transactions.id.label("transaction_id"))
+                           Transactions.transaction_reference, )
                     .select_from(Users)
                     .join(PersonalInfo, Users.id == PersonalInfo.user_id)
                     .outerjoin(Orders, Users.id == Orders.user_id)
@@ -200,13 +225,34 @@ class UserRepository(UserInterface):
                               Users.id,
                               PersonalInfo.firstname,
                               PersonalInfo.middle_name,
-                              PersonalInfo.lastname,
-                              Orders.id,
-                              Transactions.id)
+                              PersonalInfo.lastname)
                     .offset(offset)
                     .limit(limit))
             result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_total_paginated_user_sales(self):
+        try:
+            stmt = (
+                    select(func.count(func.distinct(Transactions.transaction_reference)))
+                    .select_from(Users)
+                    .join(PersonalInfo, Users.id == PersonalInfo.user_id)
+                    .outerjoin(Orders, Users.id == Orders.user_id)
+                    .outerjoin(Transactions, Orders.id == Transactions.order_id)
+                    .where(Orders.order_status.in_([
+                            OrderStatusSchema.Delivered,
+                            OrderStatusSchema.Received,
+                            ]))
+            )
+            
+            # Use scalar() because it returns a single integer, not a row/tuple
+            result = await self.__db.execute(stmt)
+            data = result.scalar() or 0
+            
+            # If there are no records, scalar() might return None, so default to 0
             return data
         except Exception as e:
             raise e
@@ -238,6 +284,17 @@ class UserRepository(UserInterface):
             if ConstantsData.ENVIRONMENT == EnvironmentStatus.Dev:
                 return DomainError(str(e))
             raise DomainError
+    
+    async def get_user_ids(self):
+        try:
+            stmt = select(Users.id).where(and_(Users.is_active == True,
+                                               Users.role == RoleSchema.CUSTOMER,
+                                               Users.is_deleted == False))
+            result = await self.__db.execute(stmt)
+            data = result.scalars().fetchall()
+            return data
+        except Exception as e:
+            raise e
     
     async def update_default_address(self, address_id: str, user_id: str):
         try:

@@ -9,6 +9,13 @@ import React, {
   useRef,
 } from "react";
 
+interface PaginationMeta {
+  has_next: boolean;
+  total_records: number;
+  start_page: number;
+  end_page: number;
+}
+
 export interface AppNotification {
   id: string;
   title: string;
@@ -23,10 +30,11 @@ export interface AppNotification {
 interface NotificationContextType {
   notifications: AppNotification[];
   unreadCount: number;
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (skip: number, limit: number) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   clearHistory: () => Promise<void>;
+  pagination: PaginationMeta;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -47,12 +55,20 @@ export function NotificationProvider({
   );
   const reconnectAttemptsRef = useRef(0);
   const unreadCount = notifications.filter((n) => !n.is_user_read).length;
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    has_next: false,
+    total_records: 0,
+    start_page: 1,
+    end_page: 1,
+  });
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (skip: number, limit: number) => {
     try {
       // Fixed duplicate API call here
-      const rawData = await apiClient.get("/notifications/");
-
+      const rawData = await apiClient.get(
+        `/notifications/?skip=${skip}&limit=${limit}`,
+      );
+      setPagination(rawData.paginated);
       console.log("🚨 RAW API RESPONSE:", rawData);
 
       if (Array.isArray(rawData)) {
@@ -74,7 +90,7 @@ export function NotificationProvider({
   const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_user_read: true })));
     try {
-      await apiClient.put("/notifications/read-all", {});
+      await apiClient.patch("/notifications/read-all", {});
     } catch (error) {
       console.error("Failed to mark all as read:", error);
     }
@@ -100,7 +116,7 @@ export function NotificationProvider({
 
   // . WEBSOCKET LOGIC ---
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications(1, 10);
 
     const wsUrl = "ws://localhost:9898/api/v1/biskota/notifications/";
     const maxReconnectAttempts = 5;
@@ -179,6 +195,7 @@ export function NotificationProvider({
         markAllAsRead,
         deleteNotification,
         clearHistory,
+        pagination,
       }}
     >
       {children}

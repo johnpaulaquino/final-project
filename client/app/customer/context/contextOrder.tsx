@@ -54,6 +54,7 @@ interface OrderContextType {
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   deliverOrder: (id: string, payload: any) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
+  receiveOrder: (id: string, payload: any) => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -148,6 +149,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           order_status: item.Orders.order_status,
           transaction_reference: item.transaction_reference,
           created_at: item.Orders.created_at,
+          user_id: item.Orders.user_id,
         }));
 
         setOrders(mappedOrders);
@@ -185,9 +187,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // --- NEW: Implement confirmOrder ---
   const confirmOrder = async (id: string, payload: any) => {
-    // Optimistic UI Update
     setOrders((prev) =>
       prev.map((order) =>
         order.string_id === id
@@ -197,6 +197,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
     try {
       await apiClient.patch(`/order/${id}/confirm`, payload);
+   
     } catch (error) {
       console.error("Failed to confirm order:", error);
     }
@@ -212,8 +213,23 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
     try {
       await apiClient.patch(`/order/${id}/cancel`, {});
+  
     } catch (error) {
       console.error("Failed to cancel order:", error);
+    }
+  };
+  const receiveOrder = async (orderId: string, payload: any) => {
+    try {
+      // Note: Action endpoints like this are usually PATCH or POST in FastAPI.
+      // I am using patch here, but change it to .post if your backend strictly requires POST.
+      await apiClient.patch(`/order/${orderId}/receive`, payload);
+
+      // Refresh the list to remove the received order from the "Delivered" tab
+      // Make sure these variables match what you currently use in your context to fetch
+    
+    } catch (error) {
+      console.error("Failed to mark order as received:", error);
+      throw error;
     }
   };
 
@@ -227,6 +243,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
     try {
       await apiClient.patch(`/order/${id}/ship`, payload);
+   
     } catch (error) {
       console.error("Failed to ship order:", error);
     }
@@ -256,11 +273,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         isLoading,
         pagination,
         fetchOrders,
-        fetchAdminOrders, // FIXED: Now properly maps to the fetchAdminOrders function
+        fetchAdminOrders,
         cancelOrder,
         updateOrderStatus,
         deliverOrder,
         confirmOrder,
+        receiveOrder,
         shipOrder,
         deleteOrder,
       }}

@@ -13,7 +13,7 @@ from app.src.exceptions.http_exceptions import JWTInvalidException
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress, UpdateAddress
 from app.src.infrastructure.db.uow import SQLUnitOfWork
-from app.src.schema import SignInTypeSchema, SuccessfulResponseSchema
+from app.src.schema import PaginatedSchema, SignInTypeSchema, SuccessfulResponseSchema
 from app.src.schema.user_schema import ChangePasswordSchema, UpdateUserSchema
 from app.src.utils.utility import Utility
 
@@ -273,6 +273,29 @@ class UserServices(SharedServices):
             
             return SuccessfulResponseSchema(message="Successfully updated password.")
         
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def get_all_active_users(self, paginated: PaginatedSchema, current_user: DecodedTokenDTO):
+        try:
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            # check user role
+            self.validate_users_role(current_user.role)
+            # get offset
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            data = await self.__uow.users.get_all_active_users(offset, paginated.limit)
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.")
+            
+            # get paginated output
+            total_records = await self.__uow.users.get_all_active_users_count()
+            paginated_data = Utility.get_paginated_data(offset=offset, skip=paginated.skip,
+                                                        limit=paginated.limit, total_records=total_records)
+            return SuccessfulResponseSchema(message="Successfully retrieved data.",
+                                            data=data,
+                                            paginated=paginated_data)
         except Exception as e:
             raise e
     

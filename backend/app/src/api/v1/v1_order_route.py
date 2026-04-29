@@ -6,7 +6,7 @@ from app.src.core.dependencies import get_current_user, get_order_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.schema import PaginatedSchema
 from app.src.schema.orders_schema import (BatchCreateOrderSchema, ConfirmOrderSchema, CreateOrderSchema,
-                                          DeliveredOrderSchema, OrderStatusSchema, ReceivedOrderSchema, )
+                                          DeliveredOrderSchema, OrderStatusSchema, )
 from app.src.utils.successful_response import SuccessfulResponse
 
 # prefix endpoint
@@ -147,13 +147,12 @@ async def update_order_to_delivered(order_id: str,
 
 @v1_order_router.patch("/{order_id}/receive", tags=[EndpointTags.CUSTOMER])
 async def update_order_to_received(order_id: str,
-                                   data: ReceivedOrderSchema,
                                    current_user: DecodedTokenDTO = Depends(get_current_user),
                                    order_services
                                    : OrderServices = Depends(get_order_service)):
     
     try:
-        order_result = await order_services.received_order(order_id, data, current_user)
+        order_result = await order_services.received_order(order_id, current_user)
         order_result.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(order_result)
         return response

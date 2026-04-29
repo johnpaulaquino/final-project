@@ -4,9 +4,10 @@ from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.domain.dto.products_dto import ProductsInformationFilterWithTags
-from app.src.exceptions.domain_exceptions import (DomainNotFoundError,
+from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainNotFoundError,
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
+from app.src.infrastructure.db.entity.products.carousels_entity import CreateCarousel
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
 from app.src.schema.products_schema import (CreateCategories, InventoryRequestSchema, ProductCategories,
@@ -48,6 +49,11 @@ class ProductsServices(SharedServices):
             await self._check_user_if_exists(current_user.user_id)
             # then check if it's admin
             self.validate_users_role(current_user.role)
+            
+            # check if the category is in the database
+            categories_data = await self.__uow.products.get_product_categories()
+            if product_request.category not in categories_data:
+                raise DomainUnprocessableEntityError(f"Category should be in {categories_data}.")
             # check if the images uploaded in the server exceed to maximum 5, then raise an error.
             if len(filenames) > 5:
                 raise DomainUnprocessableEntityError(
@@ -90,8 +96,11 @@ class ProductsServices(SharedServices):
             
             # then validate data before it insert
             list_of_categories = []
+            # get the categories from database
+            data = await self.__uow.products.get_product_categories()
             for category in categories.category:
-                
+                if category in data:
+                    raise DomainAlreadyExistsError("Category is already exist.")
                 category = Utility.capitalize_first_letters(category)
                 list_of_categories.append(category)
             
@@ -229,6 +238,83 @@ class ProductsServices(SharedServices):
             raise e
     
     @retry_on_transient
+    async def insert_carousel(self, current_user: DecodedTokenDTO,
+                              filenames: List[str],
+                              img_bytes: List[bytes],
+                              ):
+        is_images_uploaded = None
+        product_images = None
+        try:
+            # check if user exist
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # check user role
+            self.validate_users_role(current_user.role)
+            
+            # get filenames and bytes adn upload the image on the cloudinary
+            product_images = await self.upload_images_and_get(filenames, img_bytes)
+            
+            carousel = CreateCarousel(image=None)
+            # set the uploaded to true, since I upload the file in cloudinary.
+            
+            carousel.image = product_images[0] if product_images is not None else product_images
+            
+            await self.__uow.products.create_product_carousel(carousel)
+            
+            return SuccessfulResponseSchema(message="Successfully inserted carousel.")
+        
+        except Exception as e:
+            # if encountered error, delete image from cloudinary
+            if is_images_uploaded:
+                for product_image in product_images:
+                    print(product_image.public_key)
+                    public_key = product_image.public_key
+                    await self.cloudinary_infrastructure.destroy_images(public_key)
+            raise e
+    
+    @retry_on_transient
+    async def get_paginated_carousel(self, paginated: PaginatedSchema, current_user: DecodedTokenDTO):
+        try:
+            # check user
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # retrieve data
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            data = await self.__uow.products.get_paginated_carousel(offset, paginated.limit)
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.")
+            total_records = await self.__uow.products.get_paginated_carousel_count()
+            paginated_data = Utility.get_paginated_data(offset=offset,
+                                                        skip=paginated.skip,
+                                                        limit=paginated.limit,
+                                                        total_records=total_records)
+            return SuccessfulResponseSchema(message="Successfully retrieved data.", data=data, paginated=paginated_data)
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def delete_carousel(self, carousel_id: str, current_user: DecodedTokenDTO):
+        try:
+            # check user
+            await self._check_user_if_exists(current_user.user_id)
+            # validate user role
+            self.validate_users_role(current_user.role)
+            
+            # retrieve data if exist
+            data = await self.__uow.products.get_carousel(carousel_id)
+            if not data:
+                raise DomainNotFoundError("can't delete carousel that is not exist.")
+            
+            await self.__uow.products.delete_carousel(carousel_id)
+            
+            # remove image in cloudinary
+            await self.cloudinary_infrastructure.destroy_images(data.image.public_key)
+            return SuccessfulResponseSchema(message="Successfully deleted carousel.")
+        
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
     async def update_product_information(self, product_id: str,
                                          new_data: UpdateProductsInformationRequestSchema,
                                          filenames: List[str],
@@ -236,8 +322,8 @@ class ProductsServices(SharedServices):
                                          img_bytes: List[bytes]):
         new_product_images = None
         is_images_uploaded = False
-        
         try:
+            
             # check first if user exist
             await self.check_if_user_exists(current_user.user_id)
             # then check if it's admin
@@ -252,7 +338,6 @@ class ProductsServices(SharedServices):
             inventory = InventoryRequestSchema(**data.model_dump())
             details = ProductDetailsRequestSchema(**data.model_dump())
             # then make a copy on the original data and replace the old one
-            
             # check first if images is 5 in database then raise an error. Only update the Not None value.
             if filenames:
                 available_image_to_upload = (5 - len(details.images)) - len(filenames)

@@ -23,7 +23,7 @@ class SharedServices:
                                           filenames: List[str],
                                           img_bytes: List[bytes],
                                           images: list[Images],
-                                          public_ids=None):
+                                          public_ids=List[str]):
         """
         To upload image(s) in the cloudinary.
         :param filenames: a list of filenames of the images.
@@ -35,17 +35,21 @@ class SharedServices:
         is_images_uploaded = False
         try:
             # get the old images from database
-            old_images = images.copy()
+            old_images = []
             
             # check if there's an old images.
             if images:
+                
                 # then look for the value in old images using for loop.
                 for index, value in enumerate(images):
                     # then check if the old public key in
+                    
                     old_public_id = value.public_key
-                    if old_public_id in public_ids:
+                    
+                    if old_public_id not in public_ids:
                         # remove the old images from dictionary
-                        old_images.pop(index)
+                        
+                        old_images.append(old_public_id)
                         # then remove from cloudinary
             # then get the list of new img_url and public_key
             new_data_images = await self.upload_images_and_get(filenames, img_bytes)

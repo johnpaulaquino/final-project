@@ -1,64 +1,106 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { apiClient } from "@/lib/api";
 
 export interface Banner {
   id: string | number;
   image: string;
 }
 
-// Default fallback banners so the page isn't empty on first load
-const defaultBanners: Banner[] = [
-  { id: 1, image: '/banner1.png' },
-  { id: 2, image: '/banner2.png' },
-  { id: 3, image: '/banner3.png' }
-];
-
 interface BannerContextType {
   banners: Banner[];
-  addBanner: (image: string) => void;
-  removeBanner: (id: string | number) => void;
+  isLoading: boolean; // 🚀 NEW: Tracks the initial load
+  addBanner: (
+    fileBlob: Blob,
+    fileName: string,
+    previewBase64: string,
+  ) => Promise<void>;
+  removeBanner: (id: string | number) => Promise<void>;
 }
 
 const BannerContext = createContext<BannerContextType | undefined>(undefined);
 
 export function BannerProvider({ children }: { children: React.ReactNode }) {
-  const [banners, setBanners] = useState<Banner[]>(defaultBanners);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load from LocalStorage on mount with a SAFETY NET
-  useEffect(() => {
+  // 🚀 NEW: Centralized GET API Call (No Pagination)
+  const fetchLiveBanners = useCallback(async () => {
     try {
-      const savedBanners = localStorage.getItem('biskota_banners');
-      if (savedBanners) {
-        setBanners(JSON.parse(savedBanners));
-      }
+      setIsLoading(true);
+      const response = await apiClient.get(
+        "/products/carousel?skip=1&limit=100",
+      );
+
+      const rawData =
+        response?.data?.data || response?.data || response?.items || [];
+
+      const formattedBanners = rawData
+        .filter((item: any) => item.CarouselEntity?.image?.image_url)
+        .map((item: any) => ({
+          id: item.CarouselEntity.id,
+          image: item.CarouselEntity.image.image_url,
+        }));
+
+      setBanners(formattedBanners);
     } catch (error) {
-      console.error("Corrupted banner data found in LocalStorage. Resetting to defaults.");
-      // Automatically clears the corrupted data to fix the loop
-      localStorage.removeItem('biskota_banners'); 
+      console.error("Failed to fetch banners in context:", error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoaded(true);
   }, []);
 
-  // Save to LocalStorage whenever banners change
+  // Fetch exactly once when the app loads
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('biskota_banners', JSON.stringify(banners));
-    }
-  }, [banners, isLoaded]);
+    fetchLiveBanners();
+  }, [fetchLiveBanners]);
 
-  const addBanner = (image: string) => {
-    const newBanner = { id: Date.now().toString(), image };
-    setBanners((prev) => [...prev, newBanner]);
+  // Centralized Upload API Call
+  const addBanner = async (
+    fileBlob: Blob,
+    fileName: string,
+    previewBase64: string,
+  ) => {
+    try {
+      const formData = new FormData();
+      formData.append("image", fileBlob, fileName);
+
+      const response = await apiClient.post("/products/carousel", formData);
+
+      const newBanner = {
+        id: response?.data?.id || Date.now().toString(),
+        image: previewBase64,
+      };
+
+      setBanners((prev) => [...prev, newBanner]);
+    } catch (error) {
+      console.error("Failed to upload banner in context:", error);
+      throw error;
+    }
   };
 
-  const removeBanner = (id: string | number) => {
-    setBanners((prev) => prev.filter(banner => banner.id !== id));
+  // Centralized Delete API Call
+  const removeBanner = async (id: string | number) => {
+    try {
+      await apiClient.delete(`/products/carousel/${id}`);
+      setBanners((prev) => prev.filter((banner) => banner.id !== id));
+    } catch (error) {
+      console.error("Failed to delete banner in context:", error);
+      throw error;
+    }
   };
 
   return (
-    <BannerContext.Provider value={{ banners, addBanner, removeBanner }}>
+    <BannerContext.Provider
+      value={{ banners, isLoading, addBanner, removeBanner }}
+    >
       {children}
     </BannerContext.Provider>
   );
@@ -67,7 +109,7 @@ export function BannerProvider({ children }: { children: React.ReactNode }) {
 export function useBanner() {
   const context = useContext(BannerContext);
   if (context === undefined) {
-    throw new Error('useBanner must be used within a BannerProvider');
+    throw new Error("useBanner must be used within a BannerProvider");
   }
   return context;
 }

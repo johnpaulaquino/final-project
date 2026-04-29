@@ -6,10 +6,9 @@ import EditProductModal from "./editInventoryModal";
 import { Product } from "../../../customer/context/contextCart";
 
 export default function InventoryList() {
-  // deleteProduct is removed from here since it will be handled inside your modal
   const { products, fetchProducts, updateProduct } = useProduct();
+
   useEffect(() => {
-    // You can adjust skip and limit here if you implement pagination later
     fetchProducts("All", 1, 10);
   }, ["All", fetchProducts]);
 
@@ -17,10 +16,31 @@ export default function InventoryList() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Triggered when clicking anywhere on the row
   const handleRowClick = (product: Product) => {
     setSelectedProduct(product);
     setIsEditOpen(true);
+  };
+
+  // 🚀 NEW: The handler that receives the FormData from the modal
+  const handleSaveProduct = async (formData: FormData) => {
+    if (!selectedProduct) return;
+
+    try {
+      // 1. Grab the ID from the product that is currently selected in state
+      // Note: Adjust .id to .string_id if your backend uses UUIDs!
+      const productId = selectedProduct.Products.id;
+
+      // 2. Pass the ID and the raw FormData to your context
+      await updateProduct(productId, formData);
+
+      // 3. Close the modal on success
+      setIsEditOpen(false);
+    } catch (error) {
+      console.error("Failed to update product:", error);
+    }
+    formData.forEach((value, key) => {
+      console.log("FormData:", key, value);
+    });
   };
 
   const getStockStatus = (stock: number) => {
@@ -95,7 +115,7 @@ export default function InventoryList() {
                             {product.Products.product_name}
                           </span>
                           <p className="text-xs text-gray-500 line-clamp-1 mt-1 max-w-[200px]">
-                            {product.Products.description}
+                            {product.description}
                           </p>
                         </div>
                       </div>
@@ -146,7 +166,8 @@ export default function InventoryList() {
         isOpen={isEditOpen}
         product={selectedProduct}
         onClose={() => setIsEditOpen(false)}
-        onSave={(updated) => updateProduct(updated)}
+        // 🚀 MODIFIED: Connect the new handler here
+        onSave={handleSaveProduct}
       />
     </div>
   );

@@ -7,7 +7,7 @@ interface EditModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedProduct: Product) => void;
+  onSave: (formData: FormData) => void;
 }
 
 export default function EditProductModal({
@@ -18,35 +18,60 @@ export default function EditProductModal({
 }: EditModalProps) {
   const [formData, setFormData] = useState<Product | null>(null);
 
-  // Sync internal state when a product is selected
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   useEffect(() => {
-    if (product) setFormData({ ...product });
+    if (product) {
+      setFormData({ ...product });
+      setImageFile(null);
+      setImagePreview(null);
+    }
   }, [product]);
+  console.log(product);
 
   if (!isOpen || !formData) return null;
 
+  // 🚀 MODIFIED: Build the FormData right here in the modal!
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+
+    const submitData = new FormData();
+    // Ensure these keys are exactly snake_case to match Python
+    submitData.append("product_name", formData.Products.product_name || "");
+    submitData.append("price", formData.Products.price?.toString() || "0");
+    submitData.append("quantity", formData.quantity?.toString() || "0");
+    submitData.append("description", formData.description || "");
+
+    // If your backend has "category" in the dependency, you MUST append it
+    // Even if it's empty, or FastAPI might default it to None
+    submitData.append("category", formData.Products.category || "");
+
+    if (imageFile) {
+      // Check if your backend expects "images" or "image"
+      submitData.append("images", imageFile);
+    }
+
+    if (formData.images && formData.images.length > 0) {
+      [formData.images[0]].forEach((img) => {
+        if (img.public_key) {
+          // Must match "public_ids" in the backend Form parameter
+          submitData.append("public_ids", img.public_key);
+        }
+      });
+    }
+
+    onSave(submitData);
     onClose();
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({
-          ...formData,
-          Products: {
-            ...formData.Products,
-            images: reader.result as string | [],
-          },
-        });
-      };
-      reader.readAsDataURL(e.target.files[0]);
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
-
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-[#0B1527]/60 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
@@ -154,14 +179,11 @@ export default function EditProductModal({
               </label>
               <textarea
                 rows={3}
-                value={formData.Products.description || ""}
+                value={formData.description || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    Products: {
-                      ...formData.Products,
-                      description: e.target.value,
-                    },
+                    description: e.target.value,
                   })
                 }
                 className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:border-[#800000] resize-none font-medium"
