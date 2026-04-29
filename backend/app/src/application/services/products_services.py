@@ -7,6 +7,7 @@ from app.src.domain.dto.products_dto import ProductsInformationFilterWithTags
 from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainNotFoundError,
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
+from app.src.infrastructure.db.entity.products.carousels_entity import CreateCarousel
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
 from app.src.schema.products_schema import (CreateCategories, InventoryRequestSchema, ProductCategories,
@@ -233,6 +234,83 @@ class ProductsServices(SharedServices):
     async def get_low_stock_overview(self):
         try:
             pass
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def insert_carousel(self, current_user: DecodedTokenDTO,
+                              filenames: List[str],
+                              img_bytes: List[bytes],
+                              ):
+        is_images_uploaded = None
+        product_images = None
+        try:
+            # check if user exist
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # check user role
+            self.validate_users_role(current_user.role)
+            
+            # get filenames and bytes adn upload the image on the cloudinary
+            product_images = await self.upload_images_and_get(filenames, img_bytes)
+            
+            carousel = CreateCarousel(image=None)
+            # set the uploaded to true, since I upload the file in cloudinary.
+            
+            carousel.image = product_images[0] if product_images is not None else product_images
+            
+            await self.__uow.products.create_product_carousel(carousel)
+            
+            return SuccessfulResponseSchema(message="Successfully inserted carousel.")
+        
+        except Exception as e:
+            # if encountered error, delete image from cloudinary
+            if is_images_uploaded:
+                for product_image in product_images:
+                    print(product_image.public_key)
+                    public_key = product_image.public_key
+                    await self.cloudinary_infrastructure.destroy_images(public_key)
+            raise e
+    
+    @retry_on_transient
+    async def get_paginated_carousel(self, paginated: PaginatedSchema, current_user: DecodedTokenDTO):
+        try:
+            # check user
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # retrieve data
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            data = await self.__uow.products.get_paginated_carousel(offset, paginated.limit)
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.")
+            total_records = await self.__uow.products.get_paginated_carousel_count()
+            paginated_data = Utility.get_paginated_data(offset=offset,
+                                                        skip=paginated.skip,
+                                                        limit=paginated.limit,
+                                                        total_records=total_records)
+            return SuccessfulResponseSchema(message="Successfully retrieved data.", data=data, paginated=paginated_data)
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def delete_carousel(self, carousel_id: str, current_user: DecodedTokenDTO):
+        try:
+            # check user
+            await self._check_user_if_exists(current_user.user_id)
+            # validate user role
+            self.validate_users_role(current_user.role)
+            
+            # retrieve data if exist
+            data = await self.__uow.products.get_carousel(carousel_id)
+            if not data:
+                raise DomainNotFoundError("can't delete carousel that is not exist.")
+            
+            await self.__uow.products.delete_carousel(carousel_id)
+            
+            # remove image in cloudinary
+            await self.cloudinary_infrastructure.destroy_images(data.image.public_key)
+            return SuccessfulResponseSchema(message="Successfully deleted carousel.")
+        
         except Exception as e:
             raise e
     

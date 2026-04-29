@@ -3,8 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Cookie, Depends, File, Query, UploadFile
 from starlette import status
 
-from app.src.api.api_utility import delete_auth_cookie
-from app.src.api.v1 import get_filenames_and_image_bytes
+from app.src.api.api_utility import delete_auth_cookie, get_filenames_and_image_bytes
 from app.src.application.services.user_services import UserServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_redis_services, get_user_service

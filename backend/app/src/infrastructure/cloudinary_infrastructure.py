@@ -16,7 +16,10 @@ cloudinary.config(
 
 class CloudinaryInfrastructure:
     def __init__(self, sub_folder_name="display-photo"):
-        self.sub_folder_name = sub_folder_name
+        if not sub_folder_name:
+            self.sub_folder_name = "display-photo"
+        else:
+            self.sub_folder_name = sub_folder_name
     
     async def upload_image(self, url_img, public_id: str) -> str:
         # set the asset folder name.

@@ -4,7 +4,9 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.src.domain.dto.products_dto import (ListOfProductInformationDTO, ProductDetailsDTO, ProductInformationDTO,
                                              ProductsDataDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import Categories, Inventory, ProductDetails, ProductRatings, Products
+from app.src.infrastructure.db.entity import (CarouselEntity, Categories, Inventory, ProductDetails, ProductRatings,
+                                              Products, )
+from app.src.infrastructure.db.entity.products.carousels_entity import CreateCarousel
 from app.src.schema.products_schema import (ProductCategories, ProductStatusSchema,
                                             ProductsFullInformationRequestSchema,
                                             ProductsTags, )
@@ -12,8 +14,8 @@ from app.src.schema.products_schema import (ProductCategories, ProductStatusSche
 
 class ProductsRepository(UserInterface):
     
-    def __init__(self, _db: AsyncSession):
-        self._db = _db
+    def __init__(self, __db: AsyncSession):
+        self.__db = __db
     
     async def insert_record(self, request: ProductsFullInformationRequestSchema) -> ProductsDataDTO:
         """
@@ -23,9 +25,9 @@ class ProductsRepository(UserInterface):
         """
         # initialize model entity
         products = Products(**request.model_dump())
-        # insert into _db, but not commited for the meantime
-        self._db.add(products)
-        await self._db.flush()
+        # insert into __db, but not commited for the meantime
+        self.__db.add(products)
+        await self.__db.flush()
         
         # insert into product details
         products_details = ProductDetails(**request.model_dump())
@@ -34,8 +36,8 @@ class ProductsRepository(UserInterface):
         # insert into inventory
         inventory = Inventory(**request.model_dump())
         inventory.product_id = products.id
-        # insert into _db, but not commited for the meantime
-        self._db.add_all([inventory, products_details])
+        # insert into __db, but not commited for the meantime
+        self.__db.add_all([inventory, products_details])
         
         # return the Products DTO
         return ProductsDataDTO.model_validate(products, from_attributes=True)
@@ -47,7 +49,7 @@ class ProductsRepository(UserInterface):
                 category = Categories(category=categ)
                 list_of_categories.append(category)
             
-            self._db.add_all(list_of_categories)
+            self.__db.add_all(list_of_categories)
         except Exception as e:
             raise e
     
@@ -56,9 +58,58 @@ class ProductsRepository(UserInterface):
         try:
             # select only the distinc category or unique.
             stmt = select(Categories).distinct(Categories.category)
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().unique().fetchall()
             return data
+        except Exception as e:
+            raise e
+    
+    async def create_product_carousel(self, carousel: CreateCarousel):
+        try:
+            data = CarouselEntity(**carousel.model_dump())
+            self.__db.add(data)
+        
+        except Exception as e:
+            raise e
+    
+    async def get_carousel(self, carousel_id: str):
+        try:
+            stmt = select(CarouselEntity).where(CarouselEntity.id == carousel_id)
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_paginated_carousel(self, offset: int, limit: int):
+        try:
+            stmt = select(CarouselEntity).offset(offset).limit(limit)
+            result = await self.__db.execute(stmt)
+            data = result.mappings().fetchall()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_paginated_carousel_count(self):
+        try:
+            stmt = select(func.count(CarouselEntity.id))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def update_carousel(self, carousel_id: str, data: dict):
+        try:
+            stmt = update(CarouselEntity).where(CarouselEntity.id == carousel_id).values(**data)
+            await self.__db.execute(stmt)
+        except Exception as e:
+            raise e
+    
+    async def delete_carousel(self, carousel_id: str):
+        try:
+            stmt = delete(CarouselEntity).where(CarouselEntity.id == carousel_id)
+            await self.__db.execute(stmt)
         except Exception as e:
             raise e
     
@@ -79,7 +130,7 @@ class ProductsRepository(UserInterface):
                                                         ).outerjoin(Inventory, Products.id == Inventory.product_id
                                                                     ).where(Products.id == record_id)
         
-        result = await self._db.execute(stmt)
+        result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
         
         return ProductInformationDTO.model_validate(data[0], from_attributes=True) if data else None
@@ -97,7 +148,7 @@ class ProductsRepository(UserInterface):
                     ).select_from(Products).outerjoin(Inventory, Products.id == Inventory.product_id
                                                       ).where(Products.id.in_(product_ids))
             
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
             data = {"products": data}
             return ListOfProductInformationDTO(**data) if data else data
@@ -136,7 +187,7 @@ class ProductsRepository(UserInterface):
                 .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
                 .offset(offset).limit(limit))
         
-        result = await self._db.execute(stmt)
+        result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
         return data or None
     
@@ -176,7 +227,7 @@ class ProductsRepository(UserInterface):
         if category.lower() in [ProductCategories.PASTRY.lower(), ProductCategories.DRINKS.lower()]:
             stmt = stmt.where(Products.category == category).offset(offset).limit(limit)
         
-        result = await self._db.execute(stmt)
+        result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
         return data
     
@@ -185,7 +236,7 @@ class ProductsRepository(UserInterface):
             stmt = select(func.count(Products.id))
             if category.lower() in [ProductCategories.PASTRY.lower(), ProductCategories.DRINKS.lower()]:
                 stmt = stmt.where(Products.category == category)
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().first()
             return data
         except Exception as e:
@@ -224,7 +275,7 @@ class ProductsRepository(UserInterface):
                 .where(Products.tags.any(ProductsTags.BEST_SELLER))
                 .offset(offset)
                 .limit(limit))
-        result = await self._db.execute(stmt)
+        result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
         
         return data or None
@@ -232,7 +283,7 @@ class ProductsRepository(UserInterface):
     async def get_paginated_record_with_best_seller_tag_total_records(self):
         try:
             stmt = select(func.count(Products.id).where(Products.tags.any(ProductsTags.BEST_SELLER)))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().first()
             return data
         except Exception as e:
@@ -277,7 +328,7 @@ class ProductsRepository(UserInterface):
                 .where(Products.tags.any(ProductsTags.NEW_PRODUCT))
                 .offset(offset)
                 .limit(limit))
-        result = await self._db.execute(stmt)
+        result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
         return data or None
     
@@ -285,7 +336,7 @@ class ProductsRepository(UserInterface):
         try:
             
             stmt = select(func.count(Products.id).where(Products.tags.any(ProductsTags.NEW_PRODUCT)))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().first()
             return data
         except Exception as e:
@@ -294,7 +345,7 @@ class ProductsRepository(UserInterface):
     async def get_total_records(self):
         try:
             stmt = select(func.count(Products.id))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().first()
             return data
         except Exception as e:
@@ -307,7 +358,7 @@ class ProductsRepository(UserInterface):
         :return: the actual product data.
         """
         stmt = select(Products).where(Products.id == product_id)
-        result = await self._db.execute(stmt)
+        result = await self.__db.execute(stmt)
         data = result.scalar_one_or_none()
         
         return data
@@ -315,7 +366,7 @@ class ProductsRepository(UserInterface):
     async def get_product_details_only(self, product_id: str) -> ProductDetailsDTO | None:
         try:
             stmt = select(ProductDetails).where(ProductDetails.product_id == product_id)
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalar_one_or_none()
             
             return ProductDetailsDTO.model_validate(data)
@@ -333,11 +384,11 @@ class ProductsRepository(UserInterface):
         """
         
         stmt = update(Products).where(Products.id == record_id).values(**data)
-        await self._db.execute(stmt)
+        await self.__db.execute(stmt)
     
     async def update_product_details(self, product_id: str, data: dict):
         stmt = update(ProductDetails).where(ProductDetails.product_id == product_id).values(**data)
-        await self._db.execute(stmt)
+        await self.__db.execute(stmt)
     
     async def update_product_inventory(self, product_id: str, data: dict):
         try:
@@ -348,7 +399,7 @@ class ProductsRepository(UserInterface):
             :return: Nothing
             """
             stmt = update(Inventory).where(Inventory.product_id == product_id).values(**data)
-            await self._db.execute(stmt)
+            await self.__db.execute(stmt)
         
         except Exception as e:
             raise e
@@ -356,7 +407,7 @@ class ProductsRepository(UserInterface):
     async def batch_update_product_inventory(self, data: list):
         try:
             stmt = update(Inventory)
-            await self._db.execute(stmt, data)
+            await self.__db.execute(stmt, data)
         except Exception as e:
             raise e
     
@@ -368,12 +419,12 @@ class ProductsRepository(UserInterface):
         :return:
         """
         stmt = delete(Products).where(Products.id == record_id)
-        await self._db.execute(stmt)
+        await self.__db.execute(stmt)
     
     async def find_category(self, category_id: str):
         try:
             stmt = select(Categories).where(Categories.id == category_id)
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().one()
             return data
         except Exception as e:
@@ -382,6 +433,6 @@ class ProductsRepository(UserInterface):
     async def delete_category(self, category_id: str):
         try:
             stmt = delete(Categories).where(Categories.id == category_id)
-            await self._db.execute(stmt)
+            await self.__db.execute(stmt)
         except Exception as e:
             raise e

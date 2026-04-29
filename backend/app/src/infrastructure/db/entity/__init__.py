@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel
 
 from app.src.infrastructure.db.entity.notifications_entity import Notifications
+from app.src.infrastructure.db.entity.products.carousels_entity import CarouselEntity
 from app.src.infrastructure.db.entity.products.carts_entity import Carts
 from app.src.infrastructure.db.entity.products.categories_entity import Categories
 from app.src.infrastructure.db.entity.products.inventory_entity import Inventory
@@ -20,6 +21,7 @@ BaseEntityModel = SQLModel()
 __all__ = ["Users",
            "Address",
            "Carts",
+           'CarouselEntity',
            "PersonalInfo",
            "TempUsers",
            "Products",
