@@ -42,6 +42,10 @@ interface OrderContextType {
   orders: Order[];
   isLoading: boolean;
   pagination: PaginationMeta;
+
+  statusCounts: Record<string, number>; 
+  fetchStatusCounts: () => Promise<void>;
+
   fetchOrders: (status: string, skip: number, limit: number) => Promise<void>;
   fetchAdminOrders: (
     status: string,
@@ -54,6 +58,7 @@ interface OrderContextType {
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   deliverOrder: (id: string, payload: any) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
+  rateOrder: (id: string, payload: { rating: number; review: string }) => Promise<void>; // idk pa kung anong lalagay kasi wala pang route para mag Post ng rating sa order, so just a placeholder for now
   receiveOrder: (id: string, payload: any) => Promise<void>;
 }
 
@@ -63,12 +68,40 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 2. CREATED STATE FOR STATUS COUNTS
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
+    Pending: 10,
+    Approved: 0,
+    Shipped: 0,
+    Delivered: 0,
+    Received: 0,
+    Cancelled: 0,
+    Returned: 0,
+  });
+
   const [pagination, setPagination] = useState<PaginationMeta>({
     hasNext: false,
     totalRecords: 0,
     start_page: 1,
     end_page: 1,
   });
+
+  // 3. ADDED FETCH FUNCTION FOR COUNTS
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      // NOTE: You will need a matching endpoint in your FastAPI backend that returns the counts!
+      // Example expected backend response: { "Pending": 12, "Approved": 3, "Shipped": 0, ... }
+      const response = await apiClient.get(`/order/counts`); 
+      
+      if (response && response.data) {
+        setStatusCounts(response.data);
+      } else if (response) {
+        setStatusCounts(response);
+      }
+    } catch (error) {
+      console.error("Failed to fetch order counts:", error);
+    }
+  }, []);
 
   const fetchAdminOrders = useCallback(
     async (status: string, skip: number, limit: number) => {
@@ -266,12 +299,25 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  // Rate Order Function
+  const rateOrder = async (id: string, payload: { rating: number; review: string }) => {
+  try {
+    // Modify the endpoint URL to match your FastAPI backend
+    await apiClient.post(`/order/${id}/rate`, payload); // Assuming the endpoint is POST /order/{id}/rate
+  } catch (error) {
+    console.error("Failed to submit rating:", error);
+    throw error;
+  }
+};
+
   return (
     <OrderContext.Provider
       value={{
         orders,
         isLoading,
         pagination,
+        statusCounts,      
+        fetchStatusCounts,
         fetchOrders,
         fetchAdminOrders,
         cancelOrder,
@@ -281,6 +327,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         receiveOrder,
         shipOrder,
         deleteOrder,
+        rateOrder,
       }}
     >
       {children}

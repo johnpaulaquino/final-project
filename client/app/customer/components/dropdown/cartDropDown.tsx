@@ -54,12 +54,20 @@ export default function CartDropDown({
     }
   };
 
+  
+
+  // 1. Filter out only the checked items
   const selectedCartItems = cart.filter((item) =>
     selectedItems.includes(item.Products.id),
   );
 
-  const selectedTotalItems = selectedCartItems.length;
+  // 2. FIXED: Count the actual QUANTITY of items, not just the number of rows
+  const selectedTotalItems = selectedCartItems.reduce(
+    (total, item) => total + item.Carts.quantity,
+    0,
+  );
 
+  // 3. Calculate total price
   const selectedTotalPrice = selectedCartItems.reduce(
     (total, item) => total + Number(item.Products.price) * item.Carts.quantity,
     0,

@@ -88,16 +88,16 @@ export default function CustomerList() {
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 min-h-[500px] flex flex-col justify-between animate-in fade-in duration-300">
+    <div className="bg-white p-6 md:p-8 min-h-[500px] flex flex-col justify-between animate-in fade-in duration-300">
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-6">
           Registered Customers
         </h2>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto rounded-lg border border-gray-100">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-semibold tracking-wider text-gray-500 uppercase">
                 <th className="py-4 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Customer
                 </th>

@@ -2,20 +2,22 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+
+// Dropdowns
 import NotificationDropdown from "./dropdown/notificationDropDown";
-import { initialNotifications } from "../data/mockDataNotification";
-
 import CartDropdown from "./dropdown/cartDropDown";
-import { useCart } from "../context/contextCart";
-
 import ProfileDropDown from "./dropdown/profileDropDown";
+
+// Contexts
+import { useCart } from "../context/contextCart";
+import { useNotification } from "../context/contextNotification";
 
 interface HeadNavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
-export default function headNavbar({
+export default function HeadNavbar({
   activeTab,
   setActiveTab,
 }: HeadNavbarProps) {
@@ -29,50 +31,34 @@ export default function headNavbar({
   const cartRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const hasUnread = notifications.some((n) => !n.isRead);
-
+  // 2. Fetch cart and notification data from global contexts
   const { totalItems, fetchCarts } = useCart();
+  const { notifications } = useNotification(); 
+
+  // 3. Calculate unread count dynamically based on backend property
+  const unreadCount = notifications.filter((n) => !n.is_user_read).length;
 
   useEffect(() => {
     fetchCarts(1, 10);
   }, [fetchCarts]);
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  const handleDeleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((notif) => notif.id !== id));
-  };
-
-  const handleClearHistory = () => {
-    setNotifications([]);
-  };
-
+  // Close dropdowns when tab changes
   useEffect(() => {
     setIsCartOpen(false);
     setIsNotifOpen(false);
     setIsProfileOpen(false);
   }, [activeTab]);
 
+  // Handle outside clicks to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
       }
-
       if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
         setIsCartOpen(false);
       }
-
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target as Node)
-      ) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
       }
     };
@@ -80,7 +66,7 @@ export default function headNavbar({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownRef]);
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 z-50 w-full shadow-sm bg-white flex items-center justify-between gap-2 sm:gap-4 lg:gap-6 px-4 sm:px-6 py-3 sm:py-4 mx-auto">
@@ -177,8 +163,11 @@ export default function headNavbar({
                 <path d="M14 21H10M18 8C18 6.4087 17.3679 4.88258 16.2427 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.8826 2.63214 7.75738 3.75736C6.63216 4.88258 6.00002 6.4087 6.00002 8C6.00002 11.0902 5.22049 13.206 4.34968 14.6054C3.61515 15.7859 3.24788 16.3761 3.26134 16.5408C3.27626 16.7231 3.31488 16.7926 3.46179 16.9016C3.59448 17 4.19261 17 5.38887 17H18.6112C19.8074 17 20.4056 17 20.5382 16.9016C20.6852 16.7926 20.7238 16.7231 20.7387 16.5408C20.7522 16.3761 20.3849 15.7859 19.6504 14.6054C18.7795 13.206 18 11.0902 18 8Z" />
               </svg>
 
-              {hasUnread && (
-                <div className="absolute top-[1px] right-[1px] h-3.5 w-3.5 bg-[#800000] rounded-full border-[2px] border-white"></div>
+              {/* 4. Updated Red Dot / Counter Badge */}
+              {unreadCount > 0 && (
+                <div className="absolute top-[1px] right-[-3px] flex h-4.5 w-4.5 items-center justify-center px-[4px] bg-[#800000] rounded-full border-[2px] border-white text-[10px] font-bold text-white leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </div>
               )}
             </button>
 
@@ -228,7 +217,7 @@ export default function headNavbar({
           {/* profile icon */}
           <div className="relative flex items-center" ref={profileRef}>
             <button
-              className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? "bg-[#fff5f5]" : ""}`}
+              className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isProfileOpen ? "bg-[#fff5f5]" : ""}`}
               onClick={() => {
                 setIsProfileOpen(!isProfileOpen);
                 setIsNotifOpen(false);
