@@ -139,10 +139,10 @@ export default function HeadNavbar({
         <div className="hidden sm:block h-7 w-px bg-gray-200"></div>
 
         {/* icon notification */}
-        <div className="cursor-pointer flex items-center gap-4 lg:gap-6 flex-shrink-0">
+        <div className="flex items-center gap-4 lg:gap-6 flex-shrink-0">
           <div className="relative flex items-center" ref={dropdownRef}>
             <button
-              className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isNotifOpen ? "bg-[#fff5f5]" : ""}`}
+              className={`cursor-pointer relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isNotifOpen ? "bg-[#fff5f5]" : ""}`}
               onClick={() => {
                 setIsNotifOpen(!isNotifOpen);
                 setIsCartOpen(false);
@@ -180,7 +180,7 @@ export default function HeadNavbar({
           {/* Cart */}
           <div className="relative flex items-center" ref={cartRef}>
             <button
-              className={`relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? "bg-[#fff5f5]" : ""}`}
+              className={`cursor-pointer relative hover:opacity-75 transition w-8 h-8 flex items-center justify-center rounded-full ${isCartOpen ? "bg-[#fff5f5]" : ""}`}
               onClick={() => {
                 setIsCartOpen(!isCartOpen);
                 setIsNotifOpen(false);

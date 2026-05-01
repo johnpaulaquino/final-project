@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 // Shared Layout Components
 import Sidebar from './components/sidebar';
 import HeadNavbar from './components/headNavbar';
 
-// Page Components (You will need to create these files)
+// Page Components
 import Overview from './pages/overviewPage';
 import Notifications from './pages/notifications/adminNotificationPage';
 import Analytics from './pages/analyticsPage';
@@ -23,14 +23,21 @@ import SalesHistory from './pages/customer/historySalesPage';
 import OrderManagement from './pages/customer/orderManagementPage';
 
 export default function AdminPage() {
-  // Default to the Overview dashboard on load
-  const [activeTab, setActiveTab] = useState('Overview');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // 1. Read the active tab from the URL, default to 'Overview'
+  const activeTab = searchParams.get('tab') || 'Overview';
+
+  // 2. Create a custom setter function that updates the URL
+  const setActiveTab = (tabName: string) => {
+    // We update the URL parameter instead of local state
+    router.push(`${pathname}?tab=${tabName}`);
+  };
 
   // Helper function to render the correct component
   const renderContent = () => {
-    
-    
-
     // 1. If the tab belongs to products, render the smooth Wrapper!
     const productTabs = ['Inventory List', 'Add Item', 'Categories', 'Carousel'];
     

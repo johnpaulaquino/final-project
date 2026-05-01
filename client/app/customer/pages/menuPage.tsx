@@ -1,5 +1,4 @@
-import React from 'react'
-
+import React from 'react';
 import CustomerSidebar from '../components/sidebar/customerSidebar';
 import CustomerMenu from '../components/products/customerMenus';
 
@@ -8,6 +7,7 @@ interface MenuPageProps {
   setActiveTab: (tab: string) => void;
 }
 
+// Changed 'menu' to 'Menu'
 export default function menu({ activeTab, setActiveTab }: MenuPageProps) {
   return (
     <main className="relative z-10 max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8">
@@ -16,7 +16,6 @@ export default function menu({ activeTab, setActiveTab }: MenuPageProps) {
       <div className="flex-1 w-full flex flex-col">
         <CustomerMenu />
       </div>
-      
     </main>
   );
 }
