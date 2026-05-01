@@ -137,7 +137,7 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
               </button>
 
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                <h2 className="text-2xl font-black text-[#0B1527]">All Reviews</h2>
+                <h2 className="text-2xl font-black text-[#0B1527]">All Reivews</h2>
                 <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold">
                   {totalReviews} Reviews
                 </span>

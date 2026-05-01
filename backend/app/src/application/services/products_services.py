@@ -52,7 +52,8 @@ class ProductsServices(SharedServices):
             
             # check if the category is in the database
             categories_data = await self.__uow.products.get_product_categories()
-            if product_request.category not in categories_data:
+            categories_data_list = list(map(lambda x: x.category.lower(), categories_data))
+            if product_request.category.lower() not in categories_data_list:
                 raise DomainUnprocessableEntityError(f"Category should be in {categories_data}.")
             # check if the images uploaded in the server exceed to maximum 5, then raise an error.
             if len(filenames) > 5:
