@@ -236,6 +236,11 @@ class ProductsTags(str, Enum):
     NEW_PRODUCT = "New Product"
 
 
+class ProductReviewsSchema(BaseModel):
+    rates: int
+    user_comments: str
+
+
 class ProductCategories(str, Enum):
     ALL = 'All'
     DRINKS = 'Drinks'

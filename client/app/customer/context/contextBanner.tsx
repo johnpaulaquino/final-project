@@ -16,7 +16,7 @@ export interface Banner {
 
 interface BannerContextType {
   banners: Banner[];
-  isLoading: boolean; // 🚀 NEW: Tracks the initial load
+  isLoading: boolean; // NEW: Tracks the initial load
   addBanner: (
     fileBlob: Blob,
     fileName: string,
