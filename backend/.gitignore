@@ -6,3 +6,6 @@
 /remove
 /postgres_data
 /migration
+/__pycache__
+*.pyc
+*.pyo

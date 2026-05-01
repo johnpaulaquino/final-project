@@ -47,3 +47,10 @@ class ProductsInformationFilterWithTags(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     best_sellers: List[ProductInformationDTO] | None = None
     new_products: List[ProductInformationDTO] | None = None
+
+
+class OverviewDTO(BaseModel):
+    total_revenue: float
+    total_orders: int
+    total_active_customers: int
+    total_unread_alerts: int

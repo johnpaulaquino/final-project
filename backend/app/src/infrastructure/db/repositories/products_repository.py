@@ -332,6 +332,14 @@ class ProductsRepository(UserInterface):
         data = result.mappings().fetchall()
         return data or None
     
+    async def product_reviews(self, product_id: str, data: dict):
+        try:
+            stmt = update(ProductRatings).where(ProductRatings.product_id == product_id).values(**data)
+            await self.__db.execute(stmt)
+        
+        except Exception as e:
+            raise e
+    
     async def get_paginated_record_with_new_products_tag_total_records(self):
         try:
             

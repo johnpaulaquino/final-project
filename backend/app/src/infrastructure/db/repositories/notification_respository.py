@@ -65,6 +65,16 @@ class NotificationRepository(UserInterface):
         except Exception as e:
             raise e
     
+    async def get_total_unread_notifications(self):
+        try:
+            stmt = select(func.count(Notifications.id)).where(or_(
+                    Notifications.is_user_read == False, Notifications.is_admin_read == False))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
     async def get_all_total_notifications(self):
         try:
             stmt = select(func.count(Notifications.id))

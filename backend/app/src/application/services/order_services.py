@@ -372,9 +372,7 @@ class OrderServices(SharedServices):
         
         try:
             # get the current order of a user
-            data = await self.uof.users.find_record_by_id(current_user.user_id)
-            if not data:
-                raise DomainNotFoundError("User not found. Please back to login.")
+            await self._check_user_if_exists(current_user.user_id)
             
             offset = Utility.get_offset(paginated.skip, paginated.limit)
             validated_order_status = Utility.capitalize_first_letters(order_status)
@@ -394,6 +392,21 @@ class OrderServices(SharedServices):
                                                         limit=paginated.limit)
             return SuccessfulResponseSchema(message="Successfully retrieved orders.", data=order_data,
                                             paginated=paginated_data)
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def get_order_status_count(self, current_user: DecodedTokenDTO):
+        try:
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # get the data
+            data = await self.uof.orders.get_order_status_count()
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.")
+            
+            return SuccessfulResponseSchema(message="Successfully received data.", data=data)
         except Exception as e:
             raise e
     

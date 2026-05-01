@@ -124,6 +124,7 @@ class SharedServices:
     async def _check_user_if_exists(self, user_id: str):
         # retrieved data first
         data = await self.__uow.users.get_user_info_only(user_id)
+        
         if not data:
             raise DomainJWTInvalidError("Invalid user, please back to login.")
         
