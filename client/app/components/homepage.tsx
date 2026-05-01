@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 export default function homepage() {
   const router = useRouter();
 
-  const handleAdmin = () => {
-    router.push('/admin');
+  const handleViewMenu = () => {
+    router.push('/menu');
   };
 
 
@@ -28,7 +28,7 @@ export default function homepage() {
           Open Shop
         </button>
 
-        <button type='submit' onClick={handleAdmin} className='w-full md:w-auto px-8 py-3.5 rounded-xl border-2 border-[#7f1d1d] text-[#7f1d1d] bg-transparent font-bold tracking-wide hover:bg-red-50  transition transform hover:-translate-y-1'>
+        <button type='button' onClick={handleViewMenu} className='w-full md:w-auto px-8 py-3.5 rounded-xl border-2 border-[#7f1d1d] text-[#7f1d1d] bg-transparent font-bold tracking-wide hover:bg-red-50  transition transform hover:-translate-y-1'>
           View Menu
         </button>
 

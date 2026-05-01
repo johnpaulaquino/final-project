@@ -22,13 +22,14 @@ export default function OrderSummary({
   const { addOrder } = useOrders() as any;
   const { clearCart } = useCart();
 
-  // --- NEW: State to control our dynamic modal ---
+  // --- NEW: State too cntrol our dynamic modal ---
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const totalPrice = cart.reduce(
     (sum, item) => sum + parseFloat(item.Products.price) * item.Carts.quantity,
     0,
   );
+console.log("hey", cart);
 
   const shippingCost: number = 0;
   const finalTotal = totalPrice + shippingCost;
@@ -83,8 +84,7 @@ export default function OrderSummary({
                 {item.images && item.images.length > 0 ? (
                   <Image
                     src={
-                      item.images[0].image_url.startsWith("http") ||
-                      item.images[0].image_url.startsWith("/")
+                      item.images[0].image_url
                         ? item.images[0].image_url
                         : `/${item.images[0].image_url}`
                     }

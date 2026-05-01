@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AccountSidebar from "../components/account/accountSidebar";
 import AddressBook from "../components/account/addressBook";
 import SecuritySettings from "../components/account/security";
 import ProfileInfo from "../components/account/profileInfo";
 
 export default function AccountSetting() {
-  const [activeAccountTab, setActiveAccountTab] = useState("Profile Info");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const activeAccountTab = searchParams.get("accountTab") || "Profile Info";
+
+  const setActiveAccountTab = (tabName: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("accountTab", tabName);
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const renderSection = () => {
     switch (activeAccountTab) {
@@ -31,7 +41,8 @@ export default function AccountSetting() {
             Account Settings
           </h1>
           <button
-            onClick={() => window.history.back()}
+            // Use Next.js router for a smoother back navigation
+            onClick={() => router.back()}
             className="text-gray-500 hover:text-[#800000] transition font-medium"
           >
             &lsaquo; Back to Shopping
@@ -40,6 +51,7 @@ export default function AccountSetting() {
 
         {/* sidebar */}
         <div className="">
+          {/* Pass down the state and our custom URL updater */}
           <AccountSidebar
             activeTab={activeAccountTab}
             setActiveTab={setActiveAccountTab}

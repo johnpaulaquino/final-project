@@ -182,7 +182,7 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
             </div>
 
             <p className="text-gray-600 text-sm leading-relaxed">
-              {product.Products.description || "Indulge in our freshly prepared beverage, crafted with premium ingredients."}
+              {product.description || "Indulge in our freshly prepared beverage, crafted with premium ingredients."}
             </p>
 
             <div className="flex items-center justify-between bg-[#fcfcfc] border border-gray-100 p-4 rounded-2xl">

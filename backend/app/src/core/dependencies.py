@@ -2,7 +2,8 @@ from typing import Annotated, Any, AsyncGenerator
 
 from fastapi import Cookie, Depends, Request, WebSocketException
 from fastapi.security import OAuth2PasswordBearer
-from jose import ExpiredSignatureError
+from jose import ExpiredSignatureError 
+
 from starlette import status
 
 from app.src.application.services.auth_services import AuthServices
