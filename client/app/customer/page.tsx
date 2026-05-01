@@ -10,7 +10,6 @@ import AccountSetting from './pages/accountSettingPage';
 import Order from './pages/orderPage';
 import Chatbot from './components/chatbot/chatBot';
 
-
 export default function Page() {
   const searchParams = useSearchParams();
   const router = useRouter();

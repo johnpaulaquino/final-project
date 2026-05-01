@@ -1,13 +1,27 @@
 "use client";
 
-import { useBanner } from "../../../customer/context/contextBanner"; // 🚀 Adjust path to your context
-import CarouselBanner from "./carouselBanner"; // 🚀 Adjust path to your carousel component
+import { useEffect } from "react";
+import { useBanner } from "../../../customer/context/contextBanner"; 
+import CarouselBanner from "./carouselBanner"; 
 
 export default function FeatureBanners() {
-  const { banners, isLoading } = useBanner();
+  const { banners, isLoading, fetchLiveBanners } = useBanner();
 
-  // Only show the "No Banners" UI if it is done loading AND the array is empty
-  if (!isLoading && (!banners || banners.length === 0)) {
+  useEffect(() => {
+    fetchLiveBanners();
+  }, [fetchLiveBanners]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col md:flex-row gap-6 mb-10">
+        <div className="flex-1 h-[350px] rounded-[10px] bg-gray-200 animate-pulse flex items-center justify-center border-2 border-dashed border-gray-300">
+          <span className="text-gray-500 font-bold">Loading Banners...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!banners || banners.length === 0) {
     return (
       <div className="flex flex-col md:flex-row gap-6 mb-10">
         <div className="flex-1 h-[350px] rounded-[10px] bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-200">
@@ -17,10 +31,10 @@ export default function FeatureBanners() {
     );
   }
 
+  // 3. Render Carousel ONLY when data exists
   return (
     <div className="flex flex-col md:flex-row gap-6 mb-10">
       <div className="flex-1 h-[350px]">
-        {/* Removed 'slides={banners}' since CarouselBanner reads from context directly */}
         <CarouselBanner autoPlayInterval={3000} />
       </div>
     </div>

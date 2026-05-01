@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { apiClient } from "@/lib/api";
 
 export interface Banner {
@@ -16,13 +10,10 @@ export interface Banner {
 
 interface BannerContextType {
   banners: Banner[];
-  isLoading: boolean; // NEW: Tracks the initial load
-  addBanner: (
-    fileBlob: Blob,
-    fileName: string,
-    previewBase64: string,
-  ) => Promise<void>;
+  isLoading: boolean;
+  addBanner: (fileBlob: Blob, fileName: string, previewBase64: string) => Promise<void>;
   removeBanner: (id: string | number) => Promise<void>;
+  fetchLiveBanners: () => Promise<void>; // 🚀 Added to exports
 }
 
 const BannerContext = createContext<BannerContextType | undefined>(undefined);
@@ -31,16 +22,14 @@ export function BannerProvider({ children }: { children: React.ReactNode }) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🚀 NEW: Centralized GET API Call (No Pagination)
   const fetchLiveBanners = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get(
-        "/products/carousel?skip=1&limit=100",
-      );
+      // Note: skip=1 skips the very first item in the database. 
+      // If you are missing your first banner, change this to skip=0!
+      const response = await apiClient.get("/products/carousel?skip=1&limit=100");
 
-      const rawData =
-        response?.data?.data || response?.data || response?.items || [];
+      const rawData = response?.data?.data || response?.data || response?.items || [];
 
       const formattedBanners = rawData
         .filter((item: any) => item.CarouselEntity?.image?.image_url)
@@ -57,17 +46,11 @@ export function BannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch exactly once when the app loads
   useEffect(() => {
     fetchLiveBanners();
   }, [fetchLiveBanners]);
 
-  // Centralized Upload API Call
-  const addBanner = async (
-    fileBlob: Blob,
-    fileName: string,
-    previewBase64: string,
-  ) => {
+  const addBanner = async (fileBlob: Blob, fileName: string, previewBase64: string) => {
     try {
       const formData = new FormData();
       formData.append("image", fileBlob, fileName);
@@ -86,7 +69,6 @@ export function BannerProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Centralized Delete API Call
   const removeBanner = async (id: string | number) => {
     try {
       await apiClient.delete(`/products/carousel/${id}`);
@@ -99,7 +81,7 @@ export function BannerProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <BannerContext.Provider
-      value={{ banners, isLoading, addBanner, removeBanner }}
+      value={{ banners, isLoading, addBanner, removeBanner, fetchLiveBanners }}
     >
       {children}
     </BannerContext.Provider>
