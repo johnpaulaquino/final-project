@@ -3,7 +3,7 @@ from typing import List
 from app.src.application.services import retry_on_transient
 from app.src.application.services.shared_services import SharedServices
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
-from app.src.domain.dto.products_dto import ProductsInformationFilterWithTags
+from app.src.domain.dto.products_dto import OverviewDTO, ProductsInformationFilterWithTags
 from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, DomainNotFoundError,
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
@@ -13,7 +13,7 @@ from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
 from app.src.schema.products_schema import (CreateCategories, InventoryRequestSchema, ProductCategories,
                                             ProductDetailsRequestSchema,
                                             ProductRequestSchema,
-                                            ProductsFullInformationRequestSchema,
+                                            ProductReviewsSchema, ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
 from app.src.utils.utility import Utility
 
@@ -231,9 +231,27 @@ class ProductsServices(SharedServices):
         return response
     
     @retry_on_transient
-    async def get_low_stock_overview(self):
+    async def get_admin_overview(self, current_user: DecodedTokenDTO):
         try:
-            pass
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # check user role
+            self.validate_users_role(current_user.role)
+            
+            # get the total Revenue
+            total_revenue = await self.__uow.orders.get_total_revenue()
+            total_orders = await self.__uow.orders.get_total_orders()
+            total_active_users = await self.__uow.users.get_all_active_users_count()
+            total_unread_alerts = await self.__uow.notifications.get_total_unread_notifications()
+            
+            overview_data = OverviewDTO(total_revenue=total_revenue,
+                                        total_orders=total_orders,
+                                        total_unread_alerts=total_unread_alerts,
+                                        total_active_customers=total_active_users)
+            
+            return SuccessfulResponseSchema(message="Successfully received data.",
+                                            data=overview_data)
         except Exception as e:
             raise e
     
@@ -310,6 +328,30 @@ class ProductsServices(SharedServices):
             # remove image in cloudinary
             await self.cloudinary_infrastructure.destroy_images(data.image.public_key)
             return SuccessfulResponseSchema(message="Successfully deleted carousel.")
+        
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def product_reviews(self, product_id: str,
+                              data: ProductReviewsSchema,
+                              current_user: DecodedTokenDTO, ):
+        try:
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            
+            # check user role
+            self.validate_users_role(current_user.role, is_admin=False)
+            
+            # check product
+            product_data = await self.__uow.products.get_product_only(product_id)
+            if not product_data:
+                raise DomainNotFoundError("Can't review the product that is not exists.")
+            
+            # otherwise update the product
+            await self.__uow.products.product_reviews(product_id, data.model_dump(exclude_none=True,
+                                                                                  exclude_unset=True))
+            return SuccessfulResponseSchema(message='Successfully saved ratings.')
         
         except Exception as e:
             raise e

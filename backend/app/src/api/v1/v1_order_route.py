@@ -50,6 +50,19 @@ async def insert_order_item(item_orders: BatchCreateOrderSchema,
         raise e
 
 
+@v1_order_router.get("/status/counts")
+async def get_order_status_count(current_user: DecodedTokenDTO = Depends(get_current_user),
+                                 order_services
+                                 : OrderServices = Depends(get_order_service)):
+    try:
+        order_services_response = await order_services.get_order_status_count(current_user)
+        order_services_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(order_services_response)
+    except Exception as e:
+        raise e
+
+
 @v1_order_router.get('/user-sales')
 async def get_paginated_user_sales(paginated: PaginatedSchema = Query(),
                                    current_user: DecodedTokenDTO = Depends(get_current_user),

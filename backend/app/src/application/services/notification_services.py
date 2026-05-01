@@ -17,7 +17,7 @@ class NotificationServices(SharedServices):
     async def create_notification(self, notification: CreateNotification, current_user: DecodedTokenDTO):
         try:
             # check if user exists
-            data = await self.check_if_user_exists(current_user.user_id)
+            await self._check_user_if_exists(current_user.user_id)
             # then send a data
             notification.user_id = current_user.user_id
             
@@ -32,7 +32,7 @@ class NotificationServices(SharedServices):
     @retry_on_transient
     async def get_paginated_notifications(self, paginated: PaginatedSchema, current_user: DecodedTokenDTO):
         try:
-            await self.check_if_user_exists(current_user.user_id)
+            await self._check_user_if_exists(current_user.user_id)
             
             if current_user.role == RoleSchema.CUSTOMER:
                 offset = Utility.get_offset(paginated.skip, paginated.limit)

@@ -11,7 +11,8 @@ from app.src.core.dependencies import get_current_user, get_products_carousel_se
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.http_exceptions import DataUnProcessableContent
 from app.src.schema import PaginatedSchema
-from app.src.schema.products_schema import (CreateCategories, ProductsFullInformationRequestSchema,
+from app.src.schema.products_schema import (CreateCategories, ProductReviewsSchema,
+                                            ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
 from app.src.utils.successful_response import SuccessfulResponse
 
@@ -42,6 +43,19 @@ async def insert_product(
         
         return response
     
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.get("/admin/overview")
+async def get_admin_overview(current_user: DecodedTokenDTO = Depends(get_current_user),
+                             product_services: ProductsServices = Depends(
+                                     get_products_service)):
+    try:
+        product_services_response = await product_services.get_admin_overview(current_user)
+        product_services_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(product_services_response)
     except Exception as e:
         raise e
 
@@ -199,6 +213,18 @@ async def update_product_information(product_id: str,
         response = SuccessfulResponse(response_schema)
         
         return response
+    except Exception as e:
+        raise e
+
+
+@v1_products_router.patch("/ratings/{product_id}")
+async def product_reviews(product_id: str, data: ProductReviewsSchema, current_user: DecodedTokenDTO,
+                          product_service: ProductsServices = Depends(get_products_service)):
+    try:
+        product_service_response = await product_service.product_reviews(product_id, data, current_user)
+        product_service_response.status_code = status.HTTP_200_OK
+        
+        return SuccessfulResponse(product_service_response)
     except Exception as e:
         raise e
 

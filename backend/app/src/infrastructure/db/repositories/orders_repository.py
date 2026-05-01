@@ -9,14 +9,14 @@ from app.src.schema.orders_schema import CreateOrderSchema, OrderStatusSchema
 
 class OrdersRepository(UserInterface):
     
-    def __init__(self, _db: AsyncSession):
-        self._db = _db
+    def __init__(self, __db: AsyncSession):
+        self.__db = __db
     
     async def insert_record(self, record: CreateOrderSchema):
         try:
             order = Orders(**record.model_dump())
-            self._db.add(order)
-            await self._db.flush()
+            self.__db.add(order)
+            await self.__db.flush()
             
             return OrderDTO(**order.model_dump())
         except Exception as e:
@@ -25,8 +25,8 @@ class OrdersRepository(UserInterface):
     async def batch_insert_orders(self, orders: list[CreateOrderSchema]):
         try:
             list_of_orders = [Orders(**order.model_dump()) for order in orders]
-            self._db.add_all(list_of_orders)
-            await self._db.flush()
+            self.__db.add_all(list_of_orders)
+            await self.__db.flush()
         except Exception as e:
             raise e
     
@@ -36,10 +36,30 @@ class OrdersRepository(UserInterface):
             stmt = (select(Orders)
                     .where(and_(Orders.string_id == order_id,
                                 Orders.user_id == user_id)))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().first()
             
             return OrderDTO.model_validate(data) if data else data
+        except Exception as e:
+            raise e
+    
+    async def get_total_revenue(self):
+        try:
+            stmt = select(func.sum(Transactions.total_amount))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_total_orders(self):
+        try:
+            stmt = select(func.count(Orders.id)).where(Orders.order_status.in_([
+                    OrderStatusSchema.Delivered.value,
+                    OrderStatusSchema.Received.value]))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
         except Exception as e:
             raise e
     
@@ -50,8 +70,20 @@ class OrdersRepository(UserInterface):
             if order_status in OrderStatusSchema:
                 conditions.append(Orders.order_status == order_status)
             stmt = select(func.count(Orders.id)).where(and_(*conditions))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.scalars().first()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_order_status_count(self):
+        try:
+            stmt = (
+                    select(Orders.order_status, func.count(Orders.id))
+                    .where(Orders.order_status.in_([order_status for order_status in OrderStatusSchema]))
+                    .group_by(Orders.order_status))
+            result = await self.__db.execute(stmt)
+            data = result.mappings().fetchall()
             return data
         except Exception as e:
             raise e
@@ -78,7 +110,7 @@ class OrdersRepository(UserInterface):
                     .outerjoin(Inventory, Products.id == Inventory.product_id)
                     .outerjoin(Transactions, Orders.id == Transactions.order_id)
                     .where(and_(*conditions)))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
             
             return OrderDTOFullData(**data[0]) if data else None
@@ -113,7 +145,7 @@ class OrdersRepository(UserInterface):
                     .where(and_(*conditions))
                     .limit(limit)
                     .offset(offset))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
             data = {"Orders": data}
             return OrderDTOFullDataList(**data)
@@ -147,7 +179,7 @@ class OrdersRepository(UserInterface):
                     .where(and_(*conditions))
                     .limit(limit)
                     .offset(offset))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
             data = {"Orders": data}
             return OrderDTOFullDataList(**data)
@@ -176,7 +208,7 @@ class OrdersRepository(UserInterface):
                     .where(and_(Orders.string_id == order_id,
                                 Orders.order_status == order_status,
                                 Orders.user_id == user_id)))
-            result = await self._db.execute(stmt)
+            result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
             
             return OrderDTOFullData(**data[0]) if data else None
@@ -195,7 +227,7 @@ class OrdersRepository(UserInterface):
         try:
             stmt = update(Orders).values(**data).where(
                     and_(Orders.string_id == order_id, Orders.user_id == user_id))
-            await self._db.execute(stmt)
+            await self.__db.execute(stmt)
         except Exception as e:
             raise e
     
@@ -208,6 +240,6 @@ class OrdersRepository(UserInterface):
         """
         try:
             stmt = delete(Orders).where(and_(Orders.user_id == user_id, Orders.string_id == order_id))
-            await self._db.execute(stmt)
+            await self.__db.execute(stmt)
         except Exception as e:
             raise e
