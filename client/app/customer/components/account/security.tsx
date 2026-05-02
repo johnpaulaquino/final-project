@@ -10,7 +10,6 @@ export default function SecuritySettings() {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // STATE FOR SUCCESS & ERROR MESSAGES
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -67,7 +66,7 @@ export default function SecuritySettings() {
       }, 2000);
     } catch (error: any) {
       console.error("Failed to update password:", error);
-      setIsLoading(false); // Only stop loading if there is an error, so the button stays disabled during the redirect delay
+      setIsLoading(false);
 
       // 4. HANDLE ERROR
       setStatusMessage({
@@ -77,117 +76,120 @@ export default function SecuritySettings() {
           "Failed to update password. Please check your old password and try again.",
       });
     }
-    // Notice: I removed `finally { setIsLoading(false); }` so the button stays in the "Loading..." state while we wait for the redirect!
   };
 
   return (
-    <div className="animate-in fade-in duration-300">
-      <h2 className="text-xl font-bold text-[#0B1527] mb-6">Change Password</h2>
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 animate-in fade-in duration-500">
+      
+      {/* HEADER SECTION */}
+      <div className="mb-8 border-b border-gray-50 pb-6">
+        <h2 className="text-xl font-bold text-[#0B1527]">Security Settings</h2>
+        <p className="text-sm text-gray-500 mt-1">Update your password to keep your account secure.</p>
+      </div>
 
-      {/* THE SUCCESS / ERROR BANNER UI */}
-      {statusMessage && (
-        <div
-          className={`max-w-xl p-4 rounded-xl text-sm font-bold flex items-center gap-2 mb-6 animate-in slide-in-from-top-2 duration-200 ${
-            statusMessage.type === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-red-50 text-red-700 border border-red-200"
-          }`}
-        >
-          {statusMessage.type === "success" ? (
-            <svg
-              className="w-5 h-5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-5 h-5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          )}
-          {statusMessage.text}
-        </div>
-      )}
-
-      <form className="max-w-xl flex flex-col gap-6" onSubmit={handleSubmit}>
-        <div>
-          <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
-            CURRENT PASSWORD
-          </label>
-          <input
-            type="password"
-            placeholder="Old Password"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
-            disabled={statusMessage?.type === "success"}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors disabled:opacity-50"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
-              NEW PASSWORD
-            </label>
-            <input
-              type="password"
-              placeholder="Password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              disabled={statusMessage?.type === "success"}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
-              CONFIRM NEW
-            </label>
-            <input
-              type="password"
-              placeholder="Password Confirmation"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={statusMessage?.type === "success"}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50/30 focus:outline-none focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] transition-colors disabled:opacity-50"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-6 pt-4">
-          <button
-            type="submit"
-            disabled={isLoading || statusMessage?.type === "success"}
-            className="bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-[12px] shadow-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[180px]"
+      <div className="max-w-xl">
+        {/* THE SUCCESS / ERROR BANNER UI */}
+        {statusMessage && (
+          <div
+            className={`p-4 rounded-xl text-sm font-semibold flex items-start sm:items-center gap-3 mb-8 animate-in fade-in slide-in-from-top-2 duration-300 ${
+              statusMessage.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-100"
+                : "bg-red-50 text-red-800 border border-red-100"
+            }`}
           >
-            {isLoading ? (
-              <span className="block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            {statusMessage.type === "success" ? (
+              <div className="bg-green-100 p-1 rounded-full flex-shrink-0 mt-0.5 sm:mt-0">
+                <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
             ) : (
-              "Update Password"
+              <div className="bg-red-100 p-1 rounded-full flex-shrink-0 mt-0.5 sm:mt-0">
+                <svg className="w-4 h-4 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             )}
-          </button>
-          <button
-            type="button"
-            className="text-sm font-bold text-[#800000] hover:text-red-900 transition-colors"
-          >
-            Forgot Password?
-          </button>
-        </div>
-      </form>
+            <span className="leading-tight">{statusMessage.text}</span>
+          </div>
+        )}
+
+        {/* FORM SECTION */}
+        <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+          
+          {/* Old Password */}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
+              CURRENT PASSWORD
+            </label>
+            <input
+              type="password"
+              placeholder="Enter your current password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              disabled={statusMessage?.type === "success"}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 transition-all disabled:opacity-50 disabled:bg-gray-100 shadow-inner shadow-gray-50/50"
+            />
+          </div>
+
+          <div className="w-full h-px bg-gray-50 my-2"></div>
+
+          {/* New Passwords Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
+                NEW PASSWORD
+              </label>
+              <input
+                type="password"
+                placeholder="At least 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={statusMessage?.type === "success"}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 transition-all disabled:opacity-50 disabled:bg-gray-100 shadow-inner shadow-gray-50/50"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
+                CONFIRM NEW PASSWORD
+              </label>
+              <input
+                type="password"
+                placeholder="Repeat new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={statusMessage?.type === "success"}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 transition-all disabled:opacity-50 disabled:bg-gray-100 shadow-inner shadow-gray-50/50"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-2">
+            <button
+              type="submit"
+              disabled={isLoading || statusMessage?.type === "success"}
+              className="w-full sm:w-auto bg-[#0B1527] hover:bg-gray-900 text-white font-semibold py-3 px-8 rounded-xl shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[180px] text-sm"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Updating...
+                </span>
+              ) : (
+                "Update Password"
+              )}
+            </button>
+            
+            <button
+              type="button"
+              className="text-sm font-semibold text-[#800000] hover:text-red-900 transition-colors py-2 px-4 rounded-lg hover:bg-red-50"
+            >
+              Forgot Password?
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

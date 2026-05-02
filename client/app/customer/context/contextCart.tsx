@@ -54,7 +54,6 @@ interface CartContextType {
   totalPrice: number;
   fetchCarts: (skip?: number, limit?: number) => Promise<void>;
   isLoading: boolean;
-
   // --- ADDED: State to hold selected checkout items ---
   checkoutItems: (string | number)[];
   setCheckoutItems: React.Dispatch<React.SetStateAction<(string | number)[]>>;

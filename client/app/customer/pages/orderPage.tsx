@@ -24,6 +24,8 @@ export default function OrderPage() {
     cancelOrder,
     receiveOrder,
     rateOrder,
+    statusCounts,      // 🚀 1. ADDED: Bring in the counts
+    fetchStatusCounts, // 🚀 1. ADDED: Bring in the fetch function
   } = useOrders();
 
   // Cancel Modal State
@@ -58,7 +60,8 @@ export default function OrderPage() {
 
   useEffect(() => {
     fetchOrders(activeTab, currentPage, 10);
-  }, [activeTab, currentPage, fetchOrders]);
+    fetchStatusCounts(); // 🚀 2. ADDED: Fetch the counts when the page loads!
+  }, [activeTab, currentPage, fetchOrders, fetchStatusCounts]);
 
   const handleTabChange = (status: OrderStatus) => {
     setActiveTab(status);
@@ -73,9 +76,8 @@ export default function OrderPage() {
       await cancelOrder(orderToCancel);
       setOrderToCancel(null);
       setToast({ message: "Order successfully cancelled.", type: "success" });
-
-      // 🚀 FIXED: Removed the tab switching logic.
-      // You will stay on the current tab, and the Context will refresh the data!
+      
+      fetchStatusCounts(); // Refresh counts after cancelling
     } catch (error: any) {
       setOrderToCancel(null);
       setToast({
@@ -101,9 +103,8 @@ export default function OrderPage() {
         message: "Order successfully marked as received!",
         type: "success",
       });
-
-      // 🚀 FIXED: Removed the tab switching logic.
-      // You will stay on the current tab!
+      
+      fetchStatusCounts(); // Refresh counts after receiving
     } catch (error: any) {
       setOrderToReceive(null);
       setToast({
@@ -189,20 +190,36 @@ export default function OrderPage() {
           </button>
         </div>
 
-        <div className="flex overflow-x-auto gap-2 pb-2 mb-6 custom-scrollbar">
-          {STATUS_TABS.map((status) => (
-            <button
-              key={status}
-              onClick={() => handleTabChange(status)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap border ${
-                activeTab === status
-                  ? "bg-[#800000] text-white border-[#800000]"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 w-max pr-4 m-4">
+          {STATUS_TABS.map((status) => {
+            // 🚀 3. ADDED: Grab the count safely handling uppercase/lowercase
+            const itemCount =
+              statusCounts?.[status] ||
+              statusCounts?.[status.toLowerCase()] ||
+              statusCounts?.[status.toUpperCase()] ||
+              0;
+
+            return (
+              <button
+                key={status}
+                onClick={() => handleTabChange(status)}
+                className={`cursor-pointer relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap border ${
+                  activeTab === status
+                    ? "bg-[#800000] text-white border-[#800000]"
+                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {status}
+                
+                {/* 🚀 3. ADDED: Red dot notification badge */}
+                {itemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center bg-[#800000] rounded-full border-2 border-white text-[10px] font-bold text-white leading-none shadow-sm">
+                    {itemCount > 99 ? "99+" : itemCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="space-y-4">

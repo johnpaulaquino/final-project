@@ -38,6 +38,7 @@ export function CategoryProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  
   const addCategory = (name: string) => {
     const trimmedName = name.trim();
 

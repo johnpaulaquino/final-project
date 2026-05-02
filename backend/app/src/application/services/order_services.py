@@ -404,9 +404,21 @@ class OrderServices(SharedServices):
             # get the data
             data = await self.uof.orders.get_order_status_count()
             if not data:
-                return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.")
+                return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.", data={})
             
-            return SuccessfulResponseSchema(message="Successfully received data.", data=data)
+            formatted_counts = {}
+            for row in data:
+                # handle the row
+                if isinstance(row, dict):
+                    formatted_counts[row["order_status"]] = row["count"]
+                elif hasattr(row, "order_status"):
+                    formatted_counts[row.order_status] = row.count
+                else:
+                    # fallback for plain tuples (status, count)
+                    formatted_counts[row[0]] = row[1]
+            
+            return SuccessfulResponseSchema(message="Successfully received data.", data=formatted_counts)
+            
         except Exception as e:
             raise e
     

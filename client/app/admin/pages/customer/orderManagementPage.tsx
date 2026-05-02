@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useOrders, OrderStatus } from "../../../customer/context/contextOrder";
 import ConfirmationModal from "@/app/customer/components/ConfirmationModal";
-// Adjust this path if your ConfirmationModal is located somewhere else!
 
 const tabs = [
   "All",
@@ -43,36 +42,15 @@ export default function OrderManagementPage() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    const fetchFunc = fetchAdminOrders;
-    fetchFunc(activeTab, currentPage, 10);
-    
-    fetchStatusCounts();
-
-    console.log("Fetching orders:", activeTab, orders);
-  }, [activeTab, currentPage, fetchAdminOrders]);
+    fetchAdminOrders(activeTab, currentPage, 10);
+    fetchStatusCounts(); // <-- Fetching again here!
+  }, [activeTab, currentPage, fetchAdminOrders, fetchStatusCounts]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setCurrentPage(1);
   };
 
-  // const handleStatusChange = (
-  //   id: string,
-  //   user_id: string,
-  //   currentStatus: string,
-  //   newStatus: OrderStatus,
-  // ) => {
-  //   const current = currentStatus?.toLowerCase() || "";
-  //   const next = newStatus?.toLowerCase() || "";
-
-  //   if (current === "pending" && next === "approved") {
-  //     setUpdateModalData({ id, user_id, nextStatus: newStatus });
-  //   } else if (current === "approved" && next === "shipped") {
-  //     setUpdateModalData({ id, user_id, nextStatus: newStatus });
-  //   } else {
-  //     updateOrderStatus(id, newStatus);
-  //   }
-  // };
   const handleRowClick = (order: any) => {
     const currentStatus = order.order_status?.toLowerCase() || "";
 
@@ -89,7 +67,6 @@ export default function OrderManagementPage() {
         nextStatus: "Shipped",
       });
     } else if (currentStatus === "shipped") {
-      // 🚀 ADDED: Open modal for Delivering
       setUpdateModalData({
         id: order.string_id,
         user_id: order.user_id,
@@ -108,34 +85,18 @@ export default function OrderManagementPage() {
       };
 
       if (updateModalData.nextStatus === "Approved") {
-        console.log(
-          "Confirming order:",
-          updateModalData.id,
-          "for User:",
-          updateModalData.user_id,
-        );
         await confirmOrder(updateModalData.id, payload);
       } else if (updateModalData.nextStatus === "Shipped") {
-        console.log(
-          "Shipping order:",
-          updateModalData.id,
-          "for User:",
-          updateModalData.user_id,
-        );
         await shipOrder(updateModalData.id, payload);
       } else if (updateModalData.nextStatus === "Delivered") {
-        // 🚀 ADDED: Route to the Deliver Order API Call
-        console.log(
-          "Delivering order:",
-          updateModalData.id,
-          "for User:",
-          updateModalData.user_id,
-        );
         await deliverOrder(updateModalData.id, payload);
       } else {
-        // Fallback for any other generic updates
         await updateOrderStatus(updateModalData.id, updateModalData.nextStatus);
       }
+      
+      // Refresh counts after a successful update so the red dots update!
+      fetchStatusCounts();
+      
     } finally {
       setIsUpdating(false);
       setUpdateModalData(null);
@@ -179,7 +140,6 @@ export default function OrderManagementPage() {
     }
   };
 
-  // 🚀 MODIFIED: Dynamic Content for the Modal logic
   let modalTitle = "";
   let modalMessage = "";
   let confirmText = "";
@@ -205,30 +165,72 @@ export default function OrderManagementPage() {
     processingText = "Delivering...";
   }
 
+  // Helper variable to check for pending orders
+  const hasPendingOrders = statusCounts?.Pending > 0;
+
   return (
     <div className="w-full flex flex-col gap-6 p-4 md:p-6 bg-white border-gray-100 overflow-hidden relative">
+      
+      {/* 🚀 NEW: PENDING ORDERS ALERT BANNER */}
+      {hasPendingOrders && activeTab !== "Pending" && (
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between bg-orange-50 border border-orange-200 p-4 rounded-xl shadow-sm gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 h-10 w-10 bg-orange-100 rounded-full flex items-center justify-center">
+              <span className="text-orange-600 font-bold text-lg">!</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-orange-800">Attention Required</h3>
+              <p className="text-xs text-orange-600 font-medium">
+                You have {statusCounts.Pending} pending order(s) waiting to be approved.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleTabChange("Pending")}
+            className="whitespace-nowrap px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+          >
+            Review Pending Orders
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-2 gap-4">
         <div className="flex flex-col md:flex-row w-full xl:w-auto items-start md:items-center gap-4 overflow-hidden">
           <div className="w-full overflow-x-auto scrollbar-no pb-2 md:pb-0">
             <div className="flex items-center gap-2 w-max pr-4 m-4">
               {tabs.map((tab) => {
-                // Get the count for this specific tab. If undefined, default to 0.
-                const itemCount = statusCounts?.[tab] || 0;
+                // 1. We create a variable to hold the smart count
+                let itemCount = 0;
+
+                // 2. If it's the "All" tab, we add up ALL the numbers from the backend
+                if (tab === "All") {
+                  itemCount = Object.values(statusCounts || {}).reduce(
+                    (sum, count) => sum + (Number(count) || 0),
+                    0
+                  );
+                } 
+                // 3. For the other tabs, we check if the backend sent it capitalized or lowercase
+                else {
+                  itemCount =
+                    statusCounts?.[tab] || 
+                    statusCounts?.[tab.toLowerCase()] || 
+                    statusCounts?.[tab.toUpperCase()] || 
+                    0;
+                }
 
                 return (
                   <button
                     key={tab}
                     onClick={() => handleTabChange(tab)}
-                    // Added 'relative' to the className below so the dot positions correctly
-                    className={`relative flex items-center justify-center whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-lg transition-all border ${
+                    className={`cursor-pointer relative flex items-center justify-center whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-lg transition-all border ${
                       activeTab === tab
                         ? "bg-[#800000] text-white border-[#800000] shadow-sm"
                         : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                     }`}
                   >
                     {tab}
-
-                    {/* The Red Dot Counter */}
+                    
+                    {/* Only show the red dot if the count is greater than 0 */}
                     {itemCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center bg-[#800000] rounded-full border-[2px] border-white text-[10px] font-bold text-white leading-none shadow-sm">
                         {itemCount > 99 ? "99+" : itemCount}
@@ -276,7 +278,6 @@ export default function OrderManagementPage() {
               </tr>
             ) : filteredOrders.length > 0 ? (
               filteredOrders.map((order: any) => {
-                // 🚀 ADDED: Shipped rows are now clickable
                 const isClickableRow =
                   order.order_status === "Pending" ||
                   order.order_status === "Approved" ||

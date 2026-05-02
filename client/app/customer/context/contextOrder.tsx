@@ -58,7 +58,7 @@ interface OrderContextType {
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   deliverOrder: (id: string, payload: any) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
-  rateOrder: (id: string, payload: { rating: number; review: string }) => Promise<void>; // idk pa kung anong lalagay kasi wala pang route para mag Post ng rating sa order, so just a placeholder for now
+  rateOrder: (id: string, payload: { rating: number; review: string }) => Promise<void>;
   receiveOrder: (id: string, payload: any) => Promise<void>;
 }
 
@@ -68,9 +68,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 2. CREATED STATE FOR STATUS COUNTS
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
-    Pending: 10,
+    Pending: 0,
     Approved: 0,
     Shipped: 0,
     Delivered: 0,
@@ -86,14 +85,15 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     end_page: 1,
   });
 
-  // 3. ADDED FETCH FUNCTION FOR COUNTS
   const fetchStatusCounts = useCallback(async () => {
     try {
-      // NOTE: You will need a matching endpoint in your FastAPI backend that returns the counts!
-      // Example expected backend response: { "Pending": 12, "Approved": 3, "Shipped": 0, ... }
-      const response = await apiClient.get(`/order/counts`); 
+      const response = await apiClient.get(`/order/status/counts`); 
       
-      if (response && response.data) {
+      console.log("Backend Status Counts Response:", response);
+
+      if (response?.data?.data) {
+        setStatusCounts(response.data.data);
+      } else if (response?.data) {
         setStatusCounts(response.data);
       } else if (response) {
         setStatusCounts(response);
@@ -204,8 +204,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+  
   const deliverOrder = async (id: string, payload: any) => {
-    // Optimistic UI Update
     setOrders((prev) =>
       prev.map((order) =>
         order.string_id === id
@@ -216,7 +216,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     try {
       await apiClient.patch(`/order/${id}/deliver`, payload);
     } catch (error) {
-      console.error("Failed to confirm order:", error);
+      console.error("Failed to deliver order:", error);
     }
   };
 
@@ -230,7 +230,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
     try {
       await apiClient.patch(`/order/${id}/confirm`, payload);
-   
     } catch (error) {
       console.error("Failed to confirm order:", error);
     }
@@ -246,20 +245,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
     try {
       await apiClient.patch(`/order/${id}/cancel`, {});
-  
     } catch (error) {
       console.error("Failed to cancel order:", error);
     }
   };
+  
   const receiveOrder = async (orderId: string, payload: any) => {
     try {
-      // Note: Action endpoints like this are usually PATCH or POST in FastAPI.
-      // I am using patch here, but change it to .post if your backend strictly requires POST.
       await apiClient.patch(`/order/${orderId}/receive`, payload);
-
-      // Refresh the list to remove the received order from the "Delivered" tab
-      // Make sure these variables match what you currently use in your context to fetch
-    
     } catch (error) {
       console.error("Failed to mark order as received:", error);
       throw error;
@@ -276,7 +269,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
     try {
       await apiClient.patch(`/order/${id}/ship`, payload);
-   
     } catch (error) {
       console.error("Failed to ship order:", error);
     }
@@ -299,16 +291,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // Rate Order Function
   const rateOrder = async (id: string, payload: { rating: number; review: string }) => {
-  try {
-    // Modify the endpoint URL to match your FastAPI backend
-    await apiClient.post(`/order/${id}/rate`, payload); // Assuming the endpoint is POST /order/{id}/rate
-  } catch (error) {
-    console.error("Failed to submit rating:", error);
-    throw error;
-  }
-};
+    try {
+      await apiClient.post(`/order/${id}/rate`, payload);
+    } catch (error) {
+      console.error("Failed to submit rating:", error);
+      throw error;
+    }
+  };
 
   return (
     <OrderContext.Provider

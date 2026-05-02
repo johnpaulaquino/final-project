@@ -6,7 +6,6 @@ import AddressFormModal from "../checkout/addressFormModal";
 import { apiClient } from "@/lib/api";
 
 export default function AddressBook() {
-  // IMPORTANT: Make sure setAddresses is exported from your contextAccount.tsx!
   const { addresses, addAddress, removeAddress, setAddresses } = useAccount();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -28,7 +27,6 @@ export default function AddressBook() {
       const formPayload = new FormData();
       await apiClient.patch(`/me/address/${id}/set-default`, formPayload);
 
-      // Update UI for default
       if (setAddresses) {
         const updatedAddresses = addresses.map((addr) => ({
           ...addr,
@@ -42,12 +40,12 @@ export default function AddressBook() {
   };
 
   const handleOpenAdd = () => {
-    setEditingAddress(null); // Clears data so it acts as an INSERT
+    setEditingAddress(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (address: Address) => {
-    setEditingAddress(address); // Sets data so it acts as an UPDATE
+    setEditingAddress(address);
     setIsModalOpen(true);
   };
 
@@ -66,7 +64,6 @@ export default function AddressBook() {
     }
   };
 
-  // --- THE COMPLETED INSERT & UPDATE HANDLER ---
   const handleSaveAddress = async (formData: any) => {
     try {
       const payload = {
@@ -84,10 +81,8 @@ export default function AddressBook() {
       };
 
       if (editingAddress) {
-        // 1. UPDATE EXISTING ADDRESS (PATCH)
         await apiClient.patch(`/me/address/${editingAddress.id}`, payload);
 
-        // 2. Instantly update the UI without refreshing the page
         if (setAddresses) {
           const updatedAddresses = addresses.map((addr) => {
             if (addr.id === editingAddress.id) {
@@ -102,12 +97,11 @@ export default function AddressBook() {
                 st_bd_hno: payload.st_bd_hno,
               };
             }
-            return addr; // Keep other addresses unchanged
+            return addr;
           });
           setAddresses(updatedAddresses);
         }
       } else {
-        // 1. ADD NEW ADDRESS (POST)
         const response = await apiClient.post("/me/address", payload);
         const data: Address = response.data?.data || response.data;
 
@@ -125,10 +119,9 @@ export default function AddressBook() {
             building_name: data.st_bd_hno.building_name,
           },
           is_default: data.is_default,
-          phone: "",
+          phone: "", 
         };
 
-        // 2. Add to the UI instantly
         addAddress(newAddress);
       }
 
@@ -140,86 +133,107 @@ export default function AddressBook() {
   };
 
   return (
-    <div className="animate-in fade-in duration-300">
-      <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-4">
-        <h2 className="text-xl font-bold text-[#0B1527]">Delivery Addresses</h2>
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 animate-in fade-in duration-500">
+      
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4 border-b border-gray-50 pb-6">
+        <div>
+          <h2 className="text-xl font-bold text-[#0B1527]">Address Book</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage your saved delivery locations.</p>
+        </div>
         <button
           onClick={handleOpenAdd}
-          className="text-sm font-bold text-[#800000] hover:text-red-900 transition-colors flex items-center gap-1"
+          className="w-full sm:w-auto bg-[#0B1527] hover:bg-gray-800 text-white font-semibold py-2.5 px-5 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center gap-2"
         >
-          <span>+ Add New</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add New Address
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ADDRESS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {addresses.length === 0 ? (
-          <div className="col-span-full py-10 text-center border-2 border-dashed border-gray-200 rounded-2xl">
-            <p className="text-gray-500 font-medium mb-2">
-              No addresses saved yet.
-            </p>
+          
+          /* EMPTY STATE */
+          <div className="col-span-full py-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm border border-gray-100 mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <p className="text-gray-900 font-bold mb-1">No addresses saved</p>
+            <p className="text-gray-500 text-sm mb-4">Add an address so you can checkout faster.</p>
             <button
               onClick={handleOpenAdd}
-              className="text-[#800000] font-bold text-sm hover:underline"
+              className="text-[#800000] font-semibold text-sm hover:text-red-900 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors"
             >
               Add your first address
             </button>
           </div>
+
         ) : (
+          
+          /* ADDRESS CARDS */
           addresses.map((address) => {
             const isThisDeleting = isDeleting === address.id;
 
             return (
               <div
                 key={address.id}
-                className={`p-5 rounded-[16px] border flex flex-col justify-between min-h-[140px] transition-opacity duration-200 ${
+                className={`relative p-6 rounded-2xl border flex flex-col justify-between min-h-[160px] transition-all duration-200 ${
                   address.is_default
-                    ? "border-[#800000]/20 bg-[#800000]/[0.02]"
-                    : "border-gray-100 bg-white"
-                } ${isThisDeleting ? "opacity-50 pointer-events-none" : ""}`}
+                    ? "border-[#800000] bg-red-50/10 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                } ${isThisDeleting ? "opacity-50 pointer-events-none scale-[0.98]" : ""}`}
               >
                 <div>
-                  <div className="flex justify-between items-start mb-2">
-                    {address.is_default && (
-                      <span className="text-[10px] font-bold text-[#800000] bg-red-50 px-2 py-1 rounded-[6px]">
-                        Default
-                      </span>
-                    )}
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-base text-gray-900 font-bold flex items-center flex-wrap gap-2">
+                      {address.fullname}
+                      {address.is_default && (
+                        <span className="text-[10px] font-bold tracking-wide text-[#800000] bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
+                          DEFAULT
+                        </span>
+                      )}
+                    </h3>
                   </div>
-                  <p className="text-xs text-gray-900 font-bold mt-2">
-                    {address.fullname}{" "}
-                    <span className="font-normal text-gray-500 ml-2">
-                      {address.phone}
-                    </span>
+                  
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    {address.phone || "No phone provided"}
                   </p>
-                  <p className="text-xs text-gray-500 leading-relaxed mt-1">
+                  <p className="text-sm text-gray-500 leading-relaxed pr-4">
                     {formatAddress(address)}
                   </p>
                 </div>
 
-                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100/50">
-                  <div className="flex gap-4">
+                {/* CARD FOOTER / ACTIONS */}
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+                  <div className="flex items-center gap-4">
                     <button
                       onClick={() => handleOpenEdit(address)}
                       disabled={isThisDeleting}
-                      className="text-xs font-medium text-gray-400 hover:text-gray-800 disabled:opacity-50"
+                      className="text-sm font-semibold text-gray-500 hover:text-[#0B1527] disabled:opacity-50 transition-colors"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteAddress(address.id)}
                       disabled={isThisDeleting}
-                      className="text-xs font-medium text-gray-400 hover:text-red-600 disabled:opacity-50 flex items-center gap-1"
+                      className="text-sm font-semibold text-gray-500 hover:text-red-600 disabled:opacity-50 transition-colors"
                     >
                       {isThisDeleting ? "Deleting..." : "Delete"}
                     </button>
                   </div>
+                  
                   {!address.is_default && (
                     <button
                       onClick={() => setDefaultAddress(address.id)}
                       disabled={isThisDeleting}
-                      className="text-xs font-bold text-[#800000] hover:text-red-900 disabled:opacity-50"
+                      className="text-sm font-semibold text-[#800000] hover:text-red-900 disabled:opacity-50 transition-colors"
                     >
-                      Set Default
+                      Set as Default
                     </button>
                   )}
                 </div>
@@ -233,7 +247,7 @@ export default function AddressBook() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveAddress}
-        initialData={editingAddress} // <-- This tells the modal whether it's an UPDATE or INSERT!
+        initialData={editingAddress}
       />
     </div>
   );

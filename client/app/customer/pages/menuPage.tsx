@@ -10,7 +10,7 @@ interface MenuPageProps {
 // Changed 'menu' to 'Menu'
 export default function menu({ activeTab, setActiveTab }: MenuPageProps) {
   return (
-    <main className="relative z-10 max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8">
+    <main className="max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
       <CustomerSidebar setActiveTab={setActiveTab} />
       
       <div className="flex-1 w-full flex flex-col">

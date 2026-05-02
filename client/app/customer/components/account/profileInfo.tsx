@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
 import ProfileEditModal from "./ProfileEditModal";
 
-// 1. Export the interface from here so the Modal can use it
 export interface ProfileData {
   userId: string;
   firstName: string;
@@ -28,7 +27,6 @@ export default function ProfileInfo() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 2. THIS FETCHES THE DATA ON FIRST LOAD AND SAVES TO MEMORY
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -60,7 +58,6 @@ export default function ProfileInfo() {
     fetchProfileData();
   }, []);
 
-  // 3. THIS UPDATES THE MEMORY (AND UI) INSTANTLY AFTER THE MODAL SAVES
   const handleUpdateSuccess = (updatedData: ProfileData) => {
     setProfileData(updatedData);
     setIsEditModalOpen(false);
@@ -70,146 +67,117 @@ export default function ProfileInfo() {
     ? profileData.firstName.charAt(0).toUpperCase()
     : "?";
 
-  // Prevent rendering the UI until the API data is safely in memory
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-gray-500 animate-pulse">
-        Loading profile...
+      <div className="w-full max-w-4xl mx-auto p-8 text-center text-gray-400 animate-pulse font-medium">
+        Loading profile data...
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in duration-300 pb-12 px-4 sm:px-0 flex flex-col items-start w-full">
-      <h2 className="text-xl sm:text-2xl font-bold text-[#0B1527] mb-6 sm:mb-8 self-start">
-        Personal Information
-      </h2>
-
-      {/* AVATAR DISPLAY (Read-Only) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 mb-8 sm:mb-10 border-b border-gray-100 pb-6 sm:pb-8 w-full">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#800000] text-white rounded-full flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-md overflow-hidden flex-shrink-0">
-          {profileData.avatarPreview ? (
-            <img
-              src={profileData.avatarPreview}
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span>{firstInitial}</span>
-          )}
-        </div>
-        <div className="flex flex-col items-start">
-          <h3 className="font-bold text-gray-900 text-lg">
-            {profileData.firstName || "-"} {profileData.lastName || "-"}
-          </h3>
-          <p className="text-sm text-gray-500">Profile Avatar</p>
-        </div>
-      </div>
-
-      {/* READ-ONLY INFO DISPLAY */}
-      <div className="w-full max-w-xl sm:mx-auto flex flex-col gap-5 sm:gap-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    <div className="animate-in fade-in duration-500 pb-12 px-4 sm:px-0 w-full max-w-4xl mx-auto space-y-6">
+      
+      {/* CARD 1: PERSONAL INFORMATION */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Card Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 sm:px-8 border-b border-gray-50 gap-4">
           <div>
-            <label className="block text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider mb-1.5 sm:mb-2">
-              FIRST NAME
-            </label>
-            <div className="w-full border border-gray-100 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-gray-600 bg-gray-50/50 shadow-inner min-h-[44px]">
-              {profileData.firstName || "-"}
-            </div>
+            <h2 className="text-xl font-bold text-[#0B1527]">Personal Information</h2>
+            <p className="text-sm text-gray-500 mt-1">Manage your personal details and avatar.</p>
           </div>
-          <div>
-            <label className="block text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider mb-1.5 sm:mb-2">
-              LAST NAME
-            </label>
-            <div className="w-full border border-gray-100 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-gray-600 bg-gray-50/50 shadow-inner min-h-[44px]">
-              {profileData.lastName || "-"}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider mb-1.5 sm:mb-2">
-              MIDDLE NAME
-            </label>
-            <div className="w-full border border-gray-100 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-gray-600 bg-gray-50/50 shadow-inner min-h-[44px]">
-              {profileData.middleName || "-"}
-            </div>
-          </div>
-          <div>
-            <label className="block text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider mb-1.5 sm:mb-2">
-              BIRTH DATE
-            </label>
-            <div className="w-full border border-gray-100 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-gray-600 bg-gray-50/50 shadow-inner min-h-[44px]">
-              {profileData.birthDate || "-"}
-            </div>
-          </div>
-        </div>
-
-        {/* Edit Button */}
-        <div className="pt-2 sm:pt-4 w-full flex justify-start sm:justify-center border-t border-gray-100 mt-2">
           <button
             onClick={() => setIsEditModalOpen(true)}
-            className="w-full sm:w-auto bg-[#0B1527] hover:bg-gray-800 text-white font-bold py-3 px-10 rounded-xl shadow-md transition-colors text-sm sm:text-base flex items-center justify-center gap-2"
+            className="w-full sm:w-auto bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-[#0B1527] font-semibold py-2 px-5 rounded-lg shadow-sm transition-all text-sm flex items-center justify-center gap-2"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
-            Edit Personal Information
+            Edit Profile
           </button>
+        </div>
+
+        {/* Card Body */}
+        <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-8 lg:gap-12">
+          
+          {/* Avatar Column */}
+          <div className="flex flex-col items-center md:items-start gap-3 flex-shrink-0">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 bg-[#800000] text-white rounded-full flex items-center justify-center text-4xl font-bold shadow-md overflow-hidden ring-4 ring-white border border-gray-100">
+              {profileData.avatarPreview ? (
+                <img
+                  src={profileData.avatarPreview}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{firstInitial}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Data Grid Column */}
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-y-8 gap-x-6">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 tracking-wider mb-1">FIRST NAME</span>
+              <span className="text-base font-medium text-gray-900">{profileData.firstName || "—"}</span>
+            </div>
+            
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 tracking-wider mb-1">LAST NAME</span>
+              <span className="text-base font-medium text-gray-900">{profileData.lastName || "—"}</span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 tracking-wider mb-1">MIDDLE NAME</span>
+              <span className="text-base font-medium text-gray-900">{profileData.middleName || "—"}</span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 tracking-wider mb-1">BIRTH DATE</span>
+              <span className="text-base font-medium text-gray-900">{profileData.birthDate || "—"}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ISOLATED EMAIL SECTION */}
-      <div className="w-full max-w-xl sm:mx-auto mt-10 sm:mt-12 pt-8 sm:pt-10 border-t border-gray-100">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2 mb-3 sm:mb-2">
-          <label className="block text-[10px] sm:text-[11px] font-bold text-gray-400 tracking-wider">
-            ACCOUNT EMAIL
-          </label>
-          <span className="text-[9px] sm:text-[10px] text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full font-medium self-start sm:self-auto flex items-center gap-1">
-            <svg
-              className="w-3 h-3 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m0 0v2m0-2h2m-2 0H10m11-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Requires separate verification
-          </span>
+      {/* CARD 2: ACCOUNT SETTINGS */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 sm:px-8 border-b border-gray-50">
+          <h2 className="text-xl font-bold text-[#0B1527]">Account Settings</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage your login credentials.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="email"
-            value={email}
-            readOnly
-            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-gray-500 bg-gray-50 focus:outline-none cursor-not-allowed shadow-inner"
-          />
-          <button
-            type="button"
-            className="w-full sm:w-auto px-6 py-2.5 sm:py-3 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#0B1527] hover:bg-gray-50 transition-colors flex-shrink-0"
-          >
-            Update Email
-          </button>
+        
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2 mb-3">
+            <label className="block text-[11px] font-bold text-gray-400 tracking-wider">
+              ACCOUNT EMAIL
+            </label>
+            <span className="text-[10px] text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1.5 border border-amber-100">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m11-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Requires separate verification
+            </span>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              value={email}
+              readOnly
+              className="w-full max-w-md border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-500 bg-gray-50 focus:outline-none cursor-not-allowed"
+            />
+            <button
+              type="button"
+              className="w-full sm:w-auto px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-[#0B1527] hover:bg-gray-50 hover:border-gray-300 transition-all flex-shrink-0"
+            >
+              Update Email
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* RENDER THE MODAL IF OPEN */}
+      {/* MODAL */}
       {isEditModalOpen && (
         <ProfileEditModal
           isOpen={isEditModalOpen}

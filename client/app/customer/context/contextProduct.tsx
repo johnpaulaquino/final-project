@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { apiClient } from "@/lib/api"; // Assuming you have this from your previous setup
+import { apiClient } from "@/lib/api"; 
 import { Product } from "./contextCart";
 
 interface ProductContextType {
@@ -28,21 +28,40 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     async (category: string, skip = 0, limit = 10) => {
       setIsLoading(true);
       try {
-        const endpoint = `/products/with?category=${category}&skip=${skip}&limit=${limit}`;
+        // 1. Build the query parameters FIRST
+        const params = new URLSearchParams({
+          skip: skip.toString(),
+          limit: limit.toString(),
+        });
 
+        // 2. Construct the proper endpoint based on the category
+        let endpoint = "";
+        
+        if (category !== "All") {
+          // Append category for the specific search
+          params.append("category", category);
+          endpoint = `/products/with?${params.toString()}`;
+        } else {
+          // Omit category parameter for the "All" view
+          // Ensure your backend handles standard GET /products for all items!
+          endpoint = `/products?${params.toString()}`; 
+        }
+
+        // 3. Make the API request with the correctly built endpoint
         const response = await apiClient.publicGet(endpoint);
 
-        // Adjust this depending on your API's exact response structure (e.g., response.data or response.products)
-        const fetchedProducts = response.data || [];
+        // Adjust this depending on your API's exact response structure 
+        // Typically SuccessfulResponseSchema wraps arrays in data.data
+        const fetchedProducts = response.data?.data || response.data || [];
         setProducts(fetchedProducts);
       } catch (error) {
         console.error("Failed to fetch products:", error);
-        setProducts([]); // Clear products on error, or handle gracefully
+        setProducts([]); // Clear products on error
       } finally {
         setIsLoading(false);
       }
     },
-    [],
+    []
   );
 
   // Standard optimistic UI updates
@@ -57,7 +76,8 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const updateProduct = async (id: string | number, formData: FormData) => {
     try {
       await apiClient.patch(`/products/full/${id}`, formData);
-      await fetchProducts("All", 1, 10);
+      // Optional: Refresh the current view instead of defaulting to "All" and 1
+      await fetchProducts("All", 0, 10); 
     } catch (error) {
       console.error("Failed to update product:", error);
       throw error;

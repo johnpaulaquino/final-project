@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation"; // 🚀 Import Next.js router
-import { useCart } from "../../context/contextCart";
+import { useCart, CartItem } from "../../context/contextCart";
 import { useOrders, Order } from "../../context/contextOrder";
 import ConfirmationModal from "../ConfirmationModal";
 
@@ -11,6 +11,7 @@ interface OrderSummaryProps {
   onProcessPayment: () => void;
   isAddressSaved: boolean;
   isProcessing?: boolean;
+  cart: CartItem[]; // Ensure cart is passed as a prop
 }
 
 export default function OrderSummary({
