@@ -128,7 +128,7 @@ export default function ProductModal({
               <p className="text-sm font-bold text-gray-800 capitalize">
                 {fullName}
               </p>
-              {renderStars(review.rates)}
+              {renderStars(product.avg_rating || 0)}
             </div>
           </div>
           <span className="text-[10px] text-gray-400 font-medium">
