@@ -39,7 +39,6 @@ export function withAuth(request: NextRequest) {
   // If access_token is expired, but refresh_token is alive -> Let them pass!
   // Your apiClient.ts will handle the 401 and refresh the token automatically.
   if (!token && refreshToken) {
-    console.log("🔄 Optimistic Pass: Letting apiClient.ts handle the refresh");
     return undefined;
   }
 

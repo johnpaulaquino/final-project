@@ -24,7 +24,7 @@ export default function OrderPage() {
     cancelOrder,
     receiveOrder,
     rateOrder,
-    statusCounts,      // 🚀 1. ADDED: Bring in the counts
+    statusCounts, // 🚀 1. ADDED: Bring in the counts
     fetchStatusCounts, // 🚀 1. ADDED: Bring in the fetch function
   } = useOrders();
 
@@ -38,7 +38,7 @@ export default function OrderPage() {
 
   // Rating Modal State (Temporary until we implement the actual rating flow)
   const [orderToRate, setOrderToRate] = useState<string | null>(null);
-  const [isRating, setIsRating] = useState(false); 
+  const [isRating, setIsRating] = useState(false);
   const [productNameToRate, setProductNameToRate] = useState<string>("");
 
   // Toast Notification State
@@ -76,7 +76,7 @@ export default function OrderPage() {
       await cancelOrder(orderToCancel);
       setOrderToCancel(null);
       setToast({ message: "Order successfully cancelled.", type: "success" });
-      
+
       fetchStatusCounts(); // Refresh counts after cancelling
     } catch (error: any) {
       setOrderToCancel(null);
@@ -103,7 +103,7 @@ export default function OrderPage() {
         message: "Order successfully marked as received!",
         type: "success",
       });
-      
+
       fetchStatusCounts(); // Refresh counts after receiving
     } catch (error: any) {
       setOrderToReceive(null);
@@ -137,7 +137,6 @@ export default function OrderPage() {
       setIsRating(false);
     }
   };
-
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -210,7 +209,7 @@ export default function OrderPage() {
                 }`}
               >
                 {status}
-                
+
                 {/* 🚀 3. ADDED: Red dot notification badge */}
                 {itemCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center bg-[#800000] rounded-full border-2 border-white text-[10px] font-bold text-white leading-none shadow-sm">

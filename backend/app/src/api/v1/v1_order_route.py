@@ -85,7 +85,7 @@ async def get_paginated_orders(paginated: PaginatedSchema = Depends(),
                                order_services: OrderServices = Depends(get_order_service),
                                ):
     try:
-        order_response = await order_services.get_paginated_orders(paginated, order_status, current_user)
+        order_response = await order_services.get_paginated_customer_orders(paginated, order_status, current_user)
         order_response.status_code = status.HTTP_200_OK
         
         return SuccessfulResponse(order_response)

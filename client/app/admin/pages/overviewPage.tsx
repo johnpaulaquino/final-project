@@ -1,13 +1,16 @@
-import React, { useState, useMemo } from 'react';
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import { apiClient } from "@/lib/api"; // 🚀 Import your API client
 import {
   AreaChart,
   Area,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer
-} from 'recharts';
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 // Custom Tooltip Component
 const MLTooltip = ({ active, payload, label }: any) => {
@@ -25,7 +28,10 @@ const MLTooltip = ({ active, payload, label }: any) => {
           <span className="font-bold">₱{data.Predicted.toLocaleString()}</span>
         </p>
         {data.event && (
-          <p className="mt-2 pt-2 border-t border-gray-100 text-xs font-semibold" style={{ color: data.eventColor }}>
+          <p
+            className="mt-2 pt-2 border-t border-gray-100 text-xs font-semibold"
+            style={{ color: data.eventColor }}
+          >
             ★ {data.event}
           </p>
         )}
@@ -36,51 +42,125 @@ const MLTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Overview() {
+  // 🚀 NEW: State to hold the API data
+  const [overviewData, setOverviewData] = useState({
+    total_revenue: 0,
+    total_orders: 0,
+    total_active_customers: 0,
+    total_unread_alerts: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  //  NEW: Fetch data on mount
+  useEffect(() => {
+    const fetchOverviewData = async () => {
+      try {
+        setIsLoading(true);
+        // Assuming your apiClient automatically prepends the /api/v1/biskota base URL
+        const response = await apiClient.get("/products/admin/overview");
+
+        // Match the JSON structure {"data": { ... }}
+        if (response.data && response.data.data) {
+          setOverviewData(response.data.data);
+        } else if (response.data) {
+          // Fallback just in case axios already unwrapped the first layer
+          setOverviewData(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to load overview stats:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOverviewData();
+  }, []);
+
+  // 🚀 MODIFIED: Connect the UI cards directly to your state
   const stats = [
-    { title: "Total Revenue", value: "₱45,231"},
-    { title: "Total Orders", value: "1,203"},
-    { title: "Active Customers", value: "8,540"},
-    { title: "Unread Alerts", value: "2" }
+    {
+      title: "Total Revenue",
+      value: isLoading
+        ? "..."
+        : `₱${overviewData.total_revenue.toLocaleString()}`,
+    },
+    {
+      title: "Total Orders",
+      value: isLoading ? "..." : overviewData.total_orders.toLocaleString(),
+    },
+    {
+      title: "Active Customers",
+      value: isLoading
+        ? "..."
+        : overviewData.total_active_customers.toLocaleString(),
+    },
+    {
+      title: "Unread Alerts",
+      value: isLoading
+        ? "..."
+        : overviewData.total_unread_alerts.toLocaleString(),
+    },
   ];
 
   const [baseDailySales, setBaseDailySales] = useState(5000);
   const [holidayIntensity, setHolidayIntensity] = useState(100);
 
   // Mapped events to months instead of specific dates
-  const monthlyEvents: Record<string, {name: string, mult: number, color: string}> = useMemo(() => ({
-    'Feb': { name: "Valentine's Season", mult: 1.8, color: '#ef4444' },
-    'Apr': { name: "Holy Week", mult: 1.3, color: '#8b5cf6' },
-    'May': { name: "Mother's Day", mult: 2.0, color: '#ec4899' },
-    'Oct': { name: "Halloween", mult: 1.5, color: '#f97316' },
-    'Dec': { name: "Holiday Season", mult: 2.8, color: '#10b981' }
-  }), []);
+  const monthlyEvents: Record<
+    string,
+    { name: string; mult: number; color: string }
+  > = useMemo(
+    () => ({
+      Feb: { name: "Valentine's Season", mult: 1.8, color: "#ef4444" },
+      Apr: { name: "Holy Week", mult: 1.3, color: "#8b5cf6" },
+      May: { name: "Mother's Day", mult: 2.0, color: "#ec4899" },
+      Oct: { name: "Halloween", mult: 1.5, color: "#f97316" },
+      Dec: { name: "Holiday Season", mult: 2.8, color: "#10b981" },
+    }),
+    [],
+  );
 
   const chartData = useMemo(() => {
     const data = [];
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
     const baseMonthlySales = baseDailySales * 30;
-    
+
     for (let i = 0; i < months.length; i++) {
       const monthName = months[i];
       const event = monthlyEvents[monthName];
-      
-      let multiplier = 1 + (Math.random() * 0.3 - 0.15); 
-      
+
+      let multiplier = 1 + (Math.random() * 0.3 - 0.15);
+
       if (event) {
         multiplier += (event.mult - 1) * (holidayIntensity / 100);
       }
 
       const predicted = Math.round(baseMonthlySales * multiplier);
       // Actual fluctuates slightly from predicted
-      const actual = Math.round(predicted * (1 + (Math.random() * 0.15 - 0.07)));
+      const actual = Math.round(
+        predicted * (1 + (Math.random() * 0.15 - 0.07)),
+      );
 
       data.push({
         month: monthName,
         Actual: actual,
         Predicted: predicted,
         event: event?.name || null,
-        eventColor: event?.color || null
+        eventColor: event?.color || null,
       });
     }
     return data;
@@ -90,10 +170,19 @@ export default function Overview() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex justify-between items-center">
+          <div
+            key={i}
+            className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex justify-between items-center"
+          >
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">{stat.title}</p>
-              <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">
+                {stat.title}
+              </p>
+              <p
+                className={`text-2xl font-semibold ${isLoading ? "text-gray-300 animate-pulse" : "text-gray-900"}`}
+              >
+                {stat.value}
+              </p>
             </div>
           </div>
         ))}
@@ -101,50 +190,64 @@ export default function Overview() {
 
       {/* Analytics Chart */}
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 h-[480px] flex flex-col">
-        <h3 className="text-lg font-bold text-[#0B1527] mb-6">Revenue Forecast (Jan - Dec)</h3>
+        <h3 className="text-lg font-bold text-[#0B1527] mb-6">
+          Revenue Forecast (Jan - Dec)
+        </h3>
         <div className="w-full flex-grow">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="month" 
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#e2e8f0"
+              />
+              <XAxis
+                dataKey="month"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: "#64748b", fontSize: 12 }}
                 dy={10}
               />
-              <YAxis 
+              <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 12 }}
+                tick={{ fill: "#64748b", fontSize: 12 }}
                 tickFormatter={(val) => `₱${val / 1000}k`}
                 dx={-10}
               />
               <Tooltip content={<MLTooltip />} />
-              
-              <Area 
-                type="monotone" 
-                dataKey="Actual" 
-                stroke="#cbd5e1" 
+
+              <Area
+                type="monotone"
+                dataKey="Actual"
+                stroke="#cbd5e1"
                 strokeWidth={2}
-                fill="none" 
+                fill="none"
                 activeDot={false}
               />
-              
-              <Area 
-                type="monotone" 
-                dataKey="Predicted" 
-                stroke="#f43f5e" 
+
+              <Area
+                type="monotone"
+                dataKey="Predicted"
+                stroke="#f43f5e"
                 strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorPredicted)" 
-                activeDot={{ r: 6, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }}
+                fillOpacity={1}
+                fill="url(#colorPredicted)"
+                activeDot={{
+                  r: 6,
+                  fill: "#f43f5e",
+                  stroke: "#fff",
+                  strokeWidth: 2,
+                }}
               />
             </AreaChart>
           </ResponsiveContainer>
