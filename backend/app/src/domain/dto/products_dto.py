@@ -30,6 +30,7 @@ class ProductInformationDTO(BaseModel):
     images: List[dict] | None = None
     inventory_id: int | None = None
     stock_status: str | None = None
+    avg_rating: int | None = None
 
 
 class ListOfProductInformationDTO(BaseModel):

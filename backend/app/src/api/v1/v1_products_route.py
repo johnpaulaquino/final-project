@@ -10,9 +10,9 @@ from app.src.core.constants import ConstantsData, EndpointTags
 from app.src.core.dependencies import get_current_user, get_products_carousel_service, get_products_service
 from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.http_exceptions import DataUnProcessableContent
+from app.src.infrastructure.db.entity.products.product_ratings import CreateProductsRatings
 from app.src.schema import PaginatedSchema
-from app.src.schema.products_schema import (CreateCategories, ProductReviewsSchema,
-                                            ProductsFullInformationRequestSchema,
+from app.src.schema.products_schema import (CreateCategories, ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
 from app.src.utils.successful_response import SuccessfulResponse
 
@@ -217,8 +217,9 @@ async def update_product_information(product_id: str,
         raise e
 
 
-@v1_products_router.patch("/ratings/{product_id}")
-async def product_reviews(product_id: str, data: ProductReviewsSchema, current_user: DecodedTokenDTO,
+@v1_products_router.post("/ratings/{product_id}")
+async def product_reviews(product_id: int, data: CreateProductsRatings = Depends(CreateProductsRatings.depends),
+                          current_user: DecodedTokenDTO = Depends(get_current_user),
                           product_service: ProductsServices = Depends(get_products_service)):
     try:
         product_service_response = await product_service.product_reviews(product_id, data, current_user)
@@ -251,6 +252,19 @@ async def update_product_information(product_id: str,
     except Exception as e:
         raise e
 
+
+
+@v1_products_router.get("/reviews/{product_id}")
+async def get_ratings_and_comment(product_id : str,
+        paginated: PaginatedSchema = Query(),
+                                  current_user: DecodedTokenDTO = Depends(get_current_user),
+                                  product_service: ProductsServices = Depends(get_products_service)):
+    try:
+        product_service_response = await product_service.get_ratings_and_comment(product_id,paginated, current_user)
+        product_service_response.status_code = status.HTTP_200_OK
+        return SuccessfulResponse(product_service_response)
+    except Exception as e:
+        raise e
 
 # will insert safe route here.
 @v1_products_router.patch("/images/{product_id}", tags=[EndpointTags.ADMIN])
