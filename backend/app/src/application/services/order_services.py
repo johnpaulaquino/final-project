@@ -402,8 +402,11 @@ class OrderServices(SharedServices):
             # check if user exists
             await self._check_user_if_exists(current_user.user_id)
             
+            is_admin = Utility.capitalize_first_letters(current_user.role) == RoleSchema.ADMIN
+
+            user_id_to_filter = None if is_admin else current_user.user_id
             # get the data
-            data = await self.uof.orders.get_order_status_count()
+            data = await self.uof.orders.get_order_status_count(user_id=user_id_to_filter)
             if not data:
                 return SuccessfulResponseSchema(message="Successfully, but no data to retrieved.", data={})
             

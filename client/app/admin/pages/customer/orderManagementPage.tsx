@@ -97,6 +97,8 @@ export default function OrderManagementPage() {
       // Refresh counts after a successful update so the red dots update!
       fetchStatusCounts();
       
+      fetchAdminOrders(activeTab, currentPage, 10);
+
     } finally {
       setIsUpdating(false);
       setUpdateModalData(null);
@@ -107,6 +109,11 @@ export default function OrderManagementPage() {
     const lowerQuery = searchQuery.toLowerCase();
 
     return orders.filter((order) => {
+
+      if (activeTab !== "All" && order.order_status !== activeTab) {
+        return false;
+      }
+
       const matchesSearch =
         (order.string_id &&
           order.string_id.toLowerCase().includes(lowerQuery)) ||
@@ -117,7 +124,7 @@ export default function OrderManagementPage() {
 
       return matchesSearch;
     });
-  }, [orders, searchQuery]);
+  }, [orders, searchQuery, activeTab]);
 
   const getStatusStyles = (status: string) => {
     switch (status?.toLowerCase()) {

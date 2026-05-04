@@ -2,9 +2,10 @@
 
 interface ForgotPasswordFormProps {
   onGoToLogin: () => void;
+  hideLoginLink?: boolean; 
 }
 
-export default function ForgotPasswordForm({ onGoToLogin }: ForgotPasswordFormProps) {
+export default function ForgotPasswordForm({ onGoToLogin, hideLoginLink = false }: ForgotPasswordFormProps) {
   return (
     <div className='flex flex-col h-auto animate-in fade-in duration-300 w-full'>
 
@@ -34,10 +35,13 @@ export default function ForgotPasswordForm({ onGoToLogin }: ForgotPasswordFormPr
         </button>
       </form>
 
-      <p className='text-center text-xs text-[#0B1221] font-semibold mt-8'>
-        Remembered your password?{' '}
-        <button type='button' onClick={onGoToLogin} className='text-[#8a0606] hover:underline'>Log in</button>
-      </p>
+      {/* Conditionally render the login link based on the hideLoginLink prop */}
+      {!hideLoginLink && (
+        <p className='text-center text-xs text-[#0B1221] font-semibold mt-8'>
+          Remembered your password?{' '}
+          <button type='button' onClick={onGoToLogin} className='text-[#8a0606] hover:underline'>Log in</button>
+        </p>
+      )}
     </div>
   );
 }

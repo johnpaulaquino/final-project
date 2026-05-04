@@ -80,12 +80,17 @@ class OrdersRepository(UserInterface):
         except Exception as e:
             raise e
     
-    async def get_order_status_count(self):
+    async def get_order_status_count(self, user_id: str = None):
         try:
+            conditions = [Orders.order_status.in_([order_status for order_status in OrderStatusSchema])]
+            
+            if user_id:
+                conditions.append(Orders.user_id == user_id)
             stmt = (
-                    select(Orders.order_status, func.count(Orders.id))
-                    .where(Orders.order_status.in_([order_status for order_status in OrderStatusSchema]))
-                    .group_by(Orders.order_status))
+                select(Orders.order_status, func.count(Orders.id))
+                .where(and_(*conditions))
+                .group_by(Orders.order_status)
+            )
             result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
             return data
