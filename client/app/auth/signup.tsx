@@ -35,20 +35,25 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
     setError(null);
 
     try {
+      // Assuming your apiClient returns the parsed JSON response body
       const data = await apiClient.publicPost("/auth/signup", email);
 
-      if (data.status_code === 202) {
-        setStep(2); // OTP sent
-      } else if (data.status_code === 200) {
-        setStep(3); // Email already verified
+      // 🚀 FIX: Use the sign_up_steps returned by the backend
+      if (data.sign_up_steps === 2) {
+        setStep(2);
+      } else if (data.sign_up_steps === 3) {
+        setStep(3);
+      } else {
+        setStep(2);
       }
     } catch (err: any) {
       // Intercept the specific OTP error from the backend
-      if (err.message === "Your code is note expired yet.") {
-        setError(err.message); // Clear th error state so it doesn't show in red
+      if (err.message === "Your code is not expired yet.") {
+        // Fixed typo from 'note' to 'not'
+        setError(null); // Clear the error state so it doesn't show in red
         setStep(2); // Proceed to the OTP input step
       } else {
-        // Handle all other actual errors
+        // Handle all other actual errors (e.g. "This email is already exist.")
         setError(err.message || "Something went wrong");
       }
     } finally {

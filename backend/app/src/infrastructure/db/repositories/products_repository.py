@@ -4,9 +4,11 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.src.domain.dto.products_dto import (ListOfProductInformationDTO, ProductDetailsDTO, ProductInformationDTO,
                                              ProductsDataDTO, )
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import (CarouselEntity, Categories, Inventory, ProductDetails, ProductRatings,
-                                              Products, )
+from app.src.infrastructure.db.entity import (CarouselEntity, Categories, Inventory, PersonalInfo, ProductDetails,
+                                              ProductRatings,
+                                              Products, Users, )
 from app.src.infrastructure.db.entity.products.carousels_entity import CreateCarousel
+from app.src.infrastructure.db.entity.products.product_ratings import CreateProductsRatings
 from app.src.schema.products_schema import (ProductCategories, ProductStatusSchema,
                                             ProductsFullInformationRequestSchema,
                                             ProductsTags, )
@@ -119,16 +121,27 @@ class ProductsRepository(UserInterface):
         :param record_id: Unique from products.
         :return: Product record or None
         """
-        
-        stmt = select(Products, Inventory.quantity,
-                      Inventory.low_stock_threshold,
-                      Inventory.reserved_stock,
-                      Inventory.cancelled_stock,
-                      Inventory.sold_stock,
-                      ProductDetails.images, ProductDetails.description
-                      ).select_from(Products).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
-                                                        ).outerjoin(Inventory, Products.id == Inventory.product_id
-                                                                    ).where(Products.id == record_id)
+        ratings_subq = (
+                select(
+                        ProductRatings.product_id,
+                        func.avg(ProductRatings.rates).label("avg_rating"),
+                        func.count(ProductRatings.rates).label("review_count")
+                        )
+                .group_by(ProductRatings.product_id)
+                .subquery()
+        )
+        stmt = (select(Products, Inventory.quantity,
+                       Inventory.low_stock_threshold,
+                       Inventory.reserved_stock,
+                       Inventory.cancelled_stock,
+                       ratings_subq.c.avg_rating,
+                       Inventory.sold_stock,
+                       ProductDetails.images, ProductDetails.description,
+                       ).select_from(Products).outerjoin(ProductDetails, Products.id == ProductDetails.product_id
+                                                         ).outerjoin(Inventory, Products.id == Inventory.product_id
+                                                                     )
+                .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
+                .where(Products.id == record_id))
         
         result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
@@ -146,7 +159,8 @@ class ProductsRepository(UserInterface):
                     Inventory.cancelled_stock,
                     Inventory.sold_stock,
                     ).select_from(Products).outerjoin(Inventory, Products.id == Inventory.product_id
-                                                      ).where(Products.id.in_(product_ids))
+                                                      ).where(Products.id.in_(product_ids)
+                                                              )
             
             result = await self.__db.execute(stmt)
             data = result.mappings().fetchall()
@@ -191,7 +205,7 @@ class ProductsRepository(UserInterface):
         data = result.mappings().fetchall()
         return data or None
     
-    async def get_paginated_record_with_category(self, category, offset: int, limit: int):
+    async def get_paginated_record_with_category(self, category, offset: int, limit: int, is_in_categories : bool = True):
         """
         To get the paginated data.
         :param offset: Where the data retrieval start.
@@ -224,17 +238,17 @@ class ProductsRepository(UserInterface):
                 .outerjoin(ratings_subq, Products.id == ratings_subq.c.product_id)
                 .offset(offset).limit(limit))
         
-        if category.lower() in [ProductCategories.PASTRY.lower(), ProductCategories.DRINKS.lower()]:
+        if is_in_categories:
             stmt = stmt.where(Products.category == category).offset(offset).limit(limit)
         
         result = await self.__db.execute(stmt)
         data = result.mappings().fetchall()
         return data
     
-    async def get_paginated_record_with_category_total_records(self, category):
+    async def get_paginated_record_with_category_total_records(self, category, is_in_categories : bool = True):
         try:
             stmt = select(func.count(Products.id))
-            if category.lower() in [ProductCategories.PASTRY.lower(), ProductCategories.DRINKS.lower()]:
+            if is_in_categories:
                 stmt = stmt.where(Products.category == category)
             result = await self.__db.execute(stmt)
             data = result.scalars().first()
@@ -332,11 +346,18 @@ class ProductsRepository(UserInterface):
         data = result.mappings().fetchall()
         return data or None
     
-    async def product_reviews(self, product_id: str, data: dict):
+    async def update_product_reviews(self, product_id: str, data: dict):
         try:
             stmt = update(ProductRatings).where(ProductRatings.product_id == product_id).values(**data)
             await self.__db.execute(stmt)
         
+        except Exception as e:
+            raise e
+    
+    async def insert_product_reviews(self, data: CreateProductsRatings):
+        try:
+            product_reviews = ProductRatings(**data)
+            self.__db.add(product_reviews)
         except Exception as e:
             raise e
     
@@ -370,6 +391,34 @@ class ProductsRepository(UserInterface):
         data = result.scalar_one_or_none()
         
         return data
+    
+    async def get_paginated_ratings_and_comments(self,product_id : str, offset: int, limit: int, ):
+        try:
+            stmt = (select(Users.id, PersonalInfo.firstname, PersonalInfo.middle_name,
+                           PersonalInfo.lastname,
+                           ProductRatings.rates,
+                           ProductRatings.user_comments,
+                           ProductRatings.created_at
+                           ).select_from(Users)
+                    .join(PersonalInfo, Users.id == PersonalInfo.user_id)
+                    .join(ProductRatings, Users.id == ProductRatings.user_id)
+            .where(ProductRatings.product_id == product_id)
+                    .offset(offset)
+                    .limit(limit))
+            result = await self.__db.execute(stmt)
+            data = result.mappings().fetchall()
+            return data
+        except Exception as e:
+            raise e
+    
+    async def get_paginated_ratings_and_comments_count(self, product_id : str):
+        try:
+            stmt = (select(func.count(ProductRatings.id)).where(ProductRatings.product_id == product_id))
+            result = await self.__db.execute(stmt)
+            data = result.scalar()
+            return data
+        except Exception as e:
+            raise e
     
     async def get_product_details_only(self, product_id: str) -> ProductDetailsDTO | None:
         try:

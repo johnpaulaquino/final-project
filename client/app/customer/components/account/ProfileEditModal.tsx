@@ -70,10 +70,7 @@ export default function ProfileEditModal({
           formPayload.append("image", avatarFile);
         }
 
-        const response = await apiClient.patch(
-          `/me/${formData.userId}`,
-          formPayload,
-        );
+        const response = await apiClient.patch(`/me`, formPayload);
         const payload = response.message;
         console.log(payload);
 

@@ -31,6 +31,7 @@ class UserServices(SharedServices):
                                          img_byte: bytes):
         is_uploaded = False
         to_update_personal_data = None
+        
         try:
             old_personal_data = await self.__uow.users.get_personal_info_only(current_user.user_id)
             if not old_personal_data:
@@ -68,6 +69,7 @@ class UserServices(SharedServices):
                 await self.__cloudinary_infrastructure.destroy_images(old_image.public_key)
             return SuccessfulResponseSchema(message="Successfully update personal information.")
         except Exception as e:
+            
             # upload again the images in cloudinary here.
             if is_uploaded and to_update_personal_data.profile_image is not None:
                 

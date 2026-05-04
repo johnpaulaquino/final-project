@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useOrders, OrderStatus } from "../context/contextOrder";
 import ConfirmationModal from "../components/ConfirmationModal";
 import RatingModal from "../components/ratingModal";
+import { apiClient } from "@/lib/api"; // 🚀 NEW: Import your API client
 
 const STATUS_TABS: OrderStatus[] = [
   "Pending",
@@ -23,8 +24,7 @@ export default function OrderPage() {
     fetchOrders,
     cancelOrder,
     receiveOrder,
-    rateOrder,
-  } = useOrders();
+  } = useOrders(); // Removed rateOrder since we are calling API directly here
 
   // Cancel Modal State
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
@@ -34,9 +34,11 @@ export default function OrderPage() {
   const [orderToReceive, setOrderToReceive] = useState<string | null>(null);
   const [isReceiving, setIsReceiving] = useState(false);
 
-  // Rating Modal State (Temporary until we implement the actual rating flow)
-  const [orderToRate, setOrderToRate] = useState<string | null>(null);
-  const [isRating, setIsRating] = useState(false); 
+  // 🚀 MODIFIED: Rating Modal State (Now tracks product_id instead of order_id)
+  const [productToRateId, setProductToRateId] = useState<
+    string | number | null
+  >(null);
+  const [isRating, setIsRating] = useState(false);
   const [productNameToRate, setProductNameToRate] = useState<string>("");
 
   // Toast Notification State
@@ -73,9 +75,6 @@ export default function OrderPage() {
       await cancelOrder(orderToCancel);
       setOrderToCancel(null);
       setToast({ message: "Order successfully cancelled.", type: "success" });
-
-      // 🚀 FIXED: Removed the tab switching logic.
-      // You will stay on the current tab, and the Context will refresh the data!
     } catch (error: any) {
       setOrderToCancel(null);
       setToast({
@@ -101,9 +100,6 @@ export default function OrderPage() {
         message: "Order successfully marked as received!",
         type: "success",
       });
-
-      // 🚀 FIXED: Removed the tab switching logic.
-      // You will stay on the current tab!
     } catch (error: any) {
       setOrderToReceive(null);
       setToast({
@@ -116,27 +112,43 @@ export default function OrderPage() {
     }
   };
 
+  // NEW: Direct API call to the /ratings/{product_id} endpoint
   const handleConfirmRate = async (rating: number, review: string) => {
-    if (!orderToRate) return;
+    if (!productToRateId) return;
     setIsRating(true);
 
     try {
-      await rateOrder(orderToRate, { rating, review });
-      setOrderToRate(null);
+      // Map the payload directly to your backend schema expectations
+      const payload = {
+        rates: rating,
+        user_comments: review,
+      };
+      console.log("ID", productToRateId);
+      console.log("data", payload);
+      console.log("Orders", orders);
+      console.log("ID", orders[0].id);
+
+      await apiClient.post(`/products/ratings/${productToRateId}`, payload);
+
+      setProductToRateId(null);
       setToast({
         message: "Thank you! Your rating has been submitted.",
         type: "success",
       });
+
+      // Optional: Refresh orders so the UI updates
+      fetchOrders(activeTab, currentPage, 10);
     } catch (error: any) {
       setToast({
-        message: error?.message || "Failed to submit rating. Please try again.",
+        message:
+          error?.response?.data?.detail ||
+          "Failed to submit rating. Please try again.",
         type: "error",
       });
     } finally {
       setIsRating(false);
     }
   };
-
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -290,7 +302,7 @@ export default function OrderPage() {
                   <button
                     onClick={() => {
                       setProductNameToRate(order.product_name);
-                      setOrderToRate(order.string_id);
+                      setProductToRateId(order.id);
                     }}
                     className="text-xs font-bold text-[#800000] border border-[#800000]/30 rounded-lg px-5 py-2.5 hover:bg-[#800000]/5 transition-all w-full md:w-auto"
                   >
@@ -354,11 +366,12 @@ export default function OrderPage() {
         confirmColorClass="bg-green-600 hover:bg-green-700"
       />
 
+      {/* 🚀 Updated Rating Modal Binding */}
       <RatingModal
-        isOpen={orderToRate !== null}
+        isOpen={productToRateId !== null}
         productName={productNameToRate}
         isSubmitting={isRating}
-        onClose={() => setOrderToRate(null)}
+        onClose={() => setProductToRateId(null)}
         onSubmit={handleConfirmRate}
       />
 

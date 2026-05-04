@@ -8,12 +8,13 @@ from app.src.exceptions.domain_exceptions import (DomainAlreadyExistsError, Doma
                                                   DomainUnprocessableEntityError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.entity.products.carousels_entity import CreateCarousel
+from app.src.infrastructure.db.entity.products.product_ratings import CreateProductsRatings
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, SuccessfulResponseSchema
 from app.src.schema.products_schema import (CreateCategories, InventoryRequestSchema, ProductCategories,
                                             ProductDetailsRequestSchema,
                                             ProductRequestSchema,
-                                            ProductReviewsSchema, ProductsFullInformationRequestSchema,
+                                            ProductsFullInformationRequestSchema,
                                             UpdateProductsInformationRequestSchema, )
 from app.src.utils.utility import Utility
 
@@ -49,11 +50,15 @@ class ProductsServices(SharedServices):
             await self._check_user_if_exists(current_user.user_id)
             # then check if it's admin
             self.validate_users_role(current_user.role)
-            
-            # check if the category is in the database
+
             categories_data = await self.__uow.products.get_product_categories()
-            if product_request.category not in categories_data:
-                raise DomainUnprocessableEntityError(f"Category should be in {categories_data}.")
+            categories = [category.category.lower() for category in categories_data]
+
+            if product_request.category.lower() not in categories:
+                is_in_categories = False
+                if product_request.category.lower() != 'all':
+                    raise DomainUnprocessableEntityError(
+                        f"Category should be in {list(map(lambda x: Utility.capitalize_first_letters(x), categories))}.")
             # check if the images uploaded in the server exceed to maximum 5, then raise an error.
             if len(filenames) > 5:
                 raise DomainUnprocessableEntityError(
@@ -125,19 +130,28 @@ class ProductsServices(SharedServices):
     
     @retry_on_transient
     async def get_products_by_categories(self, category: str, paginated: PaginatedSchema):
+        is_in_categories = True
         try:
             # calculate the offset
             offset = Utility.get_offset(paginated.skip, paginated.limit)
-            if category.lower() not in [categ.value.lower() for categ in ProductCategories]:
-                raise DomainUnprocessableEntityError(
-                        f"Category must be in {[categ.value for categ in ProductCategories]}")
+            # check if the category is in the database
+            categories_data = await self.__uow.products.get_product_categories()
+            categories = [category.category.lower() for category in categories_data]
+
+            if category.lower() not in categories:
+                is_in_categories = False
+                if category.lower() != 'all':
+                    raise DomainUnprocessableEntityError(f"Category should be in {list(map(lambda x : Utility.capitalize_first_letters(x),categories))}.")
             # retrieve data from database
             category = Utility.capitalize_first_letters(category)
-            data = await self.__uow.products.get_paginated_record_with_category(category, offset, paginated.limit)
+            data = await self.__uow.products.get_paginated_record_with_category(category,
+                                                                                offset,
+                                                                                paginated.limit,
+                                                                                is_in_categories=is_in_categories)
             response = SuccessfulResponseSchema(message="Successfully retrieved data.", )
             
             # retrieved total records from db
-            total_records = await self.__uow.products.get_paginated_record_with_category_total_records(category)
+            total_records = await self.__uow.products.get_paginated_record_with_category_total_records(category,is_in_categories)
             # get the paginated if there's a record.
             paginated_data = Utility.get_paginated_data(offset=offset, skip=paginated.skip,
                                                         limit=paginated.limit,
@@ -333,8 +347,8 @@ class ProductsServices(SharedServices):
             raise e
     
     @retry_on_transient
-    async def product_reviews(self, product_id: str,
-                              data: ProductReviewsSchema,
+    async def product_reviews(self, order_id: int,
+                              data: CreateProductsRatings,
                               current_user: DecodedTokenDTO, ):
         try:
             # check if user exists
@@ -342,16 +356,47 @@ class ProductsServices(SharedServices):
             
             # check user role
             self.validate_users_role(current_user.role, is_admin=False)
+            # check order first
+            order_data = await self.__uow.orders.find_order_only(order_id, current_user.user_id)
+            if not data:
+                raise DomainNotFoundError("Can't review the order that is not exists.")
             
-            # check product
-            product_data = await self.__uow.products.get_product_only(product_id)
+            product_data = await self.__uow.products.get_product_only(order_data.product_id)
+            
             if not product_data:
                 raise DomainNotFoundError("Can't review the product that is not exists.")
             
+            # set the product and user id
+            data.user_id = current_user.user_id
+            data.product_id = product_data.id
             # otherwise update the product
-            await self.__uow.products.product_reviews(product_id, data.model_dump(exclude_none=True,
-                                                                                  exclude_unset=True))
+            await self.__uow.products.insert_product_reviews(data.model_dump(exclude_none=True,
+                                                                             exclude_unset=True))
+            
             return SuccessfulResponseSchema(message='Successfully saved ratings.')
+        
+        except Exception as e:
+            raise e
+    
+    @retry_on_transient
+    async def get_ratings_and_comment(self, product_id : str, paginated: PaginatedSchema, current_user: DecodedTokenDTO):
+        try:
+            # check if user exists
+            await self._check_user_if_exists(current_user.user_id)
+            self.validate_users_role(current_user.role, is_admin=False)
+            
+            offset = Utility.get_offset(paginated.skip, paginated.limit)
+            # get data
+            data = await self.__uow.products.get_paginated_ratings_and_comments(product_id,offset, paginated.limit)
+            if not data:
+                return SuccessfulResponseSchema(message="Successfully, but no data to retrieve.")
+            total_records = await self.__uow.products.get_paginated_ratings_and_comments_count(product_id)
+            paginated_data = Utility.get_paginated_data(offset=offset, limit=paginated.limit,
+                                                        skip=paginated.skip,
+                                                        total_records=total_records)
+            return SuccessfulResponseSchema(message="Successfully retrieved data.",
+                                            data=data,
+                                            paginated=paginated_data)
         
         except Exception as e:
             raise e

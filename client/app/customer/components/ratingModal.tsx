@@ -34,6 +34,7 @@ export default function RatingModal({
 
   const handleSubmit = () => {
     if (rating === 0) return;
+    // The OrderPage will handle receiving this and mapping it to the API payload
     onSubmit(rating, review);
   };
 
@@ -44,7 +45,8 @@ export default function RatingModal({
           Rate Your Purchase
         </h3>
         <p className="text-sm text-gray-500 text-center mb-6">
-          How did you like {productName}? Your feedback helps us bake better experiences!
+          How did you like {productName}? Your feedback helps us bake better
+          experiences!
         </p>
 
         {/* Star Rating Selection */}

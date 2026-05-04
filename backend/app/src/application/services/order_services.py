@@ -366,13 +366,14 @@ class OrderServices(SharedServices):
             raise e
     
     @retry_on_transient
-    async def get_paginated_orders(self, paginated: PaginatedSchema,
-                                   order_status: str,
-                                   current_user: DecodedTokenDTO):
+    async def get_paginated_customer_orders(self, paginated: PaginatedSchema,
+                                            order_status: str,
+                                            current_user: DecodedTokenDTO):
         
         try:
             # get the current order of a user
             await self._check_user_if_exists(current_user.user_id)
+            self.validate_users_role(current_user.role, is_admin=False)
             
             offset = Utility.get_offset(paginated.skip, paginated.limit)
             validated_order_status = Utility.capitalize_first_letters(order_status)

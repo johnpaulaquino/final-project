@@ -32,10 +32,14 @@ class OrdersRepository(UserInterface):
     
     async def find_order_only(self, order_id, user_id) -> OrderDTO:
         try:
+            conditions = [Orders.user_id == user_id]
+            if isinstance(order_id, str):
+                conditions.append(Orders.string_id == order_id)
+            elif isinstance(order_id, int):
+                conditions.append(Orders.id == order_id)
             
             stmt = (select(Orders)
-                    .where(and_(Orders.string_id == order_id,
-                                Orders.user_id == user_id)))
+                    .where(and_(*conditions)))
             result = await self.__db.execute(stmt)
             data = result.scalars().first()
             
