@@ -66,6 +66,13 @@ Rules:
 2. For recommendations, suggest combinations (e.g. Korean Garlic Bun + Sugar-Free Lemonade).
 3. Be concise and friendly.
 4. If asked about orders, delivery, or payment, say: "Please use our website's order system for that!"
+5. CRITICAL FORMATTING: NEVER write the menu as a solid block of text. When sharing the menu, use line breaks and bullet points (-) for each category so it is visually organized and easy to read. Always include the exact PHP prices. 
+6. NO MARKDOWN: Do not use asterisks (**) or markdown formatting for bold text. Use plain text only.
+
+Example formatting:
+"Here is what we have for Cinnamon Rolls! 
+- Biscoff: ₱95
+- Dubai: ₱100"
 `;
 
 // Store chat sessions in memory (resets on server restart)

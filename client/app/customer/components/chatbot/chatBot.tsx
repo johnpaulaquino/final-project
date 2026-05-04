@@ -159,14 +159,25 @@ export default function ChatBot() {
           </div>
  
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[88%] px-3.5 py-2 text-[12px] leading-relaxed shadow-sm ${
+            <div key={msg.id} className={`flex flex-col mb-1.5 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+              
+              {/* Optional: Show assistant name above its bubbles for a more "human" feel */}
+              {msg.sender === 'bot' && (
+                <span className="text-[10px] text-gray-500 mb-1 ml-1 font-medium">
+                  Biskota Assistant
+                </span>
+              )}
+
+              {/* The Chat Bubble */}
+              <div className={`max-w-[88%] px-4 py-2.5 text-[13px] leading-relaxed shadow-sm whitespace-pre-wrap ${
                 msg.sender === 'user'
                   ? 'bg-[#800000] text-white rounded-2xl rounded-tr-sm'
-                  : 'bg-white text-gray-700 border border-gray-100 rounded-2xl rounded-tl-sm'
+                  : 'bg-white text-gray-800 border border-gray-200 rounded-2xl rounded-tl-sm'
               }`}>
                 {msg.text}
               </div>
+
+              {/* Timestamp */}
               <span suppressHydrationWarning className="text-[9px] text-gray-400 mt-1 px-1 font-medium">
                 {isMounted ? msg.timestamp : ''}
               </span>
