@@ -5,7 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="662d6ed9-4d6a-455e-a0fe-9c39cd8b575a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/backend/app/src/infrastructure/db/repositories/carts_repoisitory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/infrastructure/db/repositories/carts_repoisitory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/api/v1/v1_products_route.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/api/v1/v1_products_route.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/application/services/order_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/application/services/order_services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/application/services/products_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/application/services/products_services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/application/services/user_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/application/services/user_services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/infrastructure/db/entity/products/orders_entity.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/infrastructure/db/entity/products/orders_entity.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/infrastructure/db/repositories/user_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/infrastructure/db/repositories/user_repository.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/schema/orders_schema.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/schema/orders_schema.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/app/customer/components/ConfirmationModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/components/ConfirmationModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/app/customer/components/products/menuProducts.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/components/products/menuProducts.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/app/customer/components/products/productModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/components/products/productModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/app/customer/context/contextOrder.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/context/contextOrder.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +64,7 @@
     "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "/home/paul/Desktop/django-rest-api-postgresql",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
     "to.speed.mode.migration.done": "true"
   }
 }]]></component>
@@ -76,7 +86,6 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="uv (backend)" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend/app" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />

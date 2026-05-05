@@ -187,3 +187,15 @@ async def delete_user_address(address_id: str,
         return response
     except Exception as e:
         raise e
+@v1_user_router.patch('/set-default/{address_id}')
+async def set_address_as_default(address_id : str, current_user : DecodedTokenDTO = Depends(get_current_user),
+                                 user_service: UserServices = Depends(get_user_service)):
+    try:
+        user_service_response = await user_service.set_address_as_default(address_id, current_user)
+
+        user_service_response.status_code = status.HTTP_200_OK
+
+        return SuccessfulResponse(user_service_response)
+
+    except Exception as e:
+        raise e

@@ -40,6 +40,7 @@ class CreateOrderSchema(BaseModel):
     payment_method: OrderPaymentMethodSchema = Body(default=OrderPaymentMethodSchema.COD)
     order_status: OrderStatusSchema = Body(default=OrderStatusSchema.Pending)
     address_id: str = Body(...)
+
     
     @staticmethod
     def depends(
@@ -55,7 +56,7 @@ class CreateOrderSchema(BaseModel):
 
 class CreateOrdersSchema(BaseModel):
     quantity: int = Body(default=1, ge=1),
-    product_id: str = Body(...),
+    product_id: str = Body(...)
     payment_method: OrderPaymentMethodSchema
     address_id: str
 

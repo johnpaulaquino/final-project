@@ -128,7 +128,7 @@ export default function ProductModal({
               <p className="text-sm font-bold text-gray-800 capitalize">
                 {fullName}
               </p>
-              {renderStars(review.rates)}
+              {renderStars(parseFloat(review.rates?.toFixed(2) || "0"))}
             </div>
           </div>
           <span className="text-[10px] text-gray-400 font-medium">
@@ -239,7 +239,7 @@ export default function ProductModal({
                       </svg>
                     </div>
                     <span className="font-bold text-gray-800">
-                      {product.avg_rating || "0.0"}
+                      {parseFloat(product.avg_rating?.toFixed(2) || "0")}
                     </span>
                     <span className="text-gray-500">
                       ({totalReviews} reviews)
