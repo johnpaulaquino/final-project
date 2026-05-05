@@ -1,6 +1,6 @@
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import and_
+
 
 from app.src.core.constants import ConstantsData
 from app.src.domain.dto.auth_dto import UserDTO, UserWithPasswordDTO
@@ -172,8 +172,8 @@ class UserRepository(UserInterface):
             stmt = (select(Address)
                     .where(and_(Address.id == address_id, Address.user_id == user_id)))
             result = await self.__db.execute(stmt)
-            data = result.scalars().first()
-            
+            data = result.scalar()
+
             return UserAddressDTO.model_validate(data) if data else data
         except Exception as e:
             raise e
@@ -316,8 +316,7 @@ class UserRepository(UserInterface):
     
     async def delete_user_address(self, user_id, address_id):
         try:
-            stmt = delete(Address).where(and_(Address.user_id == user_id,
-                                              Address.id == address_id))
+            stmt = delete(Address).where(and_(Address.user_id == user_id,Address.id == address_id))
             
             await self.__db.execute(stmt)
         except Exception as e:

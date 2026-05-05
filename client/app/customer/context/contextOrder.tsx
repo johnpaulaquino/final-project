@@ -43,7 +43,7 @@ interface OrderContextType {
   isLoading: boolean;
   pagination: PaginationMeta;
 
-  statusCounts: Record<string, number>; 
+  statusCounts: Record<string, number>;
   fetchStatusCounts: () => Promise<void>;
 
   fetchOrders: (status: string, skip: number, limit: number) => Promise<void>;
@@ -58,7 +58,10 @@ interface OrderContextType {
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   deliverOrder: (id: string, payload: any) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
-  rateOrder: (id: string, payload: { rating: number; review: string }) => Promise<void>;
+  rateOrder: (
+    id: string,
+    payload: { rating: number; review: string },
+  ) => Promise<void>;
   receiveOrder: (id: string, payload: any) => Promise<void>;
 }
 
@@ -87,8 +90,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const fetchStatusCounts = useCallback(async () => {
     try {
-      const response = await apiClient.get(`/order/status/counts`); 
-      
+      const response = await apiClient.get(`/order/status/counts`);
+
       console.log("Backend Status Counts Response:", response);
 
       if (response?.data?.data) {
@@ -204,7 +207,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
-  
+
   const deliverOrder = async (id: string, payload: any) => {
     setOrders((prev) =>
       prev.map((order) =>
@@ -249,7 +252,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       console.error("Failed to cancel order:", error);
     }
   };
-  
+
   const receiveOrder = async (orderId: string, payload: any) => {
     try {
       await apiClient.patch(`/order/${orderId}/receive`, payload);
@@ -291,9 +294,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const rateOrder = async (id: string, payload: { rating: number; review: string }) => {
+  const rateOrder = async (
+    id: string,
+    payload: { rating: number; review: string },
+  ) => {
     try {
-      await apiClient.post(`/order/${id}/rate`, payload);
+      await apiClient.post(`/products/ratings/${id}`, payload);
     } catch (error) {
       console.error("Failed to submit rating:", error);
       throw error;
@@ -306,7 +312,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         orders,
         isLoading,
         pagination,
-        statusCounts,      
+        statusCounts,
         fetchStatusCounts,
         fetchOrders,
         fetchAdminOrders,

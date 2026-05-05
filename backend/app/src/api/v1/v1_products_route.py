@@ -217,12 +217,12 @@ async def update_product_information(product_id: str,
         raise e
 
 
-@v1_products_router.post("/ratings/{product_id}")
-async def product_reviews(product_id: int, data: CreateProductsRatings = Depends(CreateProductsRatings.depends),
+@v1_products_router.post("/ratings/{order_id}")
+async def product_reviews(order_id: str, data: CreateProductsRatings = Depends(CreateProductsRatings.depends),
                           current_user: DecodedTokenDTO = Depends(get_current_user),
                           product_service: ProductsServices = Depends(get_products_service)):
     try:
-        product_service_response = await product_service.product_reviews(product_id, data, current_user)
+        product_service_response = await product_service.product_reviews(order_id, data, current_user)
         product_service_response.status_code = status.HTTP_200_OK
         
         return SuccessfulResponse(product_service_response)

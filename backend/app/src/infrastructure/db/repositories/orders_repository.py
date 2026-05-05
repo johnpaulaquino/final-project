@@ -21,7 +21,16 @@ class OrdersRepository(UserInterface):
             return OrderDTO(**order.model_dump())
         except Exception as e:
             raise e
-    
+    async def insert_order(self, record: CreateOrderSchema, address):
+        try:
+            order = Orders(**record.model_dump())
+            order.address_copy = address.model_dump()
+            self.__db.add(order)
+            await self.__db.flush()
+
+            return OrderDTO(**order.model_dump())
+        except Exception as e:
+            raise e
     async def batch_insert_orders(self, orders: list[CreateOrderSchema]):
         try:
             list_of_orders = [Orders(**order.model_dump()) for order in orders]
@@ -239,7 +248,20 @@ class OrdersRepository(UserInterface):
             await self.__db.execute(stmt)
         except Exception as e:
             raise e
-    
+    async def update_address_order(self, data, address_id,user_id):
+        try:
+            stmt = update(Orders).values(address_copy = data).where(and_(Orders.address_id == address_id,
+                                                            Orders.user_id == user_id))
+            await self.__db.execute(stmt)
+        except Exception as e:
+            raise e
+    async def update_on_delete_address(self,address_id, user_id ):
+        try:
+            stmt = update(Orders).values(address_id = None).where(and_(Orders.address_id == address_id,
+                                                            Orders.user_id == user_id))
+            await self.__db.execute(stmt)
+        except Exception as e:
+            raise e
     async def delete_record_two_param(self, user_id: str, order_id: str):
         """
         This function is to delete records from orders where user_id.

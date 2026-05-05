@@ -11,6 +11,7 @@ from app.src.exceptions.domain_exceptions import (DomainInvalidCredentialsError,
                                                   DomainUnprocessableEntityError, )
 from app.src.exceptions.http_exceptions import JWTInvalidException
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
+from app.src.infrastructure.db.entity.products.orders_entity import CreateBaseCopyAddress
 from app.src.infrastructure.db.entity.users.address_entity import CreateAddress, UpdateAddress
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, SignInTypeSchema, SuccessfulResponseSchema
@@ -209,17 +210,18 @@ class UserServices(SharedServices):
             # check if no changes in the schema
             if data == to_update:
                 return SuccessfulResponseSchema(message="No changes made.")
-            
+            new_coppy_address = CreateBaseCopyAddress(**to_update.model_dump()).model_dump()
             # then update the address
             await self.__uow.users.update_user_address(user_id=current_user.user_id,
                                                        address_id=address_id,
                                                        data=to_update.model_dump(exclude_none=True,
                                                                                  exclude_unset=True))
-            
+            #update the address on order
+            await self.__uow.orders.update_address_order(new_coppy_address,address_id,current_user.user_id)
             return SuccessfulResponseSchema(message="Successfully updated address.")
         except Exception as e:
             raise e
-    
+
     @retry_on_transient
     async def change_password(self, change_password: ChangePasswordSchema, refresh_token: str,
                               current_user: DecodedTokenDTO):
@@ -319,12 +321,35 @@ class UserServices(SharedServices):
     async def delete_user_address(self, address_id: str, current_user: DecodedTokenDTO):
         try:
             data = await self.__uow.users.get_address_only(user_id=current_user.user_id, address_id=address_id)
+
             if not data:
                 raise DomainNotFoundError("Cannot delete address that is not exists.")
-            
-            await self.__uow.users.delete_user_address(user_id=current_user.user_id, address_id=address_id)
+
+            #check if the address is associated in orders, then raise an error.
+
+            #update the address id on order
+            await self.__uow.orders.update_on_delete_address(address_id=address_id,
+                                                             user_id=current_user.user_id)
+
+            await self.__uow.users.delete_user_address(user_id=current_user.user_id,
+                                                       address_id=address_id)
             
             response = SuccessfulResponseSchema(message="Successfully deleted address.")
+            return response
+        except Exception as e:
+
+            raise e
+    async def set_address_as_default(self, address_id :str, current_user : DecodedTokenDTO ):
+        try:
+            data = await self.__uow.users.get_address_only(user_id=current_user.user_id, address_id=address_id)
+
+            if not data:
+                raise DomainNotFoundError("Cannot set as default the address that is not exists.")
+
+
+            await self.__uow.users.update_user_address(user_id=current_user.user_id,
+                                                       address_id=address_id,data={"is_default": True})
+            response = SuccessfulResponseSchema(message="Successfully set as default this address.")
             return response
         except Exception as e:
             raise e

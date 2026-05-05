@@ -4,6 +4,7 @@ from app.src.domain.dto.auth_dto import DecodedTokenDTO
 from app.src.exceptions.domain_exceptions import (DomainEntityStatusInvalidError, DomainForbiddenAccessError,
                                                   DomainJWTInvalidError,
                                                   DomainNotFoundError, )
+from app.src.infrastructure.db.entity.products.orders_entity import CreateBaseCopyAddress
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import PaginatedSchema, RoleSchema, SuccessfulResponseSchema
 from app.src.schema.orders_schema import (BatchCreateOrderSchema, ConfirmOrderSchema, CreateOrderSchema,
@@ -92,8 +93,9 @@ class OrderServices(SharedServices):
             product_ids = [order.product_id for order in new_orders.orders]
             # find products
             product_data = await self.uof.products.find_products_with_product_ids(product_ids)
-            
+
             reference_number = None
+            address_data = None #so that it will fetch the data from db once.
             # check if product not exists.
             if not product_data:
                 raise DomainNotFoundError("You cannot place an orders that the product is not exist.")
@@ -101,20 +103,22 @@ class OrderServices(SharedServices):
             if not new_orders.orders:
                 raise DomainEntityStatusInvalidError(message="Product is empty, cannot checkout this.")
             for order in new_orders.orders:
-                
+                if address_data is None:
+                    address_data = await self.uof.users.get_address_only(order.address_id,current_user.user_id)
+                    address_data = CreateBaseCopyAddress(**address_data.model_dump())
                 # map the product id, quantity, and payment method for each product.
                 create_order = CreateOrderSchema(**order.model_dump(exclude_none=True, exclude_unset=True))
                 # then explicit update the user id
                 create_order.user_id = current_user.user_id
-                
+
                 current_product = list(filter(lambda x: x.Products.id == order.product_id, product_data.products))[0]
                 # total reserved stock
                 reserved_stock = current_product.reserved_stock + order.quantity if current_product.reserved_stock else order.quantity
                 to_update = {"reserved_stock": reserved_stock}
                 create_order.price = current_product.Products.price
-                
+
                 # insert new order in db.
-                order_data = await self.uof.orders.insert_record(create_order)
+                order_data = await self.uof.orders.insert_order(create_order,address_data)
                 
                 # update reserve quantity that will map on inventory column.
                 await self.uof.products.update_product_inventory(order.product_id, to_update)
@@ -372,7 +376,8 @@ class OrderServices(SharedServices):
         
         try:
             # get the current order of a user
-            await self._check_user_if_exists(current_user.user_id)
+            data= await self._check_user_if_exists(current_user.user_id)
+
             self.validate_users_role(current_user.role, is_admin=False)
             
             offset = Utility.get_offset(paginated.skip, paginated.limit)
