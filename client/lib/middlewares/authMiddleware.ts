@@ -30,38 +30,52 @@ export function withAuth(request: NextRequest) {
   // If NO tokens exist at all -> Kick to login
   if (!token && !refreshToken) {
     if (isAdminRoute || isCustomerRoute) {
-      const response = NextResponse.redirect(new URL("/", request.url));
-      return response;
+      return NextResponse.redirect(new URL("/", request.url));
     }
     return undefined;
   }
 
-  // If access_token is expired, but refresh_token is alive -> Let them pass!
-  // Your apiClient.ts will handle the 401 and refresh the token automatically.
-  if (!token && refreshToken) {
-    return undefined;
-  }
-
+  // Get the userRole from whichever token is available
   let userRole = null;
   if (token) {
-    const decodedPayload = decodeJwt(token);
-    userRole = decodedPayload?.role;
+    userRole = decodeJwt(token)?.role;
+  } else if (refreshToken) {
+    userRole = decodeJwt(refreshToken)?.role;
   }
 
-  if (isAdminRoute && userRole !== "Admin") {
-    return NextResponse.redirect(new URL("/customer", request.url));
+  // 🚀 FIX 1: Normalize the role to lowercase to avoid case-sensitivity bugs
+  // (e.g. "admin" vs "Admin")
+  const safeRole = userRole?.toLowerCase();
+
+  // 🚀 FIX 2: Stop the Infinite Ping-Pong Loop
+  // If they are on an Admin route but NOT an admin...
+  if (isAdminRoute && safeRole !== "admin") {
+    // If we know they are a customer, send to customer
+    if (safeRole === "customer") {
+      return NextResponse.redirect(new URL("/customer", request.url));
+    }
+    // If the role is missing, undefined, or malformed, kick them to login
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (isCustomerRoute && userRole !== "Customer") {
-    return NextResponse.redirect(new URL("/admin", request.url));
+  // If they are on a Customer route but NOT a customer...
+  if (isCustomerRoute && safeRole !== "customer") {
+    // If we know they are an admin, send to admin
+    if (safeRole === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+    // If the role is missing, undefined, or malformed, kick them to login
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Auto-Redirect from the login page based on role!
   if (pathname === "/") {
-    if (userRole === "Admin")
+    if (safeRole === "admin") {
       return NextResponse.redirect(new URL("/admin", request.url));
-    if (userRole === "Customer")
+    }
+    if (safeRole === "customer") {
       return NextResponse.redirect(new URL("/customer", request.url));
+    }
   }
 
   return undefined;

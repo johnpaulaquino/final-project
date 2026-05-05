@@ -60,7 +60,7 @@ export default function menuProducts({ product }: { product: Product }) {
               </svg>
             </div>
             <span className="text-xs font-bold text-gray-800">
-              {product.avg_rating || "0.0"}
+              {parseFloat(product.avg_rating?.toFixed(2) || "0")}
             </span>
             {/* DYNAMIC REVIEW COUNT HERE */}
             <span className="text-xs text-gray-500">

@@ -12,7 +12,6 @@ interface ConfirmationModalProps {
   isProcessing?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
-  // Optional: Allows you to change the color based on action (e.g., red for delete, dark blue for logout)
   confirmColorClass?: string;
 }
 

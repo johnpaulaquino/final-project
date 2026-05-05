@@ -349,7 +349,7 @@ class ProductsServices(SharedServices):
             raise e
     
     @retry_on_transient
-    async def product_reviews(self, order_id: int,
+    async def product_reviews(self, order_id: str,
                               data: CreateProductsRatings,
                               current_user: DecodedTokenDTO, ):
         try:
