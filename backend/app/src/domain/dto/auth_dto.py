@@ -44,6 +44,9 @@ class SignUpModelDTO(BaseModel):
     csrf_token: str = None
 
 
+class OnUpdateSecuredCredentials(SignUpModelDTO):
+    email : str  | None = None
+
 class SessionTokenDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     """

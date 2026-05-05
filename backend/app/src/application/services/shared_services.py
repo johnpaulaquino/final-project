@@ -5,7 +5,7 @@ from app.src.core.constants import ConstantsData
 from app.src.core.security import AppSecurity
 from app.src.domain.dto.auth_dto import SessionTokenDTO
 from app.src.exceptions.domain_exceptions import (DomainForbiddenAccessError, DomainJWTInvalidError,
-                                                  DomainLargeFileError, DomainNotFoundError, )
+                                                  DomainLargeFileError, DomainNotFoundError, DomainDeactivatedError, )
 from app.src.infrastructure.cloudinary_infrastructure import CloudinaryInfrastructure
 from app.src.infrastructure.db.uow import SQLUnitOfWork
 from app.src.schema import RoleSchema
@@ -127,7 +127,11 @@ class SharedServices:
         
         if not data:
             raise DomainJWTInvalidError("Invalid user, please back to login.")
-        
+        if data.is_deleted:
+            if data.Users.is_deleted:
+                #to make sure that
+                raise DomainJWTInvalidError("This email is deactivated.")
+
         return data
     
     def validate_users_role(self, role: str, is_admin=True):

@@ -67,6 +67,7 @@ class AppSecurity:
     
     @staticmethod
     def decode_jwt_token(token: str, verify_exp=True):
+
         try:
             if not token:
                 raise DomainJWTInvalidError(message="Invalid token, cannot validate. Please back to login.")

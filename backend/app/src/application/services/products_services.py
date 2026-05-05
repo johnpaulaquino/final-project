@@ -414,7 +414,7 @@ class ProductsServices(SharedServices):
         try:
             
             # check first if user exist
-            await self.check_if_user_exists(current_user.user_id)
+            await self._check_user_if_exists(current_user.user_id)
             # then check if it's admin
             self.validate_users_role(current_user.role)
             
@@ -525,7 +525,7 @@ class ProductsServices(SharedServices):
                                                    ):
         
         # check first if user exist
-        await self.check_if_user_exists(current_user.user_id)
+        await self._check_user_if_exists(current_user.user_id)
         # then check the role if it's admin
         self.validate_users_role(current_user.role)
         try:
@@ -613,7 +613,7 @@ class ProductsServices(SharedServices):
         
         try:
             # check first if user exist
-            await self.check_if_user_exists(current_user.user_id)
+            await self._check_user_if_exists(current_user.user_id)
             # then check the role if it's admin
             self.validate_users_role(current_user.role)
             # first query the data from db
@@ -673,7 +673,7 @@ class ProductsServices(SharedServices):
     async def delete_product_information(self, product_id, current_user: DecodedTokenDTO):
         try:
             # check first if user exist
-            await self.check_if_user_exists(current_user.user_id)
+            await self._check_user_if_exists(current_user.user_id)
             # then check the role if it's admin
             self.validate_users_role(current_user.role)
             data = await self.__uow.products.find_record(product_id)
@@ -699,7 +699,7 @@ class ProductsServices(SharedServices):
     async def delete_category(self, category_id: str, current_user: DecodedTokenDTO):
         try:
             # validate user if exists
-            await self.check_if_user_exists(current_user.user_id)
+            await self._check_user_if_exists(current_user.user_id)
             
             # check the user role
             self.validate_users_role(current_user.role)
