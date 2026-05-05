@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { apiClient } from "@/lib/api";
-import ForgotPasswordForm from "../../../auth/forgotPassword"; // Adjust the import path as needed
+import ForgotPasswordForm from "../../../auth/forgotPassword"; 
 
 export default function SecuritySettings() {
   const [oldPassword, setOldPassword] = useState("");
