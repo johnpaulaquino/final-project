@@ -5,17 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="662d6ed9-4d6a-455e-a0fe-9c39cd8b575a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/backend/app/src/api/v1/v1_products_route.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/api/v1/v1_products_route.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/src/application/services/order_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/application/services/order_services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/src/application/services/products_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/application/services/products_services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/src/application/services/user_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/application/services/user_services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/src/infrastructure/db/entity/products/orders_entity.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/infrastructure/db/entity/products/orders_entity.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/src/infrastructure/db/repositories/user_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/infrastructure/db/repositories/user_repository.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/src/schema/orders_schema.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/schema/orders_schema.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/app/customer/components/ConfirmationModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/components/ConfirmationModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/app/customer/components/products/menuProducts.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/components/products/menuProducts.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/app/customer/components/products/productModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/components/products/productModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/app/customer/context/contextOrder.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/client/app/customer/context/contextOrder.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,25 +39,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.__init__.executor": "Run",
-    "Python.app.executor": "Run",
-    "Python.main.executor": "Run",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/paul/Desktop/django-rest-api-postgresql",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.__init__.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/paul/Desktop/django-rest-api-postgresql&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
