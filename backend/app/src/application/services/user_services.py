@@ -359,9 +359,14 @@ class UserServices(SharedServices):
             raise e
 
     @retry_on_transient
-    async def request_update_otp(self, current_user: DecodedTokenDTO):
+    async def request_update_otp(self, cookie : str, current_user: DecodedTokenDTO):
         try:
 
+            #check first if there's a verification token already and it is verified.
+            if cookie:
+                payload = AppSecurity.decode_jwt_token(cookie)
+                if payload.get("is_otp_verified"):
+                    return OnUpdateSecuredCredentials(message="Verified")
             data = await self._check_user_if_exists(current_user.user_id)
             #validate role
             self.validate_users_role(current_user.role,is_admin=False)

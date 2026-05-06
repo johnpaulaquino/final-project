@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { apiClient } from "@/lib/api";
-import ForgotPasswordForm from "../../../auth/forgotPassword"; 
+// 🚀 IMPORT YOUR NEW MODAL HERE (Adjust the path to wherever you saved it)
+import VerificationModal from "./VerificationModal";
 
 export default function SecuritySettings() {
   const [oldPassword, setOldPassword] = useState("");
@@ -10,9 +11,11 @@ export default function SecuritySettings() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
-  
-  // State for the Forgot Password Modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 🚀 ALIGNED: We now use modalMode to handle both Forgot Password and Change Email
+  const [modalMode, setModalMode] = useState<
+    "forgot-password" | "change-email" | null
+  >(null);
 
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
@@ -85,11 +88,16 @@ export default function SecuritySettings() {
   return (
     <>
       <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 animate-in fade-in duration-500">
-        
         {/* HEADER SECTION */}
-        <div className="mb-8 border-b border-gray-50 pb-6">
-          <h2 className="text-xl font-bold text-[#0B1527]">Security Settings</h2>
-          <p className="text-sm text-gray-500 mt-1">Update your password to keep your account secure.</p>
+        <div className="mb-8 border-b border-gray-50 pb-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-[#0B1527]">
+              Security Settings
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Update your password to keep your account secure.
+            </p>
+          </div>
         </div>
 
         <div className="max-w-xl">
@@ -104,14 +112,34 @@ export default function SecuritySettings() {
             >
               {statusMessage.type === "success" ? (
                 <div className="bg-green-100 p-1 rounded-full flex-shrink-0 mt-0.5 sm:mt-0">
-                  <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 text-green-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
               ) : (
                 <div className="bg-red-100 p-1 rounded-full flex-shrink-0 mt-0.5 sm:mt-0">
-                  <svg className="w-4 h-4 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-4 h-4 text-red-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                 </div>
               )}
@@ -121,7 +149,6 @@ export default function SecuritySettings() {
 
           {/* FORM SECTION */}
           <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-            
             {/* Old Password */}
             <div>
               <label className="block text-[11px] font-bold text-gray-400 tracking-wider mb-2">
@@ -185,10 +212,10 @@ export default function SecuritySettings() {
                   "Update Password"
                 )}
               </button>
-              
+
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)} // Opens the modal
+                onClick={() => setModalMode("forgot-password")} // 🚀 ALIGNED: Opens the modal in "forgot-password" mode
                 className="text-sm font-semibold text-[#800000] hover:text-red-900 transition-colors py-2 px-4 rounded-lg hover:bg-red-50"
               >
                 Forgot Password?
@@ -198,31 +225,12 @@ export default function SecuritySettings() {
         </div>
       </div>
 
-      {/* FORGOT PASSWORD MODAL OVERLAY */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-in zoom-in-95 duration-200">
-            
-            {/* Close Button */}
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full"
-              aria-label="Close modal"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Injected Form Component */}
-            <ForgotPasswordForm 
-              onGoToLogin={() => setIsModalOpen(false)} 
-              hideLoginLink={true} 
-            />
-            
-          </div>
-        </div>
-      )}
+      {/* 🚀 ALIGNED: Render the Dynamic Verification Modal */}
+      <VerificationModal
+        isOpen={modalMode !== null}
+        mode={modalMode || "forgot-password"}
+        onClose={() => setModalMode(null)}
+      />
     </>
   );
 }

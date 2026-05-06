@@ -75,9 +75,9 @@ async def get_all_active_users(paginated: PaginatedSchema = Query(),
 
 @v1_user_router.post("/sms/otp/verify")
 async def verify_sms_otp_code(otp_code: str,
-                          current_user: DecodedTokenDTO = Depends(get_current_user),
-                          redis_infrastructure: RedisInfrastructure = Depends(get_redis_services),
-                          user_service: UserServices = Depends(get_user_service), ):
+                              current_user: DecodedTokenDTO = Depends(get_current_user),
+                              redis_infrastructure: RedisInfrastructure = Depends(get_redis_services),
+                              user_service: UserServices = Depends(get_user_service), ):
     try:
         # get the otp from redis to verify
         otp_from_redis = await redis_infrastructure.get_otp(current_user.user_id)
@@ -205,25 +205,33 @@ async def set_address_as_default(address_id: str, current_user: DecodedTokenDTO 
         raise e
 
 
-@v1_user_router.post('/initiate/forgot-password')
-async def initiate_forgot_password(background_task: BackgroundTasks,
-                                   email_infrastructure: EmailInfrastructure = Depends(get_email_infrastructure),
-                                   redis_services: RedisInfrastructure = Depends(get_redis_services),
-                                   current_user: DecodedTokenDTO = Depends(get_current_user),
-                                   user_service: UserServices = Depends(get_user_service)):
+@v1_user_router.post('/initiate-password-reset')
+async def initiate_forgot_password(
+        background_task: BackgroundTasks,
+        verification_token: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY),
+        email_infrastructure: EmailInfrastructure = Depends(get_email_infrastructure),
+        redis_services: RedisInfrastructure = Depends(get_redis_services),
+        current_user: DecodedTokenDTO = Depends(get_current_user),
+        user_service: UserServices = Depends(get_user_service)):
     email = None
     is_set_otp_to_redis = False
     try:
-        user_service_response = await user_service.request_update_otp(current_user)
+        user_service_response = await user_service.request_update_otp(verification_token,current_user)
         email = user_service_response.email
-
+        success_response_schema = SuccessfulResponseSchema(
+            message="Your OTP is already verified. Please proceed to the final step.", )
+        success_response_schema.status_code = status.HTTP_200_OK
+        # if the user token verification is verified, then it will redirect to the last step.
+        if user_service_response.message == "Verified":
+            response = SuccessfulResponse(success_response_schema)
+            return response
         # check first if there's otp code in that email on redis before proceeding.
         old_otp_code = await redis_services.get_otp(user_service_response.email)
 
         if old_otp_code:
             raise DomainOTPNotExpireError(message="Your code is not expired yet.")
 
-        success_response_schema = SuccessfulResponseSchema(message="Successfully sent verification to your email.", )
+        success_response_schema.message = "Successfully sent verification to your email."
 
         # set the otp code in redis.
         expiration = 3 * 60
@@ -237,8 +245,8 @@ async def initiate_forgot_password(background_task: BackgroundTasks,
                                  verification_code=user_service_response.otp_code)
 
         response = SuccessfulResponse(success_response_schema)
-        #set cookie
-        set_verification_token(response,user_service_response,expiration)
+        # set cookie
+        set_verification_token(response, user_service_response, expiration)
         return response
     except Exception as e:
         if is_set_otp_to_redis:
@@ -247,13 +255,14 @@ async def initiate_forgot_password(background_task: BackgroundTasks,
 
 
 @v1_user_router.post('/verify-otp')
-async def verify_update_otp(otp_code: str,
-                            cookie: str = Cookie(default=None,alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY),
+async def verify_update_otp(otp_code: str = Body(...),
+                            cookie: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY),
                             redis_services: RedisInfrastructure = Depends(get_redis_services),
                             current_user: DecodedTokenDTO = Depends(get_current_user),
                             user_service: UserServices = Depends(get_user_service)):
     try:
-        user_service_response = await user_service.verify_update_otp(verification_token=cookie, current_user=current_user)
+        user_service_response = await user_service.verify_update_otp(verification_token=cookie,
+                                                                     current_user=current_user)
         user_response_schema = SuccessfulResponseSchema(message="Successfully verified OTP.")
         user_response_schema.status_code = status.HTTP_200_OK
 
@@ -265,17 +274,17 @@ async def verify_update_otp(otp_code: str,
         # validate otp code
         Utility.verify_otp(otp_code=otp_code, otp_code_from_redis=redis_otp_code)
         response = SuccessfulResponse(user_response_schema)
-        #set new verification token
-        set_verification_token(response,user_service_response,expiration)
+        # set new verification token
+        set_verification_token(response, user_service_response, expiration)
         return response
     except Exception as e:
         raise e
 
 
 @v1_user_router.patch('/forgot-password')
-async def user_forgot_password(new_password: str,
-                               refresh_token: str = Cookie(default=None,alias=ConstantsKeyData.COOKIE_REFRESH_TOKEN),
-                               cookie: str = Cookie(default=None,alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY),
+async def user_forgot_password(new_password: str = Body(...),
+                               refresh_token: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_REFRESH_TOKEN),
+                               cookie: str = Cookie(default=None, alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY),
                                current_user: DecodedTokenDTO = Depends(get_current_user),
                                user_service: UserServices = Depends(get_user_service)):
     try:
@@ -285,7 +294,7 @@ async def user_forgot_password(new_password: str,
                                                                          current_user)
         user_response.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(user_response)
-        #delete cookies
+        # delete cookies
         delete_auth_cookie(response)
         delete_verification_cookie(response)
         return response
