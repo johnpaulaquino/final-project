@@ -5,7 +5,7 @@ export interface ApiError {
   status: number;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 let currentAccessToken: string | null = null;
 let isRefreshing = false;
@@ -120,7 +120,7 @@ export async function apiFetch(
           },
         );
         console.log("refresh", refreshRes);
-        
+
         if (!refreshRes.ok) throw new Error("Refresh failed");
 
         const refreshData = await refreshRes.json();

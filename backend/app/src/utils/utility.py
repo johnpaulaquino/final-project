@@ -153,7 +153,7 @@ class Utility:
         else:
             # for production
             origins = [
-                'https://biskota-eh60pdhi9-john-pauls-projects-3d5afda2.vercel.app'
+                'https://biskota-eh60pdhi9-john-pauls-projects-3d5afda2.vercel.app',
                 'https://biskota.vercel.app'
             ]
         return origins
