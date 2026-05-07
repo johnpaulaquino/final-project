@@ -32,6 +32,13 @@ class Constants(BaseSettings):
     REDIS_SERVER_PORT: int
     
     SERVER_PORT: int
+
+    #production_env
+    DB_PROD_USER :str
+    DB_PROD_HOST : str
+    DB_PROD_NAME : str
+    DB_PROD_PORT : int
+    DB_PROD_PASSWORD : str
     
     # Cloudinary config
     C_NAME: str

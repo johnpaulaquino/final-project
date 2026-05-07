@@ -199,7 +199,7 @@ export default function ProfileInfo() {
             />
             <button
               type="button"
-              onClick={() => setIsEmailModalOpen(true)} // 
+              onClick={() => setIsEmailModalOpen(true)} //
               className="w-full sm:w-auto px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-[#0B1527] hover:bg-gray-50 hover:border-gray-300 transition-all flex-shrink-0"
             >
               Update Email
