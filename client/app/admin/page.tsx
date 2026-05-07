@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+export const dynamic = "force-dynamic";
 
 // Shared Layout Components
 import Sidebar from "./components/sidebar";
