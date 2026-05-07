@@ -154,7 +154,7 @@ class Utility:
         else:
             # for production
             origins = [
-                    'https://my-personal-portfolio-one-steel.vercel.app',
+                    'https://biskota-fwkhrpghr-john-pauls-projects-3d5afda2.vercel.app'
                     ]
         return origins
     
