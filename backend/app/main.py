@@ -45,7 +45,7 @@ app.add_exception_handler(handler=app_exception_handler,
 
 def start():
     """Entry point for the 'server' command in pyproject.toml"""
-    use_loop = "uvloop" if sys.platform != "win32" else "auto"  # to avoid conflict in windows.
+    use_loop = "uvloop" if sys.platform != "win32" else "auto"  # to avoid conflict in windows
     uvicorn.run(
             "app.main:app",
             host="0.0.0.0",

@@ -29,18 +29,6 @@ async def insert_cart(cart_data: CreateCart = Depends(CreateCart.depends),
         raise e
 
 
-@v1_cart_router.get("/{cart_id}")
-async def get_user_cart(cart_id: str,
-                        current_user: DecodedTokenDTO = Depends(get_current_user),
-                        cart_services: CartsServices = Depends(get_cart_service)):
-    try:
-        cart_response = await cart_services.get_product_cart(cart_id, current_user)
-        cart_response.status_code = status.HTTP_200_OK
-        
-        return SuccessfulResponse(cart_response)
-    except Exception as e:
-        raise e
-
 
 @v1_cart_router.get("/")
 async def paginated_user_cart(paginated: PaginatedSchema = Depends(),
@@ -64,5 +52,18 @@ async def delete_user_cart(cart_id: str,
         cart_response.status_code = status.HTTP_200_OK
         return SuccessfulResponse(cart_response)
     except Exception as e:
-        print(e)
+
+        raise e
+
+
+@v1_cart_router.get("/{cart_id}")
+async def get_user_cart(cart_id: str,
+                        current_user: DecodedTokenDTO = Depends(get_current_user),
+                        cart_services: CartsServices = Depends(get_cart_service)):
+    try:
+        cart_response = await cart_services.get_product_cart(cart_id, current_user)
+        cart_response.status_code = status.HTTP_200_OK
+
+        return SuccessfulResponse(cart_response)
+    except Exception as e:
         raise e
