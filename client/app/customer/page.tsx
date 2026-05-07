@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import HeaderNavbar from "./components/headNavbar";
 import Homepage from "./pages/homePage";
@@ -9,19 +10,18 @@ import Checkout from "./pages/checkoutPage";
 import AccountSetting from "./pages/accountSettingPage";
 import Order from "./pages/orderPage";
 import Chatbot from "./components/chatbot/chatBot";
-
 export const dynamic = "force-dynamic";
 
-export default function Page() {
+// 1. Rename your main logic to a sub-component
+function PageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  // 1. Read the URL to see what tab we are on (defaults to 'Home')
+  // Read the URL to see what tab we are on (defaults to 'Home')
   const activeTab = searchParams.get("tab") || "Home";
 
-  // 2. Function to change the URL without a full page reload
-  // Fixed version:
+  // Function to change the URL without a full page reload
   const setActiveTab = (tabName: string) => {
     router.push(`${pathname}?tab=${tabName}`);
   };
@@ -42,5 +42,15 @@ export default function Page() {
         <Chatbot />
       </div>
     </div>
+  );
+}
+
+// 2. Export a default parent component that wraps the logic in Suspense
+export default function Page() {
+  return (
+    // The fallback prevents layout shift or awkward flashes while the client reads the URL
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <PageContent />
+    </Suspense>
   );
 }
