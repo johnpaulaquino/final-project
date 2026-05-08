@@ -6,6 +6,7 @@ description = "No clear description yet"
 dependencies = [
     "fastapi[standard]",
     "sqlmodel",
+    "resend",
     "alembic",
     "asyncpg",
     "pydantic-settings",
