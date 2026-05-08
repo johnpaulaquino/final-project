@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="662d6ed9-4d6a-455e-a0fe-9c39cd8b575a" name="Changes" comment="" />
+    <list default="true" id="662d6ed9-4d6a-455e-a0fe-9c39cd8b575a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/src/utils/life_span.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/src/utils/life_span.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

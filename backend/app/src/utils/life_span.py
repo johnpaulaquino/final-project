@@ -16,10 +16,17 @@ async def app_lifespan(fastapi: FastAPI):
 
     # state is just like a variable in an app. It is best for databases connection, like Redis, Mongo DB.
     # I can access the redis variable in the entire app
-    redis_host = ConstantsData.REDIS_DB_URL if EnvironmentStatus.Dev else ConstantsData.REDIS_DB_URL_PROD
-    fastapi.state.redis = Redis.from_url(
-        redis_host,
+
+    fastapi.state.redis = Redis(
+        host=ConstantsData.REDIS_DB_URL,
+        port=ConstantsData.REDIS_SERVER_PORT,
         decode_responses=True)
+
+    if ConstantsData.ENVIRONMENT == EnvironmentStatus.Production:
+        fastapi.state.redis = Redis.from_url(
+            ConstantsData.REDIS_DB_URL_PROD,
+            decode_responses=True)
+
     try:
         fastapi.state.redis_services = RedisInfrastructure(fastapi.state.redis)
     except Exception as e:
