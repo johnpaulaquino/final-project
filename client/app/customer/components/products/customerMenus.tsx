@@ -31,7 +31,8 @@ export default function CustomerMenus() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-1">Menu</h2>
-        <div className="flex gap-3 overflow-x-auto pb-4 pt-1 scrollbar-hide">
+        {/* CHANGED HERE: Removed overflow-x-auto and scrollbar-hide, added flex-wrap */}
+        <div className="flex flex-wrap gap-3 pb-4 pt-1">
           {filters.map((categoryName) => (
             <button
               key={categoryName}
