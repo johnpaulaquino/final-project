@@ -240,7 +240,7 @@ async def initiate_forgot_password(
         success_response_schema.status_code = status.HTTP_202_ACCEPTED
         success_response_schema.status_message = "accepted"
         # send email in background task.
-        background_task.add_task(email_infrastructure.send_message_using_resend,
+        background_task.add_task(email_infrastructure.send_message_using_sendgrid,
                                  recipient=email,
                                  verification_code=user_service_response.otp_code)
 

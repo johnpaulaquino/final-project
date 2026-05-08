@@ -47,7 +47,7 @@ class Constants(BaseSettings):
     C_KEY: str
     C_SECRET: str
     C_SECURE: bool
-    RESEND_API_KEY : str # API key for resend api
+    SEND_GRID_API_KEY : str # API key for send grid api
 
     MAIL_USERNAME: str
     MAIL_PASSWORD: SecretStr

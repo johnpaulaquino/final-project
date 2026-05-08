@@ -6,9 +6,9 @@ description = "No clear description yet"
 dependencies = [
     "fastapi[standard]",
     "sqlmodel",
-    "resend",
     "alembic",
     "asyncpg",
+    "sendgrid",
     "pydantic-settings",
     "python-dotenv",
     "passlib[argon2]",
