@@ -11,8 +11,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  reactStrictMode: false, // Turn this to false
-  // ADD THIS BLOCK
+  reactStrictMode: false,
+
   async rewrites() {
     return [
       {
