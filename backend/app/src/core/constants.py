@@ -34,7 +34,7 @@ class Constants(BaseSettings):
     REDIS_DB_URL_PROD : str
     REDIS_SERVER_PORT_PROD : int
     REDIS_SERVER_PASSWORD_PROD : str
-
+    REDIS_SERVER_USERNAME_PROD : str
     SERVER_PORT: int
 
     #production_env
