@@ -1,10 +1,11 @@
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, update, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import and_
 
 from app.src.domain.interfaces.user_interface import UserInterface
-from app.src.infrastructure.db.entity import Inventory, Products
+from app.src.infrastructure.db.entity import Inventory, Products, ProductDetails, ProductRatings
 from app.src.infrastructure.db.entity.products.carts_entity import Carts, CreateCart
+from app.src.schema.products_schema import ProductStatusSchema
 
 
 class CartsRepository(UserInterface):
@@ -66,9 +67,21 @@ class CartsRepository(UserInterface):
     
     async def get_paginated_carts_products(self, offset, limit, user_id: str):
         try:
-            stmt = (select(Carts, Products, Inventory.quantity)
+
+            status_case = case(
+                (Inventory.quantity <= 0, ProductStatusSchema.OUT_OF_STOCK),
+                (Inventory.quantity <= Inventory.low_stock_threshold, ProductStatusSchema.LOW_OF_STOCK),
+                else_=ProductStatusSchema.AVAILABLE
+            ).label("stock_status")
+
+            stmt = (select(Carts, Products,
+                           status_case,
+                           ProductDetails.images,
+                           ProductDetails.description,
+                           Inventory.quantity)
                     .join(Carts, Products.id == Carts.product_id)
                     .outerjoin(Inventory, Products.id == Inventory.product_id)
+                    .outerjoin(ProductDetails, Products.id == ProductDetails.product_id)
                     .where(Carts.user_id == user_id)
                     .offset(offset)
                     .limit(limit))
