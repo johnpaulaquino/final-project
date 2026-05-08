@@ -53,10 +53,7 @@ class EmailInfrastructure(EmailInterface):
         try:
             sg = SendGridAPIClient(ConstantsData.SEND_GRID_API_KEY)
             # sg.set_sendgrid_data_residency("eu")
-            response = sg.send(message)
-            print(response.status_code)
-            print(response.body)
-            print(response.headers)
+            await asyncio.to_thread(sg.send, message)
         except Exception as e:
             print(str(e))
 
