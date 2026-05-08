@@ -12,6 +12,16 @@ const nextConfig: NextConfig = {
     ],
   },
   reactStrictMode: false, // Turn this to false
+  // ADD THIS BLOCK
+  async rewrites() {
+    return [
+      {
+        source: "/api-proxy/:path*",
+
+        destination: "https://biskota-api.up.railway.app/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

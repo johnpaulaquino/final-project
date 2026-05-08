@@ -5,8 +5,8 @@ import { withAuth } from "@/lib/middlewares/authMiddleware";
 // import { withLogger } from '@/lib/middlewares/loggerMiddleware';
 
 export default function proxy(request: NextRequest) {
-  // const authResponse = withAuth(request);
-  // if (authResponse) return authResponse;
+  const authResponse = withAuth(request);
+  if (authResponse) return authResponse;
 
   return NextResponse.next();
 }
