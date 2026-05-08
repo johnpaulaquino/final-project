@@ -114,7 +114,7 @@ class CookieResponseSchema(BaseModel):
     # Automatically False locally, True in production
     secure: bool = True
     max_age: int = 24 * 60 * 60
-    samesite: str = "none"
+    samesite: str = "None"
     path: str = "/"
 
 
@@ -123,7 +123,7 @@ class CookieResponseOnDelete(BaseModel):
     httponly: bool = True
     # Automatically False locally, True in production
     secure: bool = True
-    samesite: str = "none"
+    samesite: str = "None"
     path: str = "/"
 
 
