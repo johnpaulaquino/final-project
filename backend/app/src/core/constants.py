@@ -17,7 +17,7 @@ class Constants(BaseSettings):
     JWT_EXPIRATION: int
     
     ENVIRONMENT: str
-    
+
     # this is for database
     # this is for database
     # POSTGRES_DB_URL = postgresql + asyncpg: // postgres: 1084 @ localhost:5432 / e_comm
@@ -30,6 +30,9 @@ class Constants(BaseSettings):
     # Redis config
     REDIS_DB_URL: str
     REDIS_SERVER_PORT: int
+
+    REDIS_DB_URL_PROD : str
+    REDIS_SERVER_PORT_PROD : int
     
     SERVER_PORT: int
 
