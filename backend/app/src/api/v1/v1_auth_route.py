@@ -5,7 +5,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from starlette import status
 
-from app.src.api.api_utility import delete_auth_cookie, set_auth_cookie
+from app.src.api.api_utility import delete_auth_cookie, set_auth_cookie, set_verification_token, \
+    delete_verification_cookie
 from app.src.application.services.auth_services import AuthServices
 from app.src.core.constants import ConstantsData, ConstantsKeyData, EndpointTags
 from app.src.core.dependencies import (get_auth_service, get_email_infrastructure, get_redis_services,
@@ -53,20 +54,9 @@ async def create_account(background_task: BackgroundTasks,
                                      verification_code=services_response.otp_code)
         
         response = SuccessfulResponse(success_response_schema)
-        
-        verification_cookie_data = CookieResponseSchema(
-                key=ConstantsKeyData.COOKIE_VERIFICATION_KEY,
-                value=services_response.verification_token
-                )
-        
-        csrf_cookie_data = CookieResponseSchema(
-                key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
-                value=services_response.csrf_token)
-        
-        csrf_cookie_data.httponly = False
-        # model_dump() (or dict() in older Pydantic) securely maps your schema to Starlette's kwargs
-        response.set_cookie(**verification_cookie_data.model_dump())
-        response.set_cookie(**csrf_cookie_data.model_dump())
+
+        exp = 5 * 60
+        set_verification_token(response=response, response_schema=services_response,expiration=exp)
         
         return response
     
@@ -134,8 +124,6 @@ async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sig
         # set the access token to the successful response schema.
         success_response_schema.access_token = services_response.access_token
         # finally initialize the successful response with the successful response schema, and return the response.
-        response = SuccessfulResponse(success_response_schema)
-        
         # if no errors, then return the response with the access token if there is one.
         success_response_schema.access_token = services_response.access_token
         success_response_schema.refresh_token = services_response.refresh_token
@@ -143,27 +131,8 @@ async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sig
         
         response = SuccessfulResponse(success_response_schema)
         
-        access_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_ACCESS_TOKEN,
-                                             value=success_response_schema.access_token)
-        access_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
-        response.set_cookie(**access_cookie.model_dump())
-        
-        # refresh cookie
-        refresh_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_REFRESH_TOKEN,
-                                              value=success_response_schema.refresh_token)
-        refresh_cookie.max_age = int(
-                timedelta(days=ConstantsData.JWT_EXPIRATION).total_seconds())  # 7 days, same as the refresh token
-        response.set_cookie(**refresh_cookie.model_dump())
-        
-        # csrf cookie
-        csrf_cookie = CookieResponseSchema(key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
-                                           value=success_response_schema.csrf_token)
-        csrf_cookie.max_age = 15 * 60  # 16 minutes, same as the access token
-        csrf_cookie.httponly = False
-        response.set_cookie(**csrf_cookie.model_dump())
-        
-        # remove the cookie from the response
-        response.delete_cookie(key=ConstantsKeyData.COOKIE_VERIFICATION_KEY)
+        set_auth_cookie(response,success_response_schema)
+        delete_verification_cookie(response)
         return response
     
     except Exception as e:

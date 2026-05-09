@@ -42,10 +42,10 @@ class SignUpModelDTO(BaseModel):
     refresh_token: str = None
     sign_up_steps: int = None
     csrf_token: str = None
-
+    email: str | None = None
 
 class OnUpdateSecuredCredentials(SignUpModelDTO):
-    email : str  | None = None
+   pass
 
 class SessionTokenDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)

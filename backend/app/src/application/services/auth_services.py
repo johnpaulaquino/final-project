@@ -85,7 +85,7 @@ class AuthServices(SharedServices):
             
             # insert into db
             await self.__uow.temp_users.insert_record(TempUserRequest(email=email.strip()))
-            
+
             # return the successful response
             return SignUpModelDTO(message="Verification code sent to your email.",
                                   otp_code=otp_code,
