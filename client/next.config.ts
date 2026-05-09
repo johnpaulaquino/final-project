@@ -17,8 +17,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api-proxy/:path*",
-
-        destination: "https://biskota-api.up.railway.app/:path*",
+        destination: `${process.env.BACKEND_INTERNAL_URL}/:path*`,
       },
     ];
   },
