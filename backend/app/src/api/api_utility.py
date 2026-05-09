@@ -5,7 +5,7 @@ from fastapi import File, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.src.core.constants import ConstantsData, ConstantsKeyData
-from app.src.domain.dto.auth_dto import OnUpdateSecuredCredentials
+from app.src.domain.dto.auth_dto import OnUpdateSecuredCredentials, SignUpModelDTO
 from app.src.schema import SuccessfulResponseSchema
 from app.src.schema.auth_schema import CookieResponseOnDelete, CookieResponseSchema
 
@@ -47,16 +47,18 @@ def delete_auth_cookie(response: JSONResponse):
     response.delete_cookie(**csrf_cookie.model_dump())
 
 
-def set_verification_token(response  : JSONResponse,response_schema : OnUpdateSecuredCredentials, expiration : int):
+def set_verification_token(response  : JSONResponse,response_schema : SignUpModelDTO, expiration : int):
     verification_cookie_data = CookieResponseSchema(
         key=ConstantsKeyData.COOKIE_VERIFICATION_KEY,
         value=response_schema.verification_token
     )
-    verification_cookie_data.max_age = verification_cookie_data.max_age if expiration <= 0 else expiration
+    verification_cookie_data.max_age = expiration
+
     csrf_cookie_data = CookieResponseSchema(
         key=ConstantsKeyData.COOKIE_CSRF_TOKEN,
         value=response_schema.csrf_token)
-    csrf_cookie_data.max_age = csrf_cookie_data.max_age if expiration <= 0 else expiration
+
+    csrf_cookie_data.max_age =  expiration
 
     csrf_cookie_data.httponly = False
     response.set_cookie(**verification_cookie_data.model_dump())

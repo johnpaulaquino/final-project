@@ -105,7 +105,11 @@ class SameSiteEnum(str, Enum):
     LAX = "lax"
     STRICT = "strict"
     NONE = "none"
-
+class AuthResponseData(BaseModel):
+    access_token : str | None = None
+    refresh_token : str | None = None
+    csrf_token : str | None= None
+    verification_token : str | None= None
 
 class CookieResponseSchema(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -115,7 +119,7 @@ class CookieResponseSchema(BaseModel):
     # Automatically False locally, True in production
     secure: bool = IS_PRODUCTION
     max_age: int = 24 * 60 * 60
-    samesite: SameSiteEnum = SameSiteEnum.NONE if IS_PRODUCTION else SameSiteEnum.LAX
+    samesite: SameSiteEnum = 'lax'
     path: str = "/"
 
 
@@ -125,7 +129,7 @@ class CookieResponseOnDelete(BaseModel):
     httponly: bool = True
     # Automatically False locally, True in production
     secure: bool = IS_PRODUCTION
-    samesite: SameSiteEnum = SameSiteEnum.NONE if IS_PRODUCTION else SameSiteEnum.LAX
+    samesite: SameSiteEnum = 'lax'
     path: str = "/"
 
 
