@@ -1,7 +1,7 @@
 "use client";
 
 import { apiClient } from "@/lib/api";
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useState, useEffect } from "react";
 
 export interface Product {
   Products: {
@@ -9,6 +9,7 @@ export interface Product {
     id: number | string;
     product_name: string;
     price: string;
+    tags: string;
     category: string;
   };
   description?: string;
@@ -54,22 +55,37 @@ interface CartContextType {
   totalPrice: number;
   fetchCarts: (skip?: number, limit?: number) => Promise<void>;
   isLoading: boolean;
-  // --- ADDED: State to hold selected checkout items ---
   checkoutItems: (string | number)[];
   setCheckoutItems: React.Dispatch<React.SetStateAction<(string | number)[]>>;
-
   clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- ADDED: The state variable for checkout selection ---
-  const [checkoutItems, setCheckoutItems] = useState<(string | number)[]>([]);
+  // --- ADDED: Initialize state from localStorage so it survives refresh ---
+  const [checkoutItems, setCheckoutItems] = useState<(string | number)[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("my_checkout_items");
+      if (saved) return JSON.parse(saved);
+    }
+    return [];
+  });
+
+  // 🚀 AUTOMATIC FETCH: Load cart from API on mount
+  useEffect(() => {
+    fetchCarts();
+  }, []);
+
+  // 🚀 PERSIST SELECTIONS: Save checkout items to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("my_checkout_items", JSON.stringify(checkoutItems));
+    }
+  }, [checkoutItems]);
 
   const fetchCarts = useCallback(async (skip = 0, limit = 10) => {
     setIsLoading(true);
@@ -88,7 +104,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addToCart = async (product: Product) => {
-    // 1. PROTECT CART: Prevent adding if out of stock!
     if (product.quantity <= 0) {
       alert("Sorry, this item is out of stock!");
       return;
@@ -111,14 +126,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiClient.post("/cart", cartPostRequestBody);
 
-      //ONLY if the database succeeds, update the React UI State
       setCart((prevCart) => {
         const itemToUpdate = prevCart.find(
           (item) => item.Carts.product_id === product.Products.id,
         );
 
         if (itemToUpdate) {
-          // deeply update the nested Carts.quantity
           return prevCart.map((item) =>
             item.Carts.product_id === product.Products.id
               ? {
@@ -132,7 +145,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           );
         }
 
-        // Construct a proper CartItem with the nested Carts object
         const newItem: CartItem = {
           ...product,
           Carts: {
@@ -151,15 +163,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeFromCart = async (id: number | string) => {
     try {
-      // 1. Tell backend to delete item (Adjust the route if your FastAPI endpoint expects something else)
       await apiClient.delete(`/cart/${id}`);
 
-      // 2. Update Cart UI
       setCart((prevCart) =>
         prevCart.filter((item) => item.Carts.product_id !== id),
       );
 
-      // 3. Remove from checked items (if it was checked)
       setCheckoutItems((prev) => prev.filter((itemId) => itemId !== id));
     } catch (error) {
       console.error("Failed to remove item from DB:", error);
@@ -168,16 +177,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = (id: number | string, newQuantity: number) => {
-    // If the user tries to go below 1, remove the item entirely
     if (newQuantity < 1) {
-      removeFromCart(id); // Use your existing remove function!
+      removeFromCart(id);
       return;
     }
 
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.Products.id === id) {
-          // Extra safety: prevent updating beyond stock limits
           const validatedQty = Math.max(
             1,
             Math.min(newQuantity, item.quantity),
@@ -190,8 +197,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearCart = async () => {
-    // Note: If you have a backend endpoint to clear the user's cart upon checkout,
-    // you would await it here (e.g., await apiClient.delete('/cart/clear'); )
     setCart([]);
     setCheckoutItems([]);
   };
@@ -213,7 +218,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         totalPrice,
         isLoading,
         fetchCarts,
-        // --- ADDED: Export them so your components can use them ---
         checkoutItems,
         setCheckoutItems,
         clearCart,

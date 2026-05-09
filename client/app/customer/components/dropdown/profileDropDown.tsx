@@ -40,18 +40,6 @@ export default function ProfileDropDown({
   return (
     <>
       <div className="absolute top-12 right-0 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-        {/* profile info */}
-        <div className="p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-[#800000] text-white flex items-center justify-center font-bold text-xl flex-shrink-0">
-            A
-          </div>
-          <div className="overflow-hidden">
-            <h3 className="font-bold text-[#0B1527] text-sm truncate">
-              ASDASD
-            </h3>
-            <p className="text-xs text-gray-500 truncate">ASDASD@gmail.com</p>
-          </div>
-        </div>
 
         <div className="border-t border-gray-50"></div>
 

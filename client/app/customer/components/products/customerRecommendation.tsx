@@ -6,7 +6,8 @@ import ProductModal from "./productModal"; // Adjust path if needed
 import { Product } from "../../context/contextCart";
 import { recommendedProductsData } from "../../data/mockDataCard"; // Adjust path if needed
 
-export default function customerRecommendation() {
+// 🚀 FIXED: Capitalized component name to follow React best practices
+export default function CustomerRecommendation() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -31,61 +32,51 @@ export default function customerRecommendation() {
     fetchRecommendations();
   }, []);
 
-  // Safely hide the Navbar whenever the modal is open
-  useEffect(() => {
-    const navbar = document.querySelector("nav");
-    if (navbar) {
-      if (selectedProduct !== null) {
-        navbar.style.visibility = "hidden";
-        navbar.style.opacity = "0";
-      } else {
-        navbar.style.visibility = "visible";
-        navbar.style.opacity = "1";
-      }
-    }
-
-    return () => {
-      if (navbar) {
-        navbar.style.visibility = "visible";
-        navbar.style.opacity = "1";
-      }
-    };
-  }, [selectedProduct]);
-
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 md:mb-2">
           Recommended for You
         </h2>
-        <p className="text-sm font-medium text-gray-500 mb-6">
+        <p className="text-xs md:text-sm font-medium text-gray-500 mb-2 md:mb-4">
           Hand-picked favorites just for you.
         </p>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500 font-medium animate-pulse">
-            Loading recommendations...
-          </p>
+        <div className="flex items-center justify-center h-64 bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="flex flex-col items-center gap-3">
+             <svg className="w-8 h-8 text-[#800000] animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-sm font-bold text-gray-500 animate-pulse">Loading recommendations...</p>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Add this check to see if products actually exist */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
           {products && products.length > 0 ? (
             products.map((product) => (
               <div
-                key={`${product.Products.id}`} // Use the correct ID field
+                key={`${product.Products.id}`}
                 onClick={() => setSelectedProduct(product)}
-                className="cursor-pointer transition-transform hover:scale-[1.02] h-full"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedProduct(product);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`View details for ${product.Products.product_name || 'product'}`}
+                className="cursor-pointer transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#800000] rounded-xl h-full"
               >
-                <ProductCard key={product.Products.id} product={product} />
+                <ProductCard product={product} />
               </div>
             ))
           ) : (
-            // If the array is empty, this will show up instead of a confusing blank space!
-            <div className="col-span-full py-12 text-center text-red-500 font-bold bg-red-50 rounded-lg">
-              No products found! Check your mockData.ts import.
+            <div className="col-span-full py-16 flex flex-col items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100">
+              <p className="text-gray-500 font-medium">No recommendations found right now.</p>
             </div>
           )}
         </div>

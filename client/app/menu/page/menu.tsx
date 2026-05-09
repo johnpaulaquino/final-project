@@ -1,8 +1,8 @@
 "use client"; // Ensure this is a client component if it's handling state
 
 import React from 'react';
-import CustomerSidebar from '../components/sidebar/customerSidebar';
-import CustomerMenu from '../components/products/customerMenus';
+import CustomerSidebar from '@/app/customer/components/sidebar/customerSidebar';
+import CustomerMenu from '@/app/customer/components/products/customerMenus';
 
 interface MenuPageProps {
   activeTab?: string;
@@ -11,7 +11,7 @@ interface MenuPageProps {
 
 export default function Menu({ activeTab, setActiveTab }: MenuPageProps) {
   return (
-    <main className="px-6 pt-25 pb-24 max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
+    <main className="max-w-[1500px] mx-auto pt-24 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
       
       <div className="w-full xl:w-[320px] flex-shrink-0 xl:sticky xl:top-28 xl:self-start">
         <CustomerSidebar setActiveTab={setActiveTab} />

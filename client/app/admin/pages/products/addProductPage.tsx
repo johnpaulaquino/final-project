@@ -31,15 +31,18 @@ export default function AddItem() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
 
-  // --- FIXED: Initialize as empty string, we will set default in useEffect ---
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- FIXED: Wait for categories to load, then set the default selection ---
+  // --- ADDED: State to toggle visibility of tags ---
+  const [showTags, setShowTags] = useState(false);
+  const [isBestSeller, setIsBestSeller] = useState(false);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+
   useEffect(() => {
     if (categories.length > 0 && !category) {
-      setCategory(categories[0].category); // Defaults to the first category's name
+      setCategory(categories[0].category);
     }
   }, [categories, category]);
 
@@ -98,12 +101,15 @@ export default function AddItem() {
       formData.append("product_name", name);
       formData.append("price", price);
       formData.append("quantity", stock || "0");
-
-      // --- FIXED: 'category' is already a string now, so no need for category.category ---
       formData.append("category", category);
-
       formData.append("description", description);
       formData.append("low_stock_threshold", "5");
+
+      // --- FIXED: Append as "tags" array so the backend list[str] catches them ---
+      if (showTags) {
+        if (isBestSeller) formData.append("tags", "Best Seller");
+        if (isNewProduct) formData.append("tags", "New Product");
+      }
 
       if (imageBase64 && imageBase64 !== "/products/placeholder.jpg") {
         const imageBlob = dataURLtoBlob(imageBase64);
@@ -120,7 +126,11 @@ export default function AddItem() {
       setDescription("");
       setFileName("No file chosen");
       setImageBase64("/products/placeholder.jpg");
-
+      
+      // --- ADDED: Reset tag states ---
+      setShowTags(false);
+      setIsBestSeller(false);
+      setIsNewProduct(false);
       
       if (categories.length > 0) {
         setCategory(categories[0].category);
@@ -193,7 +203,6 @@ export default function AddItem() {
                 Category
               </label>
               <div className="relative">
-                {/* --- FIXED: value is now safely just the 'category' string --- */}
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -201,7 +210,6 @@ export default function AddItem() {
                 >
                   {categories.length > 0 ? (
                     categories.map((cat) => (
-                      // --- FIXED: Extract cat.id for the key and cat.category for the text ---
                       <option key={cat.id} value={cat.category}>
                         {cat.category}
                       </option>
@@ -264,6 +272,44 @@ export default function AddItem() {
               placeholder="Product details, ingredients, or flavor profile..."
               className="w-full p-3.5 rounded-[10px] border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#800000] focus:ring-1 focus:ring-[#800000] transition-colors resize-none font-medium placeholder-gray-400"
             ></textarea>
+          </div>
+
+          {/* --- ADDED: Conditional Product Tags Section --- */}
+          <div className="flex flex-col gap-3">
+            {/* Master Toggle to show/hide tags */}
+            <label className="flex items-center gap-2 cursor-pointer w-max">
+              <input
+                type="checkbox"
+                checked={showTags}
+                onChange={(e) => setShowTags(e.target.checked)}
+                className="w-4 h-4 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+              />
+              <span className="text-sm font-bold text-gray-700">Add Product Tags?</span>
+            </label>
+
+            {/* Tags Container (Only shows if showTags is true) */}
+            {showTags && (
+              <div className="flex items-center gap-6 p-3.5 rounded-[10px] border border-gray-200 bg-gray-50 transition-all">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isBestSeller}
+                    onChange={(e) => setIsBestSeller(e.target.checked)}
+                    className="w-4 h-4 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Best Seller</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isNewProduct}
+                    onChange={(e) => setIsNewProduct(e.target.checked)}
+                    className="w-4 h-4 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">New Product</span>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}

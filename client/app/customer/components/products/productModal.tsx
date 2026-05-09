@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Product } from "../../context/contextCart";
 import { useCart } from "../../context/contextCart";
-import { apiClient } from "@/lib/api"; //
+import { apiClient, getAccessToken } from "@/lib/api";
+import AuthModal from "@/app/auth/authModal";
 
 interface ProductModalProps {
   product: Product | null;
@@ -11,7 +12,6 @@ interface ProductModalProps {
   onClose: () => void;
 }
 
-// Match the schema returned from the backend
 interface Review {
   id: string;
   firstname: string;
@@ -32,23 +32,21 @@ export default function ProductModal({
   const [viewingAllReviews, setViewingAllReviews] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 🚀 Fetch reviews dynamically when the modal opens
   useEffect(() => {
     const fetchReviews = async () => {
       if (!isOpen || !product) return;
 
       setIsLoadingReviews(true);
       try {
-        // Appending the product ID to the path. Adjust if your API uses query params (e.g., ?product_id=...)
         const response = await apiClient.get(
           `/products/reviews/${product.Products.id}`,
         );
 
-        // Handle axios responses securely
         const rawData = response.data?.data || response.data || [];
         setReviews(rawData);
-        console.log("Reviews", reviews);
       } catch (error) {
         console.error("Failed to fetch product reviews:", error);
         setReviews([]);
@@ -60,16 +58,32 @@ export default function ProductModal({
     fetchReviews();
   }, [isOpen, product]);
 
-  // Reset the "View All" state when closing the modal
   useEffect(() => {
     if (!isOpen) {
       setViewingAllReviews(false);
     }
   }, [isOpen]);
 
+  // Check authentication status on mount and when modal opens
+  useEffect(() => {
+    const token = getAccessToken();
+    setIsAuthenticated(!!token);
+  }, [isOpen]);
+
   if (!isOpen || !product) return null;
 
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    setIsAuthModalOpen(false);
+    addToCart(product);
+    onClose();
+  };
+
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     addToCart(product);
     onClose();
   };
@@ -100,7 +114,6 @@ export default function ProductModal({
     );
   };
 
-  // 🚀 Helper to format the backend date string neatly
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown Date";
     const date = new Date(dateString);
@@ -111,7 +124,6 @@ export default function ProductModal({
     });
   };
 
-  // 🚀 Updated to consume API fields
   const ReviewItem = ({ review }: { review: Review }) => {
     const fullName =
       `${review.firstname || "Anonymous"} ${review.lastname || ""}`.trim();
@@ -301,14 +313,12 @@ export default function ProductModal({
                         ))}
                       </div>
 
-                      {/* Show this if there are no reviews yet */}
                       {totalReviews === 0 && (
                         <p className="text-sm text-gray-500 italic text-center py-4">
                           No reviews yet. Be the first to try it!
                         </p>
                       )}
 
-                      {/* See All Button */}
                       {totalReviews > 3 && (
                         <button
                           onClick={() => setViewingAllReviews(true)}
@@ -325,6 +335,12 @@ export default function ProductModal({
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialView="signup"
+      />
     </div>
   );
 }

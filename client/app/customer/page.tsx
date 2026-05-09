@@ -45,12 +45,12 @@ function PageContent() {
   );
 }
 
-// 2. Export a default parent component that wraps the logic in Suspense
-export default function Page() {
+// 2. Create a default export that wraps PageContent in Suspense
+export default function CustomerPage() {
   return (
-    // The fallback prevents layout shift or awkward flashes while the client reads the URL
     <Suspense fallback={<div className="min-h-screen bg-white" />}>
       <PageContent />
     </Suspense>
   );
 }
+

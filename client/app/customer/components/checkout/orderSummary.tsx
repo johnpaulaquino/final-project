@@ -64,15 +64,12 @@ export default function OrderSummary({
       }
     });
 
-    clearCart();
     setIsConfirmModalOpen(false);
     onProcessPayment();
 
-    // 🚀 Use router.push instead of window.location to prevent hard reloads wiping state
     router.push("/");
   };
 
-  // 🚀 Show a loading state if the cart is still fetching from context/localStorage
   if (!cart) {
     return (
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col h-full animate-pulse">
@@ -84,6 +81,7 @@ export default function OrderSummary({
   }
 
   return (
+    <>
     <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col h-full">
       <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
 
@@ -175,7 +173,6 @@ export default function OrderSummary({
               : "Place Order"}
       </button>
 
-      {/* THE DYNAMIC MODAL: Adapted for placing an order */}
       <ConfirmationModal
         isOpen={isConfirmModalOpen}
         title="Confirm Order"
@@ -189,5 +186,6 @@ export default function OrderSummary({
         confirmColorClass="bg-[#0B1527] hover:bg-gray-800"
       />
     </div>
+    </>
   );
 }

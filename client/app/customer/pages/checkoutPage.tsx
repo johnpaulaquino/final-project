@@ -151,7 +151,7 @@ export default function CheckoutPage() {
   const isAddressReady = addresses.length > 0 && !isAddressExpanded;
 
   return (
-    <main className="max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
+    <main className="px-6 pt-25 pb-24 max-w-[1500px] mx-auto pt-6 md:pt-28 px-4 md:px-6 flex flex-col xl:flex-row gap-6 md:gap-8 pb-12">
       <div className="flex-grow flex flex-col gap-6 md:gap-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight mb-2">

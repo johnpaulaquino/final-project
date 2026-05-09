@@ -21,18 +21,34 @@ export default function EditProductModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // --- ADDED: State to toggle visibility and handle tags ---
+  const [showTags, setShowTags] = useState(false);
+  const [isBestSeller, setIsBestSeller] = useState(false);
+  const [isNewProduct, setIsNewProduct] = useState(false);
+
   useEffect(() => {
     if (product) {
       setFormData({ ...product });
       setImageFile(null);
       setImagePreview(null);
+
+      // --- ADDED: Parse existing tags to pre-check the boxes if they exist ---
+      const existingTags = product.Products.tags || "";
+      const hasBestSeller = existingTags.includes("Best Seller");
+      const hasNewProduct = existingTags.includes("New Product");
+
+      setIsBestSeller(hasBestSeller);
+      setIsNewProduct(hasNewProduct);
+      
+      // If the product already has tags, automatically show the tag options
+      setShowTags(hasBestSeller || hasNewProduct);
     }
   }, [product]);
+  
   console.log(product);
 
   if (!isOpen || !formData) return null;
 
-  // 🚀 MODIFIED: Build the FormData right here in the modal!
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -44,8 +60,13 @@ export default function EditProductModal({
     submitData.append("description", formData.description || "");
 
     // If your backend has "category" in the dependency, you MUST append it
-    // Even if it's empty, or FastAPI might default it to None
     submitData.append("category", formData.Products.category || "");
+
+    // --- FIXED: Append as "tags" array so the backend list[str] catches them ---
+    if (showTags) {
+      if (isBestSeller) submitData.append("tags", "Best Seller");
+      if (isNewProduct) submitData.append("tags", "New Product");
+    }
 
     if (imageFile) {
       // Check if your backend expects "images" or "image"
@@ -72,6 +93,7 @@ export default function EditProductModal({
       setImagePreview(URL.createObjectURL(file));
     }
   };
+
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-[#0B1527]/60 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
@@ -151,7 +173,7 @@ export default function EditProductModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.quantity ?? 0} // Added ?? 0 for numbers
+                  value={formData.quantity ?? 0}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -188,6 +210,44 @@ export default function EditProductModal({
                 }
                 className="p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:border-[#800000] resize-none font-medium"
               ></textarea>
+            </div>
+
+            {/* --- ADDED: Conditional Product Tags Section --- */}
+            <div className="flex flex-col gap-3">
+              {/* Master Toggle to show/hide tags */}
+              <label className="flex items-center gap-2 cursor-pointer w-max">
+                <input
+                  type="checkbox"
+                  checked={showTags}
+                  onChange={(e) => setShowTags(e.target.checked)}
+                  className="w-4 h-4 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+                />
+                <span className="text-sm font-bold text-gray-700">Edit Product Tags?</span>
+              </label>
+
+              {/* Tags Container (Only shows if showTags is true) */}
+              {showTags && (
+                <div className="flex items-center gap-6 p-3.5 rounded-[10px] border border-gray-200 bg-gray-50 transition-all">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isBestSeller}
+                      onChange={(e) => setIsBestSeller(e.target.checked)}
+                      className="w-4 h-4 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Best Seller</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isNewProduct}
+                      onChange={(e) => setIsNewProduct(e.target.checked)}
+                      className="w-4 h-4 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">New Product</span>
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-4">

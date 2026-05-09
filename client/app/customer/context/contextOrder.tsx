@@ -6,6 +6,7 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  useEffect,
 } from "react";
 import { apiClient } from "@/lib/api";
 
@@ -45,6 +46,8 @@ interface OrderContextType {
 
   statusCounts: Record<string, number>;
   fetchStatusCounts: () => Promise<void>;
+
+  addOrder: (newOrder: Order) => void;
 
   fetchOrders: (status: string, skip: number, limit: number) => Promise<void>;
   fetchAdminOrders: (
@@ -87,6 +90,22 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     start_page: 1,
     end_page: 1,
   });
+
+  useEffect(() => {
+    const savedOrders = localStorage.getItem("my_orders");
+    if (savedOrders) {
+      setOrders(JSON.parse(savedOrders));
+    }
+  }, []);
+
+  const addOrder = (newOrder: Order) => {
+    setOrders((prevOrders) => {
+      const updatedOrders = [...prevOrders, newOrder];
+      // Save the new array to localStorage
+      localStorage.setItem("my_orders", JSON.stringify(updatedOrders));
+      return updatedOrders;
+    });
+  };
 
   const fetchStatusCounts = useCallback(async () => {
     try {
@@ -310,6 +329,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     <OrderContext.Provider
       value={{
         orders,
+        addOrder,
         isLoading,
         pagination,
         statusCounts,

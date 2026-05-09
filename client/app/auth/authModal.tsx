@@ -36,7 +36,7 @@ export default function AuthModal({
   return (
     <div className="fixed inset-0 z-[9999] flex bg-black/60 backdrop-blur-sm items-center justify-center p-4">
       {/* modal container */}
-      <div className="bg-white rounded-[32px] md:rounded-[40px] shadow-2xl flex w-full max-w-4xl overflow-hidden min-h-[550px] relative">
+      <div className="bg-white rounded-[10px] md:rounded-[10px] shadow-2xl flex w-full max-w-4xl overflow-hidden min-h-[550px] relative">
         {/* left side*/}
         <div className="w-full md:w-[55%] px-8 py-10 sm:px-12 md:px-14 flex flex-col justify-center items-center">
           <div className="w-full max-w-sm">

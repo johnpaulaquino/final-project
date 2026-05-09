@@ -4,13 +4,12 @@ import Image from "next/image";
 import { Product } from "./customerSidebar";
 import { useCart } from "../../context/contextCart";
 
-export default function sideProducts({ item }: { item: Product }) {
-  const { addToCart } = useCart();
+export default function SideProducts({ item }: { item: Product }) {
 
   return (
-    <div className="flex items-center gap-4 group cursor-pointer animate-in fade-in slide-in-from-top-2 duration-300 py-2 px-2 rounded-[5px] transition-colors hover:bg-zinc-50 border border-transparent hover:border-zinc-100">
-      {/* image para sa prodyuct (Kept exactly as you wrote it with Next/Image) */}
-      <div className="w-14 h-14 rounded-[5px] overflow-hidden bg-gray-100 flex-shrink-0 relative">
+    <div className="flex items-center gap-3 xl:gap-4 group cursor-pointer animate-in fade-in slide-in-from-top-2 duration-300 py-1.5 xl:py-2 px-2 rounded-[5px] transition-colors hover:bg-zinc-50 border border-transparent hover:border-zinc-100">
+      
+      <div className="w-12 h-12 xl:w-14 xl:h-14 rounded-[5px] overflow-hidden bg-gray-100 flex-shrink-0 relative" aria-hidden="true">
         {item.image ? (
           <Image
             src={item.image}
@@ -28,54 +27,28 @@ export default function sideProducts({ item }: { item: Product }) {
         )}
       </div>
 
-      {/* product details */}
-      <div className="flex items-center justify-between gap-4 flex-grow">
-        <div className="flex-grow flex flex-col">
-          <h3 className="text-sm font-bold text-gray-900 leading-tight mb-1 group-hover:text-[#800000] transition-colors">
+      <div className="flex items-center justify-between gap-2 xl:gap-4 flex-grow min-w-0">
+        <div className="flex-grow flex flex-col min-w-0">
+          
+          <h3 className="text-xs xl:text-sm font-bold text-gray-900 leading-tight mb-1 group-hover:text-[#800000] transition-colors line-clamp-1">
             {item.name}
           </h3>
-          <div className="flex items-center justify-between gap-2 mt-1">
-            <span className="text-xs font-bold text-[#800000]">
+          
+          <div className="flex items-center justify-between gap-1 xl:gap-2 mt-1">
+            <span className="text-[10px] xl:text-xs font-bold text-[#800000]">
               {item.price}
             </span>
 
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Star Icon (Moved inline to fix React re-rendering bug) */}
-              <div className="w-4 h-4 text-yellow-400 flex items-center justify-center">
-                <Image
-                  src="/icons/star.png"
-                  alt="Star Rating"
-                  width={20}
-                  height={20}
-                />
+            <div className="flex items-center gap-1 xl:gap-1.5 flex-shrink-0" aria-label={`Rating: ${item.rating} stars`}>
+              <div className="w-3 h-3 xl:w-4 xl:h-4 text-yellow-400 flex items-center justify-center relative">
+                <Image src="/icons/star.png" alt="" fill className="object-contain" aria-hidden="true" />
               </div>
-
-              <span className="text-xs font-bold text-gray-600">
+              <span className="text-[10px] xl:text-xs font-bold text-gray-600">
                 {item.rating}
               </span>
             </div>
           </div>
         </div>
-
-        {/* button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            addToCart(item as any);
-          }}
-          className="cursor-pointer flex items-center justify-center p-2 rounded-full bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm transform hover:scale-105"
-        >
-          {/* add to cart icon  */}
-          <div className="font-bold w-5 h-5 text-white flex items-center justify-center">
-            <Image
-              src="/icons/add-to-cart.png"
-              alt="Add to Cart"
-              width={15}
-              height={15}
-              className="object-contain w-4 h-4 rounded-full invert"
-            />
-          </div>
-        </button>
       </div>
     </div>
   );
