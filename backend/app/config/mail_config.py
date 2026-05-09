@@ -14,3 +14,4 @@ MAIL_CONFIGURATION = ConnectionConfig(
         VALIDATE_CERTS=ConstantsData.MAIL_VALIDATE_CERTS,
         TEMPLATE_FOLDER=ConstantsData.TEMPLATE_PATH.parent.parent / 'templates' / 'email',
         )
+RESEND_TEMPLATE_PATH=ConstantsData.TEMPLATE_PATH.parent.parent / 'templates' / 'email'

@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional
 
 from fastapi import Body
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
 from app.src.core.constants import ConstantsData
 from app.src.exceptions.domain_exceptions import DomainInvalidCredentialsError, DomainUnprocessableEntityError
@@ -108,6 +108,7 @@ class SameSiteEnum(str, Enum):
 
 
 class CookieResponseSchema(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
     key: str
     value: str
     httponly: bool = True
@@ -119,6 +120,7 @@ class CookieResponseSchema(BaseModel):
 
 
 class CookieResponseOnDelete(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
     key: str
     httponly: bool = True
     # Automatically False locally, True in production

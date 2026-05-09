@@ -24,6 +24,12 @@ async def app_lifespan(fastapi: FastAPI):
         fastapi.state.redis = Redis.from_url(
         redis_host,
         decode_responses=True)
+
+    if ConstantsData.ENVIRONMENT == EnvironmentStatus.Production:
+        fastapi.state.redis = Redis.from_url(
+            ConstantsData.REDIS_DB_URL_PROD,
+            decode_responses=True)
+
     try:
         fastapi.state.redis_services = RedisInfrastructure(fastapi.state.redis)
     except Exception as e:

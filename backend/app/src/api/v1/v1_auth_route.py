@@ -49,7 +49,7 @@ async def create_account(background_task: BackgroundTasks,
             success_response_schema.status_code = status.HTTP_202_ACCEPTED
             success_response_schema.status_message = "accepted"
             # send email in background task.
-            background_task.add_task(email_infrastructure.send_email_verification_code, recipient=email,
+            await email_infrastructure.send_message_using_sendgrid(recipient=email,
                                      verification_code=services_response.otp_code)
         
         response = SuccessfulResponse(success_response_schema)
