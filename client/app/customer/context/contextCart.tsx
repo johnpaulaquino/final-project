@@ -21,7 +21,7 @@ export interface Product {
   description?: string;
   stock_status: string;
   review_count: number;
-  quantity: number; // Backend stock
+  quantity: number;
   avg_rating: number | null;
   images: { image_url: string; public_key: string }[];
   low_stock_threshold: number;
@@ -29,7 +29,7 @@ export interface Product {
 
 export interface CartProduct {
   Carts: {
-    quantity: number; // User's cart amount
+    quantity: number;
     product_id: number | string;
   };
   Products: {
@@ -41,13 +41,12 @@ export interface CartProduct {
     description?: string;
   };
   description?: string;
-
   stock_status: string;
   review_count: number;
-  quantity: number; // Backend stock
+  quantity: number;
   avg_rating: number | null;
   images: { image_url: string }[];
-  low_stock_threshold: number; // New field for low stock threshold
+  low_stock_threshold: number;
 }
 
 export type CartItem = CartProduct;
@@ -72,7 +71,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- ADDED: Initialize state from localStorage so it survives refresh ---
   const [checkoutItems, setCheckoutItems] = useState<(string | number)[]>(
     () => {
       if (typeof window !== "undefined") {
@@ -83,12 +81,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
   );
 
-  // 🚀 AUTOMATIC FETCH: Load cart from API on mount
   useEffect(() => {
     fetchCarts();
   }, []);
 
-  // 🚀 PERSIST SELECTIONS: Save checkout items to localStorage whenever they change
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("my_checkout_items", JSON.stringify(checkoutItems));
@@ -101,6 +97,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const endpoint = `/cart/?skip=${skip}&limit=${limit}`;
       const response = await apiClient.get(endpoint);
 
+      // 🚀 THE FIX: Properly extract the array data
       let fetchedProducts = [];
       if (Array.isArray(response)) {
         fetchedProducts = response;
@@ -165,7 +162,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             product_id: product.Products.id,
             quantity: 1,
           },
-        };
+        } as unknown as CartItem;
 
         return [...prevCart, newItem];
       });

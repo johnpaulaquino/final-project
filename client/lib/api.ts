@@ -1,5 +1,3 @@
-// src/lib/apiClient.ts
-
 export interface ApiError {
   message: string;
   status: number;
@@ -26,7 +24,6 @@ const getCookie = (name: string) => {
 export const getAccessToken = () => {
   if (!currentAccessToken) {
     currentAccessToken = getCookie("access_token");
-    console.log("TOken", currentAccessToken);
   }
   return currentAccessToken;
 };
@@ -73,20 +70,8 @@ export async function apiFetch(
   options: RequestInit = {},
   isPrivate = true,
 ): Promise<any> {
-  // 🚀 SILVER BULLET: Automatically fix missing trailing slashes!
-  let safeEndpoint = endpoint;
-
-  // If there are query parameters (like /cart?skip=1)
-  if (safeEndpoint.includes("?")) {
-    safeEndpoint = safeEndpoint.replace(/([^/])\?/, "$1/?");
-  }
-  // If there are no query parameters (like /me), just add the slash to the end
-  else if (!safeEndpoint.endsWith("/")) {
-    safeEndpoint += "/";
-  }
-
-  // Use the safely formatted endpoint
-  const url = `${API_BASE_URL}${safeEndpoint}`;
+  // Use the exact endpoint provided by the React components
+  const url = `${API_BASE_URL}${endpoint}`;
 
   // Check if the body we are sending is FormData
   const isFormData = options.body instanceof FormData;
@@ -119,14 +104,12 @@ export async function apiFetch(
     endpoint !== "/auth/login" &&
     endpoint !== "/auth/refresh-token"
   ) {
-    // If another request is already refreshing the token, join the queue
     if (isRefreshing) {
       try {
         const newToken = await new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         });
 
-        // Once the queue resolves, retry the original request with the new token
         config.headers = {
           ...config.headers,
           Authorization: `Bearer ${newToken}`,
@@ -136,7 +119,6 @@ export async function apiFetch(
         throw err;
       }
     } else {
-      // We are the first request to hit a 401! Lock the refresh state.
       isRefreshing = true;
 
       try {
@@ -152,18 +134,14 @@ export async function apiFetch(
 
         const refreshData = await refreshRes.json();
 
-        // Save new token in memory
         setAccessToken(refreshData.access_token);
 
-        // Update the cookie so it survives the next page refresh
         if (typeof document !== "undefined") {
           document.cookie = `access_token=${refreshData.access_token}; path=/; max-age=86400;`;
         }
 
-        // Process all queued requests with the new token
         processQueue(null, refreshData.access_token);
 
-        // Retry the original request
         config.headers = {
           ...config.headers,
           Authorization: `Bearer ${refreshData.access_token}`,
@@ -173,21 +151,20 @@ export async function apiFetch(
         processQueue(refreshError, null);
         setAccessToken(null);
 
-        // Force backend to clear the HttpOnly cookies if it exists
         await fetchWithTimeout(`${API_BASE_URL}/auth/logout`, {
           method: "POST",
           credentials: "include",
-        }).catch(() => {}); // Ignore errors here, we just want to attempt to clear
+        }).catch(() => {});
 
-        // DESTROY FRONTEND COOKIES SO THE MIDDLEWARE DOESN'T TRAP YOU
         if (typeof document !== "undefined") {
           document.cookie =
             "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           document.cookie =
             "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
+          // 🚀 THE SIGNAL: Trigger the loop breaker in the middleware
           if (window.location.pathname !== "/") {
-            window.location.href = "/";
+            window.location.href = "/?clear=1";
           }
         }
 
@@ -201,7 +178,7 @@ export async function apiFetch(
     }
   }
 
-  // 3. Handle the final response (successful or failed for other reasons)
+  // 3. Handle the final response
   let data;
   try {
     if (res.status !== 204) {
@@ -292,7 +269,6 @@ export const apiClient = {
       } as ApiError;
     }
 
-    // Save the new token directly into memory and cookies!
     if (data && data.access_token) {
       setAccessToken(data.access_token);
       if (typeof document !== "undefined") {
@@ -304,10 +280,8 @@ export const apiClient = {
   },
 
   logout: async () => {
-    // Clear frontend memory
     setAccessToken(null);
 
-    // Destroy frontend cookies
     if (typeof document !== "undefined") {
       document.cookie =
         "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -316,7 +290,6 @@ export const apiClient = {
     }
 
     try {
-      // Call the logout endpoint to clear the HttpOnly refresh token cookie
       await fetchWithTimeout(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
@@ -325,9 +298,8 @@ export const apiClient = {
       console.warn("Backend logout failed, but frontend is cleared.");
     }
 
-    // Redirect back to the login page (or homepage)
     if (typeof window !== "undefined") {
-      window.location.href = "/";
+      window.location.href = "/?clear=1";
     }
   },
 };

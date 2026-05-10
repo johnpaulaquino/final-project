@@ -1,5 +1,3 @@
-// src/lib/middlewares/authMiddleware.ts
-
 import { NextRequest, NextResponse } from "next/server";
 
 interface AuthMiddlewareOptions {
@@ -27,21 +25,25 @@ export function withAuth(
     ...options,
   };
 
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // 🚀 THE LOOP BREAKER: If the URL has ?clear=1, destroy cookies server-side!
+  if (searchParams.get("clear") === "1") {
+    const response = NextResponse.redirect(
+      new URL(config.loginRoute, request.url),
+    );
+    response.cookies.delete("access_token");
+    response.cookies.delete("refresh_token");
+    return response;
+  }
 
   const accessToken = request.cookies.get("access_token")?.value;
-  
-
   const refreshToken = request.cookies.get("refresh_token")?.value;
-  
   const hasAuth = !!accessToken || !!refreshToken;
 
   const isAdminRoute = pathname.startsWith(config.adminRoute);
-
   const isCustomerRoute = pathname.startsWith(config.customerRoute);
-
   const isProtectedRoute = isAdminRoute || isCustomerRoute;
-
   const isPublicRoute = config.publicRoutes.includes(pathname);
 
   // Block unauthenticated users
