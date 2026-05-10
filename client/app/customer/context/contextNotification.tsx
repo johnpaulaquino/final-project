@@ -118,7 +118,7 @@ export function NotificationProvider({
   useEffect(() => {
     fetchNotifications(1, 10);
 
-    const wsUrl = `${process.env.BACKEND_INTERNAL_URL}/notifications`;
+    const wsUrl = "ws://localhost:9898/api/v1/biskota/notifications/";
     const maxReconnectAttempts = 5;
 
     const connectWebSocket = () => {
@@ -129,7 +129,7 @@ export function NotificationProvider({
       ws.onopen = () => {
         console.log("🟢 WebSocket Connected!");
         isRefreshingRef.current = false;
-        reconnectAttemptsRef.current = 0; 
+        reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
       };
 
       ws.onmessage = (event) => {
