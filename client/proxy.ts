@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/middlewares/authMiddleware";
 
-// import { withLogger } from '@/lib/middlewares/loggerMiddleware';
+
 
 export default function proxy(request: NextRequest) {
   const authResponse = withAuth(request);
