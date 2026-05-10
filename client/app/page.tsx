@@ -1,12 +1,12 @@
 'use client';
 
+import { Suspense } from "react";
 import Navbar from "./components/headNavbar"; 
 import HomePage from "./components/homepage";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-
-export default function Home() {
-
+// 1. Isolate the logic that depends on URL parameters into its own component
+function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -25,5 +25,19 @@ export default function Home() {
           <HomePage setActiveTab={setActiveTab} />
       </div>
     </div>
+  );
+}
+
+// 2. Export your main page and wrap the content in a Suspense boundary
+export default function Home() {
+  return (
+    // You can customize this fallback UI (e.g., adding a spinner)
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-slate-500 font-medium animate-pulse">Loading...</p>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
