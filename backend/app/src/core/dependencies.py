@@ -67,8 +67,10 @@ async def get_redis_services(request: Request) -> RedisInfrastructure:
 
 async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)):
     try:
-        # check first the token in headers, if there is.
+
+        # check first the token in headers if there is.
         if token:
+
             encoded_data = AppSecurity.decode_jwt_token(token)
             # return the decoded token
             return DecodedTokenDTO(**encoded_data)
@@ -76,6 +78,7 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
         # otherwise go to the cookie and check if there's a cookie.
         cookie_access_token = request.cookies.get(ConstantsKey.COOKIE_ACCESS_TOKEN)
         encoded_data = AppSecurity.decode_jwt_token(cookie_access_token)
+
         # return the decoded token
         return DecodedTokenDTO(**encoded_data)
     except Exception as e:

@@ -21,6 +21,8 @@ dependencies = [
     "fastapi-mail",
     "cryptography", # Fernet is part of this package
     "tenacity",
+    "scikit-learn",
+    "numpy",
     "python-json-logger",
     "websocket>=0.2.1",
 ]

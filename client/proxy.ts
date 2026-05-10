@@ -6,6 +6,7 @@ import { withAuth } from "@/lib/middlewares/authMiddleware";
 
 export default function proxy(request: NextRequest) {
   const authResponse = withAuth(request);
+
   if (authResponse) return authResponse;
 
   return NextResponse.next();

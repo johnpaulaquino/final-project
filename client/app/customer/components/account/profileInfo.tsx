@@ -28,7 +28,6 @@ export default function ProfileInfo() {
   const [email, setEmail] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // 🚀 NEW: State for the Email Verification Modal
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +37,7 @@ export default function ProfileInfo() {
       try {
         const response = await apiClient.get("/me/");
         const payload = response.data?.data || response.data;
+        console.log("Response", payload);
 
         if (payload?.Users) {
           setEmail(payload.Users.email || "");

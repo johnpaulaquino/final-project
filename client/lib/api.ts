@@ -5,7 +5,8 @@ export interface ApiError {
   status: number;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL =
+  process.env.BACKEND_INTERNAL_URL || "http://localhost:9898/api/v1/biskota";
 
 let currentAccessToken: string | null = null;
 let isRefreshing = false;
@@ -14,11 +15,25 @@ let failedQueue: Array<{
   reject: (error: any) => void;
 }> = [];
 
+// Helper to read cookies safely on the client side
+const getCookie = (name: string) => {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? match[2] : null;
+};
+
+// Hydrate the token from the cookie if memory is empty
+export const getAccessToken = () => {
+  if (!currentAccessToken) {
+    currentAccessToken = getCookie("access_token");
+    console.log("TOken", currentAccessToken);
+  }
+  return currentAccessToken;
+};
+
 export const setAccessToken = (token: string | null) => {
   currentAccessToken = token;
 };
-
-export const getAccessToken = () => currentAccessToken;
 
 // Helper to process the queue of waiting requests
 const processQueue = (error: any, token: string | null = null) => {
@@ -58,26 +73,39 @@ export async function apiFetch(
   options: RequestInit = {},
   isPrivate = true,
 ): Promise<any> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  // 🚀 SILVER BULLET: Automatically fix missing trailing slashes!
+  let safeEndpoint = endpoint;
 
-  // 1. CRITICAL FIX: Check if the body we are sending is FormData
+  // If there are query parameters (like /cart?skip=1)
+  if (safeEndpoint.includes("?")) {
+    safeEndpoint = safeEndpoint.replace(/([^/])\?/, "$1/?");
+  }
+  // If there are no query parameters (like /me), just add the slash to the end
+  else if (!safeEndpoint.endsWith("/")) {
+    safeEndpoint += "/";
+  }
+
+  // Use the safely formatted endpoint
+  const url = `${API_BASE_URL}${safeEndpoint}`;
+
+  // Check if the body we are sending is FormData
   const isFormData = options.body instanceof FormData;
 
   const config: RequestInit = {
     ...options,
-    credentials: "include", // Always include cookies (like HttpOnly refresh token)
+    credentials: "include",
     headers: {
-      // ONLY apply application/json if we are NOT sending files
       ...(!isFormData && { "Content-Type": "application/json" }),
       ...options.headers,
     },
   };
 
-  // If it's a private route and we have a token in memory, attach it
-  if (isPrivate && currentAccessToken) {
+  // If it's a private route, attach the token from memory or cookies
+  const tokenToUse = isPrivate ? getAccessToken() : null;
+  if (tokenToUse) {
     config.headers = {
       ...config.headers,
-      Authorization: `Bearer ${currentAccessToken}`,
+      Authorization: `Bearer ${tokenToUse}`,
     };
   }
 
@@ -119,14 +147,18 @@ export async function apiFetch(
             credentials: "include",
           },
         );
-        console.log("refresh", refreshRes);
 
         if (!refreshRes.ok) throw new Error("Refresh failed");
 
         const refreshData = await refreshRes.json();
 
-        // Assuming your FastAPI returns { access_token: "..." }
+        // Save new token in memory
         setAccessToken(refreshData.access_token);
+
+        // Update the cookie so it survives the next page refresh
+        if (typeof document !== "undefined") {
+          document.cookie = `access_token=${refreshData.access_token}; path=/; max-age=86400;`;
+        }
 
         // Process all queued requests with the new token
         processQueue(null, refreshData.access_token);
@@ -141,9 +173,22 @@ export async function apiFetch(
         processQueue(refreshError, null);
         setAccessToken(null);
 
-        // Optional: Redirect to login or clear auth state
-        if (typeof window !== "undefined" && window.location.pathname !== "/") {
-          window.location.href = "/";
+        // Force backend to clear the HttpOnly cookies if it exists
+        await fetchWithTimeout(`${API_BASE_URL}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        }).catch(() => {}); // Ignore errors here, we just want to attempt to clear
+
+        // DESTROY FRONTEND COOKIES SO THE MIDDLEWARE DOESN'T TRAP YOU
+        if (typeof document !== "undefined") {
+          document.cookie =
+            "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          document.cookie =
+            "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+          if (window.location.pathname !== "/") {
+            window.location.href = "/";
+          }
         }
 
         throw {
@@ -182,7 +227,6 @@ export async function apiFetch(
 export const apiClient = {
   get: (endpoint: string) => apiFetch(endpoint, { method: "GET" }, true),
 
-  // Applied the fix to POST and PUT as well, to future-proof your app!
   post: (endpoint: string, body: any) => {
     const isFormData = body instanceof FormData;
     return apiFetch(
@@ -202,9 +246,7 @@ export const apiClient = {
   },
 
   patch: (endpoint: string, body: any) => {
-    // 2. CRITICAL FIX: Don't stringify FormData!
     const isFormData = body instanceof FormData;
-
     return apiFetch(
       endpoint,
       { method: "PATCH", body: isFormData ? body : JSON.stringify(body) },
@@ -224,15 +266,13 @@ export const apiClient = {
     body.append("username", email);
     body.append("password", password);
 
-    // Login is technically a "public" route because we don't have a token yet,
-    // but we use form-urlencoded for FastAPI's OAuth2 dependencies.
     const res = await fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: body,
-      credentials: "include", // Required so the browser saves the set-cookie header!
+      credentials: "include",
     });
 
     let data;
@@ -252,9 +292,12 @@ export const apiClient = {
       } as ApiError;
     }
 
-    // Save the new token directly into memory!
+    // Save the new token directly into memory and cookies!
     if (data && data.access_token) {
       setAccessToken(data.access_token);
+      if (typeof document !== "undefined") {
+        document.cookie = `access_token=${data.access_token}; path=/; max-age=86400;`;
+      }
     }
 
     return data;
@@ -264,8 +307,16 @@ export const apiClient = {
     // Clear frontend memory
     setAccessToken(null);
 
+    // Destroy frontend cookies
+    if (typeof document !== "undefined") {
+      document.cookie =
+        "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie =
+        "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
+
     try {
-      //call the logout endpoint to clear the HttpOnly refresh token cookie
+      // Call the logout endpoint to clear the HttpOnly refresh token cookie
       await fetchWithTimeout(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
@@ -274,7 +325,7 @@ export const apiClient = {
       console.warn("Backend logout failed, but frontend is cleared.");
     }
 
-    //Redirect back to the login page (or homepage)
+    // Redirect back to the login page (or homepage)
     if (typeof window !== "undefined") {
       window.location.href = "/";
     }

@@ -14,7 +14,7 @@ from app.src.utils.utility import Utility
 class LoginRequest(BaseModel):
     email: EmailStr | str
     password: str
-    
+
     @field_validator("email")
     def validate_email(cls, value: str):
         if not value:
@@ -22,7 +22,7 @@ class LoginRequest(BaseModel):
         if "@" not in value:
             raise DomainUnprocessableEntityError("Invalid email format.")
         return value.strip()
-    
+
     @field_validator("password")
     def validate_password(cls, value: str):
         if not value:
@@ -42,7 +42,7 @@ class SignUpRequest(BaseModel):
     firstname: str = Body(...)
     middle_name: Optional[str] = Body(None)
     lastname: str = Body(...)
-    
+
     @staticmethod
     def sign_up_request_depends(password=Body(...),
                                 firstname=Body(...),
@@ -119,7 +119,7 @@ class CookieResponseSchema(BaseModel):
     # Automatically False locally, True in production
     secure: bool = IS_PRODUCTION
     max_age: int = 24 * 60 * 60
-    samesite: SameSiteEnum = 'none'
+    samesite: SameSiteEnum = SameSiteEnum.NONE if IS_PRODUCTION else SameSiteEnum.LAX
     path: str = "/"
 
 
@@ -129,7 +129,7 @@ class CookieResponseOnDelete(BaseModel):
     httponly: bool = True
     # Automatically False locally, True in production
     secure: bool = IS_PRODUCTION
-    samesite: SameSiteEnum = 'none'
+    samesite: SameSiteEnum = SameSiteEnum.NONE if IS_PRODUCTION else SameSiteEnum.LAX
     path: str = "/"
 
 

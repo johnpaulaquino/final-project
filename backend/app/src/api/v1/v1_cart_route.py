@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from starlette import status
+from starlette.requests import Request
 
 from app.src.application.services.carts_services import CartsServices
 from app.src.core.constants import ConstantsData, EndpointTags
@@ -32,9 +33,11 @@ async def insert_cart(cart_data: CreateCart = Depends(CreateCart.depends),
 
 @v1_cart_router.get("/")
 async def paginated_user_cart(paginated: PaginatedSchema = Depends(),
+
                               current_user: DecodedTokenDTO = Depends(get_current_user),
                               cart_services: CartsServices = Depends(get_cart_service)):
     try:
+
         cart_response = await cart_services.get_paginated_user_cart(paginated, current_user)
         cart_response.status_code = status.HTTP_200_OK
         

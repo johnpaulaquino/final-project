@@ -1,7 +1,13 @@
 "use client";
 
 import { apiClient } from "@/lib/api";
-import React, { createContext, useCallback, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  useEffect,
+} from "react";
 
 export interface Product {
   Products: {
@@ -67,13 +73,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
 
   // --- ADDED: Initialize state from localStorage so it survives refresh ---
-  const [checkoutItems, setCheckoutItems] = useState<(string | number)[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("my_checkout_items");
-      if (saved) return JSON.parse(saved);
-    }
-    return [];
-  });
+  const [checkoutItems, setCheckoutItems] = useState<(string | number)[]>(
+    () => {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("my_checkout_items");
+        if (saved) return JSON.parse(saved);
+      }
+      return [];
+    },
+  );
 
   // 🚀 AUTOMATIC FETCH: Load cart from API on mount
   useEffect(() => {
@@ -90,10 +98,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const fetchCarts = useCallback(async (skip = 0, limit = 10) => {
     setIsLoading(true);
     try {
-      const endpoint = `/cart?skip=${skip}&limit=${limit}`;
+      const endpoint = `/cart/?skip=${skip}&limit=${limit}`;
       const response = await apiClient.get(endpoint);
 
-      const fetchedProducts = response.data || [];
+      let fetchedProducts = [];
+      if (Array.isArray(response)) {
+        fetchedProducts = response;
+      } else if (response && response.data) {
+        fetchedProducts = response.data;
+      }
+
       setCart(fetchedProducts);
     } catch (error) {
       console.error("Failed to fetch carts:", error);
@@ -124,7 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     try {
-      await apiClient.post("/cart", cartPostRequestBody);
+      await apiClient.post("/cart/", cartPostRequestBody);
 
       setCart((prevCart) => {
         const itemToUpdate = prevCart.find(

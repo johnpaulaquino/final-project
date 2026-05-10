@@ -173,11 +173,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(),
 async def refresh_token(refresh_token: str = Cookie(None),
                         auth_services: AuthServices = Depends(get_auth_service), ):
     try:
+
+
         auth_services_response = await auth_services.refresh_token(refresh_token=refresh_token)
         
         auth_services_response.status_code = status.HTTP_200_OK
         
         response = SuccessfulResponse(auth_services_response)
+        #delete cookies first
+        delete_auth_cookie(response)
+
+        delete_verification_cookie(response)
         # set cookie
         set_auth_cookie(response, auth_services_response)
         return response

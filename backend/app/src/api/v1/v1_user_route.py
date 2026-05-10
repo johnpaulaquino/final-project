@@ -28,7 +28,9 @@ async def get_information(current_user: DecodedTokenDTO = Depends(get_current_us
                           user_service: UserServices = Depends(get_user_service),
                           ):
     try:
+
         user_response = await user_service.get_information(current_user)
+
         user_response.status_code = status.HTTP_200_OK
         return SuccessfulResponse(user_response)
     except Exception as e:
@@ -64,6 +66,7 @@ async def get_all_active_users(paginated: PaginatedSchema = Query(),
                                user_service: UserServices = Depends(get_user_service),
                                ):
     try:
+
         user_service_response = await user_service.get_all_active_users(paginated, current_user)
         user_service_response.status_code = status.HTTP_200_OK
 

@@ -130,6 +130,7 @@ class UserServices(SharedServices):
     async def get_information(self, current_user: DecodedTokenDTO):
         try:
             data = await self.__uow.users.find_record_by_id(current_user.user_id)
+            print(data)
             if not data:
                 raise JWTInvalidException("No user found, please back to login.")
 

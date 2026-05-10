@@ -34,23 +34,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-         <AccountProvider>
         <CartProvider>
-         
+          <AccountProvider>
             <CategoryProvider>
               <ProductProvider>
                 <BannerProvider>
                   <OrderProvider>
-                    <NotificationProvider>
-                    {children}
-                    </NotificationProvider>
+                    <NotificationProvider>{children}</NotificationProvider>
                   </OrderProvider>
                 </BannerProvider>
               </ProductProvider>
             </CategoryProvider>
-       
+          </AccountProvider>
         </CartProvider>
-           </AccountProvider>
       </body>
     </html>
   );

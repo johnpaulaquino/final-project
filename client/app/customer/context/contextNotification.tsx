@@ -114,75 +114,77 @@ export function NotificationProvider({
     }
   };
 
-  // . WEBSOCKET LOGIC ---
   useEffect(() => {
-    fetchNotifications(1, 10);
+    let reconnectTimeout: NodeJS.Timeout | null = null;
 
-    const wsUrl = "ws://localhost:9898/api/v1/biskota/notifications/";
-    const maxReconnectAttempts = 5;
+    let reconnectAttempts = 0;
 
-    const connectWebSocket = () => {
-      console.log("Attempting to connect to:", wsUrl);
-      const ws = new WebSocket(wsUrl);
+    const MAX_RECONNECTS = 5;
+
+    const connect = () => {
+      const baseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_BASE_URL || "ws://localhost:9898";
+
+      const ws = new WebSocket(
+        `${baseUrl}/api/v1/biskota/notifications/`,
+      );
+
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log("🟢 WebSocket Connected!");
-        isRefreshingRef.current = false;
-        reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
+        console.log("WebSocket connected");
+
+        reconnectAttempts = 0;
       };
 
       ws.onmessage = (event) => {
-        const newNotification = JSON.parse(event.data);
-        setNotifications((prev) => [newNotification, ...prev]);
+        const notification = JSON.parse(event.data);
+
+        setNotifications((prev) => [notification, ...prev]);
       };
 
       ws.onclose = async (event) => {
-        console.warn(
-          `🔴 WebSocket Closed. Code: ${event.code}, Reason: ${event.reason}`,
-        );
+        console.warn("WebSocket closed", event.code);
 
-        // Normal Closure
-        if (event.code === 1000) return;
+        // Unauthorized
+        if (event.code === 4401) {
+          console.warn("Unauthorized websocket");
 
-        // REMOVED: The manual /auth/refresh-token logic that was causing the infinite loop.
-        // We now rely entirely on api.ts to handle auth state and cookie refreshing.
+          await apiClient.logout();
 
-        // GENERAL AUTO-RECONNECT FLOW (Fixed 5 seconds, 5 attempts)
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const timeout = 5000; // Fixed 5 seconds
-
-          console.log(
-            `⏳ Attempting to reconnect in ${timeout / 1000} seconds... (Attempt ${reconnectAttemptsRef.current + 1} of ${maxReconnectAttempts})`,
-          );
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current += 1;
-            connectWebSocket();
-          }, timeout);
-        } else {
-          console.error(
-            "🚫 Maximum WebSocket reconnect attempts reached. Giving up.",
-          );
-          // Notice we DO NOT use window.location.href = "/" here.
-          // If the user is truly unauthorized, api.ts will have already safely kicked them out.
+          return;
         }
+
+        // Normal close
+        if (event.code === 1000) {
+          return;
+        }
+
+        if (reconnectAttempts >= MAX_RECONNECTS) {
+          console.error("Max reconnect reached");
+
+          return;
+        }
+
+        reconnectAttempts += 1;
+
+        reconnectTimeout = setTimeout(() => {
+          connect();
+        }, 5000);
       };
 
       ws.onerror = (error) => {
-        console.error("🟡 WebSocket Error:", error);
+        console.error("WebSocket error", error);
       };
     };
 
-    connectWebSocket();
+    connect();
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close(1000);
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
       }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+
+      wsRef.current?.close(1000);
     };
   }, []);
 
