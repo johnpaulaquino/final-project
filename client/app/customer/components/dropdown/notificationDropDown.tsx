@@ -12,17 +12,15 @@ interface NotificationDropdownProps {
 export default function NotificationDropdown({
   onClose,
 }: NotificationDropdownProps) {
-  // 2. GRAB ALL DATA AND ACTIONS DIRECTLY FROM THE GLOBAL CONTEXT
   const { notifications, markAllAsRead, deleteNotification, clearHistory } =
     useNotification();
 
-  // Track which notifications are expanded by their ID
-  const [expandedNotifs, setExpandedNotifs] = useState<Record<string, boolean>>({});
-  // Helper function to convert FastAPI's ISO timestamp to relative time ("5 mins ago")
+  const [expandedNotifs, setExpandedNotifs] = useState<Record<string, boolean>>(
+    {},
+  );
   const formatTimeAgo = (dateString: string) => {
     if (!dateString) return "Just now";
 
-    // 3. TIMEZONE FIX: Force UTC timezone to match FastAPI backend perfectly
     const safeDateString =
       dateString.endsWith("Z") || dateString.includes("+")
         ? dateString
@@ -67,7 +65,8 @@ export default function NotificationDropdown({
         {notifications.length > 0 ? (
           notifications.map((notif, index) => {
             // Check text length and expand state INSIDE the loop so it applies per-item
-            const isLongText = notif.description && notif.description.length > 90;
+            const isLongText =
+              notif.description && notif.description.length > 90;
             const isExpanded = expandedNotifs[notif.id] || false;
 
             return (

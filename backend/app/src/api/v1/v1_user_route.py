@@ -139,11 +139,9 @@ async def change_password(change_password: ChangePasswordSchema,
         # delete cookies
         response = SuccessfulResponse(user_response)
 
-        delete_auth_cookie(response)
 
         return response
     except Exception as e:
-        print(e)
         raise e
 
 
@@ -249,7 +247,6 @@ async def initiate_forgot_password(
 
         response = SuccessfulResponse(success_response_schema)
         # set cookie
-        set_verification_token(response, user_service_response, expiration)
         return response
     except Exception as e:
         if is_set_otp_to_redis:
@@ -278,7 +275,6 @@ async def verify_update_otp(otp_code: str = Body(...),
         Utility.verify_otp(otp_code=otp_code, otp_code_from_redis=redis_otp_code)
         response = SuccessfulResponse(user_response_schema)
         # set new verification token
-        set_verification_token(response, user_service_response, expiration)
         return response
     except Exception as e:
         raise e
@@ -297,9 +293,7 @@ async def user_forgot_password(new_password: str = Body(...),
                                                                          current_user)
         user_response.status_code = status.HTTP_200_OK
         response = SuccessfulResponse(user_response)
-        # delete cookies
-        delete_auth_cookie(response)
-        delete_verification_cookie(response)
+
         return response
     except Exception as e:
         raise e

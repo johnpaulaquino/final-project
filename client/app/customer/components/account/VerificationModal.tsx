@@ -53,9 +53,9 @@ export default function VerificationModal({
       confirmLabel: "Confirm New Password",
       placeholder: "At least 8 characters",
       finalSuccess: "Your password has been successfully updated.",
-      apiSendCode: "/me/initiate-password-reset",
-      apiVerifyCode: "/me/verify-otp",
-      apiFinal: "/me/forgot-password",
+      apiSendCode: "/api/me/initiate-password-reset",
+      apiVerifyCode: "/api/me/verify-otp",
+      apiFinal: "/api/me/forgot-password",
       payloadKey: "new_password",
     },
     "change-email": {
