@@ -2,7 +2,6 @@
 
 import { useState, useRef, FormEvent } from "react";
 import { setAccessToken } from "@/lib/api"; // Keep this to save the token in memory on step 3
-import { setAuthCookies } from "@/lib/authUtils";
 
 interface SignupFormProps {
   onGoToLogin: () => void;
@@ -159,12 +158,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
         if (data.access_token) {
           setAccessToken(data.access_token);
         }
-        setAuthCookies(
-          data.access_token,
-          data.refresh_token,
-          data.csrf_token,
-          null,
-        );
+
         setStep(4);
       }
     } catch (err: any) {
