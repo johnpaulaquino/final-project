@@ -82,7 +82,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    fetchCarts();
+    fetchCarts(1, 10);
   }, []);
 
   useEffect(() => {

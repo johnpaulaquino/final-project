@@ -122,11 +122,9 @@ export function NotificationProvider({
     const MAX_RECONNECTS = 5;
 
     const connect = () => {
-      const baseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_BASE_URL || "ws://localhost:9898";
+      const baseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_BASE_URL;
 
-      const ws = new WebSocket(
-        `${baseUrl}/api/v1/biskota/notifications/`,
-      );
+      const ws = new WebSocket(`${baseUrl}/notifications/`);
 
       wsRef.current = ws;
 

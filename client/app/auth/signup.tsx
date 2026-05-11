@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, FormEvent } from "react";
-import { apiClient, setAccessToken } from "@/lib/api"; // Adjust path as needed
+import { setAccessToken } from "@/lib/api"; // Keep this to save the token in memory on step 3
 
 interface SignupFormProps {
   onGoToLogin: () => void;
@@ -27,7 +27,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // ----------------------------------------
-  // STEP 1: Initiate Signup
+  // STEP 1: Initiate Signup (Hits Next.js Bridge)
   // ----------------------------------------
   const handleEmailSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -35,25 +35,30 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
     setError(null);
 
     try {
-      // Assuming your apiClient returns the parsed JSON response body
-      const data = await apiClient.publicPost("/auth/signup", email);
+      // 🚀 Call the local Next.js API route
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(email),
+      });
 
-      // 🚀 FIX: Use the sign_up_steps returned by the backend
-      if (data.sign_up_steps === 2) {
-        setStep(2);
-      } else if (data.sign_up_steps === 3) {
-        setStep(3);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw { message: data.message || "Something went wrong" };
+      }
+
+      // Use the sign_up_steps returned by the backend
+      if (data.sign_up_steps === 2 || data.sign_up_steps === 3) {
+        setStep(data.sign_up_steps);
       } else {
         setStep(2);
       }
     } catch (err: any) {
-      // Intercept the specific OTP error from the backend
       if (err.message === "Your code is not expired yet.") {
-        // Fixed typo from 'note' to 'not'
-        setError(null); // Clear the error state so it doesn't show in red
-        setStep(2); // Proceed to the OTP input step
+        setError(null);
+        setStep(2);
       } else {
-        // Handle all other actual errors (e.g. "This email is already exist.")
         setError(err.message || "Something went wrong");
       }
     } finally {
@@ -62,7 +67,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
   };
 
   // ----------------------------------------
-  // STEP 2: Verify OTP
+  // STEP 2: Verify OTP (Hits Next.js Bridge)
   // ----------------------------------------
   const handleOtpSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,8 +82,20 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
     setError(null);
 
     try {
-      // Sends the OTP string directly, matching FastAPI: otp_code: str = Body()
-      const data = await apiClient.post("/auth/verify-otp", otpString);
+      // 🚀 Call the local Next.js API route
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(otpString),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw {
+          message: data.message || "Verification failed. Please try again.",
+        };
+      }
 
       // Backend returns status_code 201 Created on success
       if (data.status_code === 201) {
@@ -104,7 +121,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
   };
 
   // ----------------------------------------
-  // STEP 3: Complete Signup
+  // STEP 3: Complete Signup (Hits Next.js Bridge)
   // ----------------------------------------
   const handleDetailsSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -117,15 +134,24 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
     setError(null);
 
     try {
-      // Mapping frontend camelCase to standard backend snake_case
-      // Modify these keys if your FastAPI SignUpRequest model uses different names
       const payload = {
         firstname: details.firstName,
         lastname: details.lastName,
         password: details.password,
       };
 
-      const data = await apiClient.post("/auth/complete-signup", payload);
+      // 🚀 Call the local Next.js API route
+      const res = await fetch("/api/auth/complete-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw { message: data.message || "Could not complete signup." };
+      }
 
       if (data.status_code === 201) {
         // Save the access token returned by the backend into our apiClient memory
@@ -281,7 +307,7 @@ export default function Signup({ onGoToLogin }: SignupFormProps) {
                     key={i}
                     ref={(el) => {
                       otpRefs.current[i] = el;
-                    }} // Fixed strict TypeScript ref error
+                    }}
                     type="text"
                     maxLength={1}
                     value={digit}

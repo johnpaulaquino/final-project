@@ -68,14 +68,15 @@ class AuthServices(SharedServices):
                 if temp_user_data.sign_up_steps == 1:
                     # generate an otp
                     # return the successful response
-                    return SignUpModelDTO(message="Verification code sent to your email.", otp_code=otp_code,
+                    return SuccessfulResponseSchema(message="Verification code sent to your email.",
+                                                    otp_code=otp_code,
                                           verification_token=verification_token,
                                           csrf_token=csrf_token,
                                           sign_up_steps=2)
                 
                 elif temp_user_data.sign_up_steps == 2:
                     # return the successful response
-                    return SignUpModelDTO(message="Your email is verified, please proceed to next step.",
+                    return SuccessfulResponseSchema(message="Your email is verified, please proceed to next step.",
                                           verification_token=verification_token,
                                           csrf_token=csrf_token,
                                           sign_up_steps=3)
@@ -87,7 +88,7 @@ class AuthServices(SharedServices):
             await self.__uow.temp_users.insert_record(TempUserRequest(email=email.strip()))
 
             # return the successful response
-            return SignUpModelDTO(message="Verification code sent to your email.",
+            return SuccessfulResponseSchema(message="Verification code sent to your email.",
                                   otp_code=otp_code,
                                   verification_token=verification_token,
                                   csrf_token=csrf_token,
@@ -108,14 +109,14 @@ class AuthServices(SharedServices):
                 raise DomainNotFoundError(message="Email does not exist.")
             
             if temp_users_data.sign_up_steps == 2:
-                return SignUpModelDTO(message="Your email is already verified, please proceed to next step.")
+                return SuccessfulResponseSchema(message="Your email is already verified, please proceed to next step.")
             
             # verify otp
             Utility.verify_otp(otp_code_from_redis, otp_code)
             
             # update the record in db
             await self.__uow.temp_users.update_record(record_id=email)
-            response = SignUpModelDTO(message="Successfully verified your email. Please proceed to next step.")
+            response = SuccessfulResponseSchema(message="Successfully verified your email. Please proceed to next step.")
             
             # return the successful response
             return response
@@ -159,7 +160,7 @@ class AuthServices(SharedServices):
             # insert the token into db
             access_refresh_token = await self.__insert_session_token(user_id, user.role)
             # prepare the response
-            response = SignUpModelDTO(message="Successfully created account.",
+            response = SuccessfulResponseSchema(message="Successfully created account.",
                                       access_token=access_refresh_token.access_token,
                                       refresh_token=access_refresh_token.refresh_token,
                                       csrf_token=self.generate_csrf_token())
@@ -201,7 +202,7 @@ class AuthServices(SharedServices):
             access_refresh_token = await self.__insert_session_token(curr_users.id, curr_users.role)
             
             # prepare the response
-            response = SignUpModelDTO(message="Successfully logged in.",
+            response = SuccessfulResponseSchema(message="Successfully logged in.",
                                       access_token=access_refresh_token.access_token,
                                       csrf_token=self.generate_csrf_token(),
                                       refresh_token=access_refresh_token.refresh_token)

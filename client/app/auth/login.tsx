@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { apiClient } from "@/lib/api";
 
 interface LoginFormProps {
@@ -23,7 +23,7 @@ export default function Login({
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  const activeTab = searchParams.get('tab') || 'customer';
+  const activeTab = searchParams.get("tab") || "customer";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +42,6 @@ export default function Login({
 
       // FIX: Explicitly route to /customer (with or without the tab parameter)
       router.push("/customer?tab=Home");
-      
     } catch (err: any) {
       setError(err?.message || "Login failed.");
     } finally {

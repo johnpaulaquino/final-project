@@ -7,66 +7,61 @@ import {
   COOKIE_VERIFICATION_KEY,
 } from "./constants/auth";
 
-interface AuthTokens {
-  access_token?: string;
-  refresh_token?: string;
-  csrf_token?: string;
-  verification_token?: string;
-}
-
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
-/**
- * Sets authentication cookies securely on the Vercel domain.
- */
-export async function setAuthCookies(tokens: AuthTokens) {
+export async function setAuthCookies(
+  access_token: string | null = null,
+  refresh_token: string | null = null,
+  csrf_token: string | null = null,
+  verification_token: string | null = null,
+) {
   const cookieStore = await cookies();
 
-  if (tokens.access_token) {
+  if (access_token) {
     cookieStore.set({
       name: COOKIE_ACCESS_TOKEN,
-      value: tokens.access_token,
+      value: access_token,
       httpOnly: true,
       secure: IS_PRODUCTION,
       sameSite: "lax",
       path: "/",
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 15 * 60,
     });
   }
 
-  if (tokens.refresh_token) {
+  if (refresh_token) {
     cookieStore.set({
       name: COOKIE_REFRESH_TOKEN,
-      value: tokens.refresh_token,
+      value: refresh_token,
       httpOnly: true,
       secure: IS_PRODUCTION,
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60,
     });
   }
 
-  if (tokens.csrf_token) {
+  if (csrf_token) {
     cookieStore.set({
       name: COOKIE_CSRF_TOKEN,
-      value: tokens.csrf_token,
-      httpOnly: true, // Match backend (false so client can read if needed)
+      value: csrf_token,
+      httpOnly: false,
       secure: IS_PRODUCTION,
       sameSite: "lax",
       path: "/",
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 15 * 60,
     });
   }
 
-  if (tokens.verification_token) {
+  if (verification_token) {
     cookieStore.set({
       name: COOKIE_VERIFICATION_KEY,
-      value: tokens.verification_token,
+      value: verification_token,
       httpOnly: true,
       secure: IS_PRODUCTION,
       sameSite: "lax",
       path: "/",
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 15 * 60,
     });
   }
 }
@@ -77,8 +72,8 @@ export async function setAuthCookies(tokens: AuthTokens) {
 export async function deleteAuthCookies() {
   const cookieStore = await cookies();
 
-  cookieStore.delete("access_token");
-  cookieStore.delete("refresh_token");
-  cookieStore.delete("csrf_token");
-  cookieStore.delete("verification_token");
+  cookieStore.delete(COOKIE_ACCESS_TOKEN);
+  cookieStore.delete(COOKIE_REFRESH_TOKEN);
+  cookieStore.delete(COOKIE_CSRF_TOKEN);
+  cookieStore.delete(COOKIE_VERIFICATION_KEY);
 }

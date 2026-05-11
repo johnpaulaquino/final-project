@@ -9,7 +9,13 @@ def SuccessfulResponse(success_schema: SuccessfulResponseSchema):
     message_content = {'status_code'   : success_schema.status_code,
                        "status_message": success_schema.status_message,
                        "message"       : success_schema.message}
-    
+
+    if success_schema.verification_token is not None:
+        message_content.update({"verification_token": success_schema.verification_token})
+
+    if success_schema.csrf_token is not None:
+        message_content.update({"csrf_token": success_schema.csrf_token})
+
     if success_schema.paginated is not None:
         # to check if it's a paginated data
         message_content.update({"paginated": jsonable_encoder(success_schema.paginated)})

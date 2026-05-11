@@ -42,7 +42,6 @@ class EnvironmentStatus(str):
     Test = 'test'
     Production = 'production'
 
-
 class SuccessfulResponseSchema(BaseModel):
     message: str
     headers: dict = None
@@ -55,3 +54,6 @@ class SuccessfulResponseSchema(BaseModel):
     action: str = None
     paginated: PaginatedOutput | None = None
     otp_code: str | None = None
+    verification_token : str | None = None
+    sign_up_steps: int | None = None
+    email: str | None = None
