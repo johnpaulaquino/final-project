@@ -23,7 +23,7 @@ __base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/me"
 v1_user_router = APIRouter(tags=[EndpointTags.USERS], prefix=__base_endpoint)
 
 
-@v1_user_router.get("/")
+@v1_user_router.get("")
 async def get_information(current_user: DecodedTokenDTO = Depends(get_current_user),
                           user_service: UserServices = Depends(get_user_service),
                           ):
@@ -145,7 +145,7 @@ async def change_password(change_password: ChangePasswordSchema,
         raise e
 
 
-@v1_user_router.patch('/')
+@v1_user_router.patch('')
 async def update_user_personal_information(data: UpdateUserSchema = Depends(UpdateUserSchema.depends),
                                            current_user: DecodedTokenDTO = Depends(get_current_user),
                                            image: Optional[UploadFile] = File(None),

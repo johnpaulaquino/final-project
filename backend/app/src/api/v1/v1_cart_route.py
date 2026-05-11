@@ -15,7 +15,7 @@ __base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/cart"
 v1_cart_router = APIRouter(tags=[EndpointTags.CUSTOMER], prefix=__base_endpoint)
 
 
-@v1_cart_router.post("/")
+@v1_cart_router.post("")
 async def insert_cart(cart_data: CreateCart = Depends(CreateCart.depends),
                       current_user: DecodedTokenDTO = Depends(get_current_user),
                       cart_services: CartsServices = Depends(get_cart_service),
@@ -31,7 +31,7 @@ async def insert_cart(cart_data: CreateCart = Depends(CreateCart.depends),
 
 
 
-@v1_cart_router.get("/")
+@v1_cart_router.get("")
 async def paginated_user_cart(paginated: PaginatedSchema = Depends(),
 
                               current_user: DecodedTokenDTO = Depends(get_current_user),

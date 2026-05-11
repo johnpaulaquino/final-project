@@ -13,14 +13,14 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
 
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: "/api-proxy/:path*",
-  //       destination: `${process.env.BACKEND_INTERNAL_URL}/:path*`,
-  //     },
-  //   ];
-  // },
+  async rewrites() {
+    return [
+      {
+        source: "/api-proxy/:path*",
+        destination: `${process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

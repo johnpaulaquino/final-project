@@ -6,8 +6,7 @@ export interface ApiError {
 }
 
 // Ensure this is set to "/api-proxy" in your .env
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
-
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api-proxy";
 let currentAccessToken: string | null = null;
 let isRefreshing = false;
 let failedQueue: Array<{

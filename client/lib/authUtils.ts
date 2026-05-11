@@ -23,7 +23,7 @@ export async function setAuthCookies(
       value: access_token,
       httpOnly: true,
       secure: IS_PRODUCTION,
-      sameSite: "lax",
+      sameSite: IS_PRODUCTION ? "none" : "lax",
       path: "/",
       maxAge: 15 * 60,
     });
@@ -35,7 +35,7 @@ export async function setAuthCookies(
       value: refresh_token,
       httpOnly: true,
       secure: IS_PRODUCTION,
-      sameSite: "lax",
+      sameSite: IS_PRODUCTION ? "none" : "lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60,
     });
