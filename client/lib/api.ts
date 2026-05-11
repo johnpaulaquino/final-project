@@ -3,9 +3,7 @@ export interface ApiError {
   status: number;
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL ||
-  "http://localhost:9898/api/v1/biskota";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
 
 console.log("Base endpoint", API_BASE_URL);
 let currentAccessToken: string | null = null;
