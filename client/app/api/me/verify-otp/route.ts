@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     if (!res.ok) return NextResponse.json(data, { status: res.status });
 
     if (data.verification_token) {
-      await setAuthCookies(data.verification_token);
+      await setAuthCookies(null, null, null, data.verification_token);
     }
 
     return NextResponse.json(data);

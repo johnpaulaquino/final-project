@@ -59,10 +59,6 @@ async def create_account(background_task: BackgroundTasks,
                                      verification_code=services_response.otp_code)
 
         response = SuccessfulResponse(services_response)
-
-        exp = 5 * 60
-        set_verification_token(response=response, response_schema=services_response, expiration=exp)
-
         return response
 
     except Exception as e:
@@ -110,7 +106,7 @@ async def verify_signup_otp(otp_code: str = Body(),
 async def complete_signup(signup_data: SignUpRequest = Depends(SignUpRequest.sign_up_request_depends),
                           redis_services: RedisInfrastructure = Depends(get_redis_services),
                           auth_services: AuthServices = Depends(get_auth_service),
-                          verification_token: str = Cookie(None)):
+                          verification_token: str = Cookie(None,alias=ConstantsKeyData.COOKIE_VERIFICATION_KEY)):
     try:
 
         # auth services response.
