@@ -15,8 +15,8 @@ from app.src.core.security import AppSecurity
 from app.src.exceptions.http_exceptions import DataBadRequestException
 from app.src.infrastructure.email_infrastructure import EmailInfrastructure
 from app.src.infrastructure.redis_infrastructure import RedisInfrastructure
-from app.src.schema import SuccessfulResponseSchema, EnvironmentStatus
-from app.src.schema.auth_schema import CookieResponseSchema, LoginRequest, SignUpRequest
+from app.src.schema import  EnvironmentStatus
+from app.src.schema.auth_schema import  LoginRequest, SignUpRequest
 from app.src.utils.successful_response import SuccessfulResponse
 
 __base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/auth"
@@ -54,9 +54,22 @@ async def create_account(background_task: BackgroundTasks,
                                          recipient=email,
                                          verification_code=services_response.otp_code)
             else:
-                background_task.add_task(email_infrastructure.send_message_using_sendgrid,
-                                     recipient=email,
-                                     verification_code=services_response.otp_code)
+                try:
+                    await email_infrastructure.send_message_using_sendgrid(
+                        recipient=email,
+                        verification_code=services_response.otp_code)
+                    print("SendGrid accepted the email payload!")
+                except Exception as e:
+                    print("SENDGRID REJECTED THE EMAIL!")
+
+                    # SendGrid hides the actual JSON error message inside 'e.body'
+                    if hasattr(e, 'body'):
+                        print(f"SendGrid Exact Reason: {e.body}")
+                    elif hasattr(e, 'message'):
+                        print(f"Error Message: {e.message}")
+                    else:
+                        print(f"Generic Error: {e}")
+
 
         response = SuccessfulResponse(services_response)
         return response
