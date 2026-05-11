@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
 
   async rewrites() {
+    console.log(
+      "Setting up rewrites to backend API...",
+      process.env.BACKEND_INTERNAL_URL,
+    );
     return [
       {
         source: "/api-proxy/:path*",
