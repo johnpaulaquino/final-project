@@ -8,7 +8,7 @@ export async function POST() {
     // Grab the refresh token before we delete it, so we can tell FastAPI to invalidate it
     const refreshToken = cookieStore.get("refresh_token")?.value;
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
+    const backendUrl = process.env.BACKEND_INTERNAL_URL;
 
     // 1. Tell FastAPI to invalidate the token in Redis
     // We wrap this in a try/catch so that if the backend is down,

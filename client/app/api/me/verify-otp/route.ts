@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     if (vToken) cookieParts.push(`verification_token=${vToken}`);
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL}/me/verify-otp`,
+      `${process.env.BACKEND_INTERNAL_URL}/me/verify-otp`,
       {
         method: "POST",
         headers: {

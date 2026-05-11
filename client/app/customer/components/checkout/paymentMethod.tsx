@@ -9,19 +9,16 @@ interface PaymentMethodProps {
 
 export default function paymentMethod({ activePayment, setActivePayment }: PaymentMethodProps) {
   const methods = [
-    { id: 'cc', 
-      title: 'Credit / Debit Card', 
-      description: 'Pay securely with your card', 
+    {
+      id: "cod",
+      title: "Cash on Delivery",
+      description: "Pay when you receive your order",
     },
-
-    { id: 'gcash', 
-      title: 'GCash', 
-      description: 'Pay using your GCash wallet', 
-    },
-
-    { id: 'cod', 
-      title: 'Cash on Delivery', 
-      description: 'Pay when you receive your order', 
+    { id: "gcash", title: "GCash", description: "Pay using your GCash wallet" },
+    {
+      id: "cc",
+      title: "Credit / Debit Card",
+      description: "Pay securely with your card",
     },
   ];
 

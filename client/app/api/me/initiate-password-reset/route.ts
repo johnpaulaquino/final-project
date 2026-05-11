@@ -15,7 +15,7 @@ export async function POST() {
     if (refreshToken) cookieParts.push(`refresh_token=${refreshToken}`);
     if (vToken) cookieParts.push(`verification_token=${vToken}`);
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
+    const backendUrl = process.env.BACKEND_INTERNAL_URL;
 
     // Call your FastAPI /me (or /users) router
     const res = await fetch(`${backendUrl}/me/initiate-password-reset`, {

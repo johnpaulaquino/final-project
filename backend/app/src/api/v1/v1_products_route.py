@@ -21,7 +21,7 @@ __base_endpoint = f"{ConstantsData.API_V1_ENDPOINT}/products"
 v1_products_router = APIRouter(tags=[EndpointTags.PRODUCTS], prefix=__base_endpoint, )
 
 
-@v1_products_router.post("/", tags=[EndpointTags.ADMIN], )
+@v1_products_router.post("", tags=[EndpointTags.ADMIN], )
 async def insert_product(
         products_schema: ProductsFullInformationRequestSchema = Depends(
                 ProductsFullInformationRequestSchema.depends_schema),
@@ -174,7 +174,7 @@ async def get_product_information_paginated_with_tags(paginated: PaginatedSchema
         raise e
 
 
-@v1_products_router.get("/", tags=[EndpointTags.CUSTOMER])
+@v1_products_router.get("", tags=[EndpointTags.CUSTOMER])
 async def get_product_information_paginated(paginated: PaginatedSchema = Query(),
                                             product_services: ProductsServices = Depends(get_products_service),
                                             ):

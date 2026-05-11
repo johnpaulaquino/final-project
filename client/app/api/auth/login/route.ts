@@ -3,7 +3,7 @@ import { setAuthCookies } from "@/lib/authUtils"; // Adjust path if needed
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
+  const backendUrl = process.env.BACKEND_INTERNAL_URL;
 
   const res = await fetch(`${backendUrl}/auth/login`, {
     method: "POST",

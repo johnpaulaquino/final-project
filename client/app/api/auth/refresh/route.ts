@@ -15,7 +15,7 @@ export async function POST() {
       );
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
+    const backendUrl = process.env.BACKEND_INTERNAL_URL;
     if (!backendUrl) {
       return NextResponse.json(
         { error: "Server misconfiguration" },

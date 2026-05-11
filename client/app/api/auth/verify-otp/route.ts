@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const vToken = cookieStore.get(COOKIE_VERIFICATION_KEY)?.value;
 
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL}/auth/verify-otp`,
+    `${process.env.BACKEND_INTERNAL_URL}/auth/verify-otp`,
     {
       method: "POST",
       headers: {

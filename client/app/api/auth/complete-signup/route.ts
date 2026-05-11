@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     const vToken = cookieStore.get("verification_token")?.value;
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL;
+    const backendUrl = process.env.BACKEND_INTERNAL_URL;
     if (!backendUrl) {
       return NextResponse.json(
         { error: "Server misconfiguration" },

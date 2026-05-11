@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api-proxy/:path*",
-        destination: `${process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL}/:path*`,
+        destination: `${process.env.BACKEND_INTERNAL_URL}/:path*`,
       },
     ];
   },
