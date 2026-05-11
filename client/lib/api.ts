@@ -4,8 +4,10 @@ export interface ApiError {
 }
 
 const API_BASE_URL =
-  process.env.BACKEND_INTERNAL_URL || "http://localhost:9898/api/v1/biskota";
+  process.env.NEXT_PUBLIC_BACKEND_INTERNAL_URL ||
+  "http://localhost:9898/api/v1/biskota";
 
+console.log("Base endpoint", API_BASE_URL);
 let currentAccessToken: string | null = null;
 let isRefreshing = false;
 let failedQueue: Array<{
